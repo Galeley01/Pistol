@@ -1,29 +1,49 @@
 using UnityEngine;
 using NaughtyAttributes;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 // Отладочная панель бега/усталости. Рисуется кодом (OnGUI), Canvas не нужен.
-// Повесьте на Player. Галочка Show в Inspector — показать/скрыть.
+// Повесьте на Player. Клавиша 2 — показать/скрыть (по умолчанию скрыта).
 public class MovementDebugUI : MonoBehaviour
 {
-    [Tooltip("Показать/скрыть панель")]
-    public bool show = true;
+    // Новое имя поля (раньше было show = true): старое значение из сцены не подхватится,
+    // и панель по умолчанию будет скрыта
+    [Tooltip("Показывать панель сразу при запуске игры. Во время игры — клавиша 2")]
+    public bool showOnStart = false;
 
-    [ShowIf("show"), Tooltip("Найдётся сам")] public PlayerMovement movement;
-    [ShowIf("show")] public Vector2 position = new Vector2(10, 10);
-    [ShowIf("show"), MinValue(0.5f), MaxValue(3f)] public float scale = 1f;
+    [Tooltip("Найдётся сам")] public PlayerMovement movement;
+    public Vector2 position = new Vector2(10, 10);
+    [MinValue(0.5f), MaxValue(3f)] public float scale = 1f;
+
+    [ShowNativeProperty] bool IsShown => show;
 
     [Button("Показать / скрыть")]
     void Toggle() => show = !show;
 
+    bool show;
     Texture2D tex;
     GUIStyle label, title;
 
     void Start()
     {
+        show = showOnStart;
         if (movement == null) movement = GetComponentInParent<PlayerMovement>();
         if (movement == null) movement = FindFirstObjectByType<PlayerMovement>();
         tex = Texture2D.whiteTexture;
     }
+
+    void Update()
+    {
+        if (ReadToggle()) show = !show;
+    }
+
+#if ENABLE_INPUT_SYSTEM
+    static bool ReadToggle() => Keyboard.current != null && Keyboard.current.digit2Key.wasPressedThisFrame;
+#else
+    static bool ReadToggle() => Input.GetKeyDown(KeyCode.Alpha2);
+#endif
 
     void OnGUI()
     {
