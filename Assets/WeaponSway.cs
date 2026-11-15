@@ -87,6 +87,30 @@ public class WeaponSway : MonoBehaviour
     [Foldout("Оружие при беге"), ShowIf("lowerWhileRunning"), Range(0f, 0.5f), Tooltip("Пауза перед подъёмом оружия после остановки, сек")]
     public float sprintPoseHold = 0.12f;
 
+    [Foldout("Отдача (как подлетает ствол)"), Range(0.01f, 0.15f), Tooltip("За сколько секунд ствол подлетает до верхней точки. Меньше — резче")]
+    public float recoilRiseTime = 0.035f;
+    [Foldout("Отдача (как подлетает ствол)"), Range(0.05f, 0.8f), Tooltip("За сколько секунд оружие почти вернулось на место (на 90%)")]
+    public float recoilReturnTime = 0.22f;
+    [Foldout("Отдача (как подлетает ствол)"), Range(0.4f, 1f), Tooltip("1 — возвращается ровно, без перелёта. Меньше — с лёгким «клевком» ниже исходного")]
+    public float recoilReturnDamping = 0.85f;
+    [Foldout("Отдача (как подлетает ствол)"), Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.1f)]
+    [Tooltip("Точка, вокруг которой подлетает ствол: от кисти на рукояти (IK_RightHand). Ниже/назад — рукоять сильнее упирается, ствол сильнее подлетает")]
+    public Vector3 recoilPivotOffset = Vector3.zero;
+
+    [Foldout("Осмотр барабана (Alt)"), Tooltip("Насколько сдвинуть оружие в режиме осмотра: ближе к лицу, задним торцом барабана к глазам")]
+    [Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.25f)]
+    public Vector3 inspectPosition = new Vector3(-0.04f, 0.06f, -0.06f);
+    [Foldout("Осмотр барабана (Alt)"), Tooltip("Поворот оружия в режиме осмотра. X+ — ствол вниз, Z− — откинутый барабан поднимается")]
+    [Vector3Slider(Vector3SliderAttribute.Kind.Rotation, 90f)]
+    public Vector3 inspectRotation = new Vector3(20f, 10f, -35f);
+    [Foldout("Осмотр барабана (Alt)"), Range(0f, 1f), Tooltip("Сколько покачивания и дрейфа рук остаётся при осмотре")]
+    public float inspectSwayMultiplier = 0.3f;
+    [Foldout("Осмотр барабана (Alt)"), Range(0f, 1f), Tooltip("Ставит позу осмотра без Alt — удобно подбирать ползунки в Play Mode (барабан при этом можно не открывать)")]
+    public float inspectPreview = 0f;
+
+    // 0..1 — насколько оружие в позе осмотра (выставляет RevolverInspect)
+    [HideInInspector] public float inspectAmount;
+
     [Foldout("Прицеливание (как в Squad)"), Range(0f, 1.5f), Tooltip("Сколько инерции (заноса) остаётся в прицеле. 1 = как от бедра")]
     public float aimLagMultiplier = 0.85f;
     [Foldout("Прицеливание (как в Squad)"), Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.15f)]
@@ -130,6 +154,7 @@ public class WeaponSway : MonoBehaviour
     bool wasGrounded = true;
     float lastAirVelocity;
     float aimBreathPhase, aimShakeTime, instability, instabilityTime;
+    Vector3 recoilRot, recoilRotVel, recoilPos, recoilPosVel;   // отдельная жёсткая пружина отдачи
 
     // Толчок извне (например, оружие встало у глаза): скорость поворота (°/с) и смещения (м/с)
     public void AddKick(Vector3 rotationVelocity, Vector3 positionVelocity)
@@ -137,6 +162,19 @@ public class WeaponSway : MonoBehaviour
         lagVel += rotationVelocity;
         posVel += positionVelocity;
     }
+
+    // Отдача выстрела: на сколько градусов подлетает ствол (x− — вверх, y — вбок, z — крен)
+    // и на сколько метров уходит оружие (z− — назад к лицу). Это верхняя точка, а не скорость.
+    // Вращение идёт вокруг кисти на рукояти: подлетает ствол, рукоять остаётся в руке.
+    public void AddRecoil(Vector3 peakRotation, Vector3 peakPosition)
+    {
+        float k = RecoilSpring.ImpulseFor(1f, recoilRiseTime);
+        recoilRotVel += peakRotation * k;
+        recoilPosVel += peakPosition * k;
+    }
+
+    // Сбить хват (0..1): ствол гуляет, пока хват не стабилизируется (как после поворота в прицеле)
+    public void AddInstability(float amount) => instability = Mathf.Clamp01(instability + amount);
 
     [ShowNativeProperty] public float Instability => instability;
 
@@ -172,7 +210,9 @@ public class WeaponSway : MonoBehaviour
         if (dt <= 0f) return;
 
         float aim = weaponAim != null ? weaponAim.AimAmount : 0f;
-        float k = masterIntensity * Mathf.Lerp(1f, aimMultiplier, aim);      // покачивание, дрейф
+        float ip = Mathf.SmoothStep(0f, 1f, Mathf.Max(inspectAmount, inspectPreview));   // поза осмотра
+        float k = masterIntensity * Mathf.Lerp(1f, aimMultiplier, aim)       // покачивание, дрейф
+                * Mathf.Lerp(1f, inspectSwayMultiplier, ip);
         float kLag = masterIntensity * Mathf.Lerp(1f, aimLagMultiplier, aim); // инерция и занос
 
         // ---------- Движение игрока ----------
@@ -283,7 +323,7 @@ public class WeaponSway : MonoBehaviour
         float rp = Mathf.SmoothStep(0f, 1f, runPose);
 
         // ---------- Сборка ----------
-        Vector3 aimRot = new Vector3(-freeAim.y, freeAim.x, 0f);   // Free-Aim — точный, без ослабления
+        Vector3 aimRot = new Vector3(-freeAim.y, freeAim.x, 0f) * (1f - ip);   // Free-Aim — точный; при осмотре оружие по центру
         // ---------- 8. Прицеливание как в Squad ----------
         // Усталость: 0 — отдохнул, 1 — измотан
         float fatigue = movement != null ? Mathf.Clamp01(Mathf.Max(breathless, movement.IsExhausted ? 0.8f : 0f)) : 0f;
@@ -308,19 +348,27 @@ public class WeaponSway : MonoBehaviour
         Vector3 aimSway = aimBreath + aimShake + aimInstab;
 
         // ---------- Сборка ----------
-        Vector3 euler = aimRot + lag * kLag + bobRot + driftRot + aimSway + sprintRotation * rp;
+        Vector3 euler = aimRot + lag * kLag + bobRot + driftRot + aimSway + sprintRotation * rp + inspectRotation * ip;
         Quaternion rot = Quaternion.Euler(euler);
 
         // Кисть немного смещается вслед за поворотом (как будто ведёт запястьем)
         Vector3 shift = new Vector3((aimRot.y + lag.y * kLag) * handShift, -(aimRot.x + lag.x * kLag) * handShift, 0f);
-        Vector3 offset = posSpring * k + bobPos + driftPos + sprintPosition * rp + shift;
+        Vector3 offset = posSpring * k + bobPos + driftPos + sprintPosition * rp + inspectPosition * ip + shift;
 
         // От бедра вращаем вокруг запястья (ствол уходит дальше рукояти),
         // в прицеле — вокруг целика: он остаётся у глаза, а мушка гуляет отдельно (мушка и целик не совпадают)
         Vector3 localPivot = Vector3.Lerp(wristPivot, rearSightPoint, aim);
         Vector3 wrist = transform.localPosition + transform.localRotation * localPivot;
-        pivot.localRotation = rot;
-        pivot.localPosition = offset + wrist - rot * wrist;
+        Vector3 pivotPos = offset + wrist - rot * wrist;
+
+        // ---------- 9. Отдача: поворот вокруг кисти на рукояти ----------
+        RecoilSpring.Step(ref recoilRot, ref recoilRotVel, recoilRiseTime, recoilReturnTime, recoilReturnDamping, dt);
+        RecoilSpring.Step(ref recoilPos, ref recoilPosVel, recoilRiseTime, recoilReturnTime, recoilReturnDamping, dt);
+        Quaternion gunFrame = rot * transform.localRotation;                    // оси оружия в пространстве камеры
+        Vector3 hand = pivotPos + rot * (transform.localPosition + transform.localRotation * (wristPivot + recoilPivotOffset));
+        Quaternion kick = gunFrame * Quaternion.Euler(recoilRot) * Quaternion.Inverse(gunFrame);
+        pivot.localRotation = kick * rot;
+        pivot.localPosition = hand + kick * (pivotPos - hand) + gunFrame * recoilPos;
     }
 
     static void StepSpring(ref Vector3 x, ref Vector3 v, Vector3 target, float stiffness, float damping, float dt)
@@ -359,4 +407,35 @@ public class WeaponSway : MonoBehaviour
 #else
     Vector2 ReadLook() => new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * 2f;
 #endif
+}
+
+// Пружина отдачи: резкий взлёт и спокойный возврат.
+// Пока значение уходит от нуля — жёсткая пружина без перелёта (верхняя точка ровно через riseTime),
+// когда возвращается — мягче, за returnTime, с заданным демпфированием.
+public static class RecoilSpring
+{
+    // Скорость толчка, после которой пружина поднимется ровно на peak
+    public static float ImpulseFor(float peak, float riseTime) => peak * 2.7182818f / Mathf.Max(riseTime, 0.005f);
+
+    public static void Step(ref Vector3 x, ref Vector3 v, float riseTime, float returnTime, float returnDamping, float dt)
+    {
+        if (dt <= 0f) return;
+        float wr = 1f / Mathf.Max(riseTime, 0.005f);
+        float wb = 3.9f / Mathf.Max(returnTime, 0.02f);   // критическое демпфирование: 90% пути за ~3.9/ω
+        int steps = Mathf.Max(1, Mathf.CeilToInt(dt / 0.002f));
+        float h = dt / steps;
+        for (int s = 0; s < steps; s++)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                float xi = x[i], vi = v[i];
+                bool outward = xi * vi > 0f || (Mathf.Abs(xi) < 1e-7f && Mathf.Abs(vi) > 1e-6f);
+                float a = outward ? (-wr * wr * xi - 2f * wr * vi)
+                                  : (-wb * wb * xi - 2f * returnDamping * wb * vi);
+                vi += a * h;
+                xi += vi * h;
+                x[i] = xi; v[i] = vi;
+            }
+        }
+    }
 }

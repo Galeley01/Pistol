@@ -78,6 +78,8 @@ public class PlayerMovement : MonoBehaviour
     public Vector2 AppliedLookDelta { get; private set; }
     public Vector3 LocalAcceleration { get; private set; }  // ускорение тела в его координатах (x — вбок, z — вперёд), м/с²  // на сколько повернулась камера в этом кадре: x — вправо, y — вверх (градусы)
     public float PreFatigue { get; private set; }     // 0..1 — нарастание перед усталостью
+    // Режим осмотра барабана (RevolverInspect): камера стоит, курсор свободен, ходить нельзя
+    public bool InspectMode { get; private set; }
 
     // ---- Для отладочного UI ----
     public float SprintTimer => sprintTimer;          // сколько секунд уже бежим
@@ -113,15 +115,26 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        HandleCursor();
+        if (!InspectMode) HandleCursor();
         AppliedLookDelta = Vector2.zero;
-        if (Cursor.lockState == CursorLockMode.Locked)
+        if (Cursor.lockState == CursorLockMode.Locked && !InspectMode)
             Look();
         HandleCrouch();
         Move();
     }
 
+    // Включить / выключить режим осмотра. При выходе курсор снова захватывается
+    public void SetInspectMode(bool on)
+    {
+        InspectMode = on;
+        LockCursor(!on);
+    }
+
     // ---------- Обзор мышью ----------
+    // Отдача поднимает взгляд: накапливается и плавно применяется за несколько кадров
+    Vector2 pendingRecoil;
+    public void AddRecoilLook(Vector2 degrees) => pendingRecoil += degrees;   // x — вправо, y — вверх
+
     void Look()
     {
         Vector2 look = ReadLook() * mouseSensitivity;
@@ -154,6 +167,14 @@ public class PlayerMovement : MonoBehaviour
             FreeAimOffset = clamped;
         }
 
+        // Отдача — прямо в камеру (мимо мёртвой зоны Free-Aim)
+        if (pendingRecoil.sqrMagnitude > 0.000001f)
+        {
+            Vector2 r = pendingRecoil * (1f - Mathf.Exp(-25f * Time.deltaTime));
+            pendingRecoil -= r;
+            toCamera += r;
+        }
+
         // На бегу резко развернуться нельзя: скорость поворота ограничена
         float sprintBlend = Mathf.InverseLerp(walkSpeed, runSpeed, new Vector3(horizontalVelocity.x, 0f, horizontalVelocity.z).magnitude);
         if (IsRunning && sprintBlend > 0f)
@@ -180,7 +201,7 @@ public class PlayerMovement : MonoBehaviour
     // ---------- Приседание (переключение на C) ----------
     void HandleCrouch()
     {
-        if (ReadCrouch())
+        if (!InspectMode && ReadCrouch())
         {
             if (!IsCrouching) IsCrouching = true;
             else if (CanStandUp()) IsCrouching = false;   // под низким потолком не встанет
@@ -213,11 +234,12 @@ public class PlayerMovement : MonoBehaviour
     {
         JumpedThisFrame = false;
 
-        LeanInput = (ReadLeanRight() ? 1f : 0f) - (ReadLeanLeft() ? 1f : 0f);
+        // В режиме осмотра клавиши движения не работают — персонаж плавно останавливается
+        LeanInput = InspectMode ? 0f : (ReadLeanRight() ? 1f : 0f) - (ReadLeanLeft() ? 1f : 0f);
 
-        Vector2 input = ReadMove();
+        Vector2 input = InspectMode ? Vector2.zero : ReadMove();
         bool moving = input.sqrMagnitude > 0.01f;
-        bool wantsRun = ReadRun() && moving && !IsLeaning;   // при выглядывании бег запрещён
+        bool wantsRun = !InspectMode && ReadRun() && moving && !IsLeaning;   // при выглядывании бег запрещён
         IsRunning = wantsRun && !IsCrouching;                // стамина тратится только здесь
 
         UpdateStamina();
@@ -245,7 +267,7 @@ public class PlayerMovement : MonoBehaviour
         if (controller.isGrounded && verticalVelocity < 0f)
             verticalVelocity = -2f;
 
-        if (controller.isGrounded && ReadJump())
+        if (controller.isGrounded && !InspectMode && ReadJump())
         {
             if (IsCrouching)
             {

@@ -96,6 +96,11 @@ public class BodycamEffects : MonoBehaviour
     [Foldout("Инерция мыши и стрейф")] public float strafeTilt = 2.5f;
 
     // ===================== Выглядывание =====================
+    [Foldout("Отдача камеры"), Range(0.01f, 0.15f), Tooltip("За сколько секунд голову подбрасывает до верхней точки")]
+    public float recoilRiseTime = 0.04f;
+    [Foldout("Отдача камеры"), Range(0.05f, 0.6f), Tooltip("За сколько секунд голова почти вернулась (на 90%)")]
+    public float recoilReturnTime = 0.18f;
+
     [Foldout("Выглядывание Q / E")] public float leanAngle = 14f;
     [Foldout("Выглядывание Q / E")] public float leanOffset = 0.4f;
     [Foldout("Выглядывание Q / E"), Tooltip("Меньше = медленнее")] public float leanSpeed = 4f;
@@ -139,6 +144,7 @@ public class BodycamEffects : MonoBehaviour
     Vector3 posCurrent, rotCurrent;
     WeaponAim weaponAim;
     Vector2 nod, nodVel;          // пружина кивка: x — вперёд/назад, y — крен
+    Vector3 recoilCam, recoilCamVel;   // отдача: x — вверх, z — крен, градусы
     float bodyRun;
 
     void Start()
@@ -324,11 +330,24 @@ public class BodycamEffects : MonoBehaviour
         Vector3 impactRot = Noise3(impactTime, 100f) * impactMaxAngle * imp;
         Vector3 impactPos = Noise3(impactTime, 200f) * impactMaxOffset * imp;
 
+        // 5) отдача — резко и без сглаживания, иначе она «плывёт»
+        RecoilSpring.Step(ref recoilCam, ref recoilCamVel, recoilRiseTime, recoilReturnTime, 1f, dt);
+        Vector3 recoilRot = new Vector3(-recoilCam.x, 0f, recoilCam.z);
+
         transform.localPosition = posCurrent + impactPos;
-        transform.localRotation = Quaternion.Euler(rotCurrent + shakeFiltered * aimCalm + impactRot);
+        transform.localRotation = Quaternion.Euler(rotCurrent + shakeFiltered * aimCalm + impactRot + recoilRot);
     }
 
     void AddImpact(float amount) => impact = Mathf.Min(1f, impact + amount);
+
+    // ---------- Для отдачи и других толчков извне ----------
+    // Резкая тряска камеры (0..1)
+    public void AddShake(float amount) => AddImpact(amount);
+    // Толчок «кивка»: камеру подбрасывает вверх (°/с) и слегка кренит (°/с), затем пружина возвращает
+    public void AddRecoilKick(float pitchUpVelocity, float rollVelocity) => nodVel += new Vector2(-pitchUpVelocity, rollVelocity);
+    // Короткий резкий толчок головы от выстрела: верхняя точка в градусах (вверх, крен)
+    public void AddRecoilPunch(float pitchUpDegrees, float rollDegrees)
+        => recoilCamVel += new Vector3(pitchUpDegrees, 0f, rollDegrees) * RecoilSpring.ImpulseFor(1f, recoilRiseTime);
 
     // Шум Перлина в диапазоне -1..1 по трём осям
     static Vector3 Noise3(float t, float seed) => new Vector3(

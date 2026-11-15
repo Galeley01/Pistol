@@ -351,6 +351,21 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1040469004}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1040469006}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1040469005}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1040469007}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1040469008}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1040469009}
   m_SourcePrefab: {fileID: 100100000, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
 --- !u!4 &226226899 stripped
 Transform:
@@ -879,6 +894,15 @@ MonoBehaviour:
   sprintPoseInTime: 0.3
   sprintPoseOutTime: 0.6
   sprintPoseHold: 0.12
+  recoilRiseTime: 0.035
+  recoilReturnTime: 0.22
+  recoilReturnDamping: 0.85
+  recoilPivotOffset: {x: 0, y: 0, z: 0}
+  inspectPosition: {x: -0.014, y: 0.06, z: -0.123}
+  inspectRotation: {x: -14.799988, y: -26.8, z: -14.100006}
+  inspectSwayMultiplier: 0.3
+  inspectPreview: 0
+  inspectAmount: 1
   aimLagMultiplier: 0.85
   rearSightPoint: {x: 0, y: 0.055, z: 0.01}
   aimBreathCalm: 0.15
@@ -891,6 +915,143 @@ MonoBehaviour:
   tiredStabilizeTime: 2
   showAimPoint: 0
   aimPointSize: 4
+--- !u!114 &1040469005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040468998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b08b74abc6dd830489d147bfebc9907a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  muzzle: {fileID: 0}
+  zeroDistance: 15
+  sightHeight: 0.013
+  showTrajectory: 0
+  previewDistance: 80
+  lineColor: {r: 1, g: 0.25, b: 0.2, a: 0.75}
+  hitColor: {r: 1, g: 0.2, b: 0.15, a: 0.95}
+--- !u!114 &1040469006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040468998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3261234ce989ee84e91026a808c745a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ammoType: {fileID: 11400000, guid: d3b5b2fb39d6b7d43930baa1ecb16809, type: 2}
+  startLoaded: 1
+  cylinder: {fileID: 0}
+  chamberRadius: 0.01
+  rearFace: -0.023
+  angleOffset: 0
+  showGizmos: 1
+  ejector: {fileID: 0}
+  ejectorRod: {fileID: 0}
+  ejectorTravel: 0.012
+  ejectStroke: 0
+  stepAngle: -60
+--- !u!114 &1040469007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040468998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b8990a29c59010478d91182bc406c89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flipAngle: 25
+  aimFlipMultiplier: 0.7
+  flipVariation: 0.15
+  sideAngle: 0.6
+  rollAngle: 1
+  recoilBack: 0.018
+  recoilUp: 0.002
+  gripDisturb: 0.35
+  tiredMultiplier: 1.35
+  cameraFlip: 0.5
+  cameraRollAngle: 0.3
+  cameraJolt: 0.06
+  viewClimb: 3
+  viewClimbSide: 0.15
+  muzzleFlash: 1
+  flashSize: 3
+  flashColor: {r: 0.9528302, g: 0.65997773, b: 0.30113026, a: 1}
+  lightIntensity: 8
+  lightRange: 6
+  lightDuration: 0.06
+  smoke: 1
+  smokeAmount: 5
+  smokeLifetime: 1.6
+  cylinderGapPuff: 1
+  flashMaterial: {fileID: 2100000, guid: 7b9db86482394ab43b8db2a046cc4af0, type: 2}
+  smokeMaterial: {fileID: 2100000, guid: 6533366364c212e4780fee9b5bf183e0, type: 2}
+  shotSound: {fileID: 8300000, guid: 4d31380627dfbfd45b1af5a2dd34569c, type: 3}
+  dryFireSound: {fileID: 8300000, guid: a2d11139fc6b1f54ebf506996c917e9f, type: 3}
+  volume: 1
+  spatialBlend: 0.7
+  minDistance: 1
+  maxDistance: 300
+  rolloff: 0
+  pitchVariation: 0.05
+--- !u!114 &1040469008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040468998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56e08a43bac9fe94cbfe7c0f8ca08a33, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  inTime: 0.45
+  outTime: 0.35
+  vignetteIntensity: 0.42
+  vignetteSmoothness: 0.45
+  vignetteRoundness: 1
+  focusBlur: 1
+  blurStrength: 0.3
+  blurQuality: 1
+  focusOffset: 0
+  logEvents: 1
+--- !u!114 &1040469009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040468998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27c30eb7463a6b24d838d08b9d366c13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  emptyColor: {r: 1, g: 1, b: 1, a: 0.9}
+  spentColor: {r: 0.68, g: 0.68, b: 0.68, a: 0.85}
+  ringRadius: 0.0044
+  ringWidth: 0.0007
+  hoverScale: 1.15
+  hoverBoost: 1.6
+  ringDepth: -0.0006
+  outlineColor: {r: 1, g: 1, b: 1, a: 0.75}
+  outlineRadius: 0.0154
+  outlineWidth: 0.0006
+  outlineDepth: -0.0221
+  pickTolerance: 1.3
+  instantActions: 1
+  logClicks: 1
 --- !u!4 &1066103089 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -481320100699377648, guid: acf2fc5ed3b6d2c469da3dfb84e32a37, type: 3}
@@ -1765,6 +1926,8 @@ MonoBehaviour:
   swayMaxAngle: 5
   swaySmooth: 8
   strafeTilt: 2.5
+  recoilRiseTime: 0.04
+  recoilReturnTime: 0.18
   leanAngle: 14
   leanOffset: 0.4
   leanSpeed: 4

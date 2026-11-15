@@ -6,6 +6,8 @@ using UnityEngine.InputSystem;
 
 // Вешается на корень Revolver (рядом с Animator).
 // ЛКМ — выстрел (барабан закрыт) или раскрутка барабана (барабан открыт).
+// Выстрел: барабан проворачивается на камору (RevolverCylinder), курок падает (OnShot),
+// если там патрон — пуля летит из дула (RevolverShooter), иначе сухой щелчок.
 // R — открыть / закрыть барабан.
 // Методы OnShot / OnSpinStart / OnCylinderClosed вызываются из анимаций (Animation Events).
 [RequireComponent(typeof(Animator))]
@@ -28,12 +30,16 @@ public class RevolverFire : MonoBehaviour
     [BoxGroup("Отладка")] public bool logEvents = true;
 
     [ShowNativeProperty] public bool IsOpen => isOpen;
+    // Барабан открыт и стоит (не открывается, не крутится) — можно осматривать
+    public bool IsOpenIdle => isOpen && animator != null && InState("OpenIdle");
 
     // Подписываются руки (FPSArmsRig): убрать / вернуть левую руку
     public event System.Action CylinderOpening;
     public event System.Action CylinderClosing;
 
     Animator animator;
+    RevolverCylinder cylinder;
+    RevolverShooter shooter;
     readonly System.Collections.Generic.HashSet<string> animParams = new System.Collections.Generic.HashSet<string>();
     bool isOpen;
     float nextShotTime;
@@ -43,6 +49,8 @@ public class RevolverFire : MonoBehaviour
         animator = GetComponent<Animator>();
         if (muzzle == null) muzzle = transform.Find("Muzzle");
         foreach (var p in animator.parameters) animParams.Add(p.name);
+        cylinder = GetComponent<RevolverCylinder>();
+        shooter = GetComponent<RevolverShooter>();
     }
 
     void ApplySpeeds()
@@ -78,6 +86,10 @@ public class RevolverFire : MonoBehaviour
         if (isOpen || Time.time < nextShotTime || !InState("Idle")) return;
         nextShotTime = Time.time + fireCooldown;
         animator.SetTrigger("Fire");
+
+        // Самовзвод: пока нажимается спуск, барабан проворачивается на одну камору
+        float cock = (animationSettings != null ? animationSettings.fireCockTime : 0.117f) / Mathf.Max(fireSpeed, 0.01f);
+        if (cylinder != null) cylinder.AdvanceForShot(cock);
     }
 
     public void ToggleCylinder()
@@ -105,10 +117,29 @@ public class RevolverFire : MonoBehaviour
     bool InState(string state) => animator.GetCurrentAnimatorStateInfo(0).IsName(state) && !animator.IsInTransition(0);
 
     // ---------- Animation Events ----------
+    // Курок упал на камору под ним
     public void OnShot()
     {
-        if (logEvents) Debug.Log("БАХ!");
-        // Здесь позже: вспышка, звук, пуля (Raycast из muzzle), отдача камеры
+        if (cylinder == null)
+        {
+            // Без учёта патронов — стреляем всегда
+            if (shooter != null) shooter.Fire(null);
+            if (logEvents) Debug.Log("БАХ!");
+            return;
+        }
+
+        int chamber = cylinder.Model.UnderHammer;
+        var state = cylinder.Model.GetState(chamber);
+        if (cylinder.TryFire(out var ammo))
+        {
+            if (shooter != null) shooter.Fire(ammo);
+            if (logEvents) Debug.Log($"БАХ! (камора {chamber})  {cylinder.Model.Describe()}");
+        }
+        else if (logEvents)
+        {
+            Debug.Log($"Щёлк — в каморе {chamber} {(state == RoundState.Spent ? "стреляная гильза" : "пусто")}  {cylinder.Model.Describe()}");
+        }
+        // Позже: вспышка, звук, отдача
     }
 
     public void OnSpinStart()
