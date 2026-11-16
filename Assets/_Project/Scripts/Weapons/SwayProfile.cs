@@ -5,7 +5,7 @@ using Pistol.Core;
 namespace Pistol.Weapons
 {
     // How a weapon moves in the hands (WeaponSway): weight and inertia, roll, bob, drift, run pose,
-    // recoil spring timing, inspect pose and aiming sway. Model geometry (wrist, rear sight) stays on the component.
+    // inspect pose and aiming sway. Wrist and rear sight come from ItemRig; recoil timing lives in RecoilProfile.
     // Changes made in Play Mode are kept (it is an asset).
     [CreateAssetMenu(menuName = "Pistol/Profiles/Weapon Sway", fileName = "SwayProfile")]
     public class SwayProfile : ScriptableObject
@@ -77,12 +77,6 @@ namespace Pistol.Weapons
         [Foldout("Оружие при беге"), ShowIf("lowerWhileRunning"), Range(0f, 0.5f), Tooltip("Пауза перед подъёмом оружия после остановки, сек")]
         public float sprintPoseHold = 0.12f;
 
-        [Foldout("Отдача (как подлетает ствол)"), Range(0.01f, 0.15f), Tooltip("За сколько секунд ствол подлетает до верхней точки. Меньше — резче")]
-        public float recoilRiseTime = 0.035f;
-        [Foldout("Отдача (как подлетает ствол)"), Range(0.05f, 0.8f), Tooltip("За сколько секунд оружие почти вернулось на место (на 90%)")]
-        public float recoilReturnTime = 0.22f;
-        [Foldout("Отдача (как подлетает ствол)"), Range(0.4f, 1f), Tooltip("1 — возвращается ровно, без перелёта. Меньше — с лёгким «клевком» ниже исходного")]
-        public float recoilReturnDamping = 0.85f;
         [Foldout("Осмотр барабана (Alt)"), Tooltip("Насколько сдвинуть оружие в режиме осмотра: ближе к лицу, задним торцом барабана к глазам")]
         [Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.25f)]
         public Vector3 inspectPosition = new Vector3(-0.04f, 0.06f, -0.06f);

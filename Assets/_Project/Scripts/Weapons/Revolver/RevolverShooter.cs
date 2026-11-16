@@ -136,11 +136,9 @@ namespace Pistol.Weapons.Revolver
         [Button("Взять высоту прицела из точки целика")]
         void SightHeightFromRearSight()
         {
-            var sway = GetComponent<WeaponSway>();
             var rig = GetComponent<ItemRig>();
-            var m = rig != null ? rig.Muzzle : null;
-            if (sway == null || m == null) { Debug.LogWarning("WeaponSway and the ItemRig Muzzle are required"); return; }
-            sightHeight = Mathf.Max(0f, sway.rearSightPoint.y - m.localPosition.y);
+            if (rig == null || rig.Muzzle == null || rig.RearSight == null) { Debug.LogWarning("ItemRig with Muzzle and Rear Sight is required"); return; }
+            sightHeight = Mathf.Max(0f, rig.LocalPoint(rig.RearSight, Vector3.zero).y - rig.LocalPoint(rig.Muzzle, Vector3.zero).y);
             Debug.Log($"Sight height above the bore: {sightHeight * 1000f:F1} mm");
         }
 

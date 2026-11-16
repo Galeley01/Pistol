@@ -27,6 +27,13 @@ namespace Pistol.Weapons
         [BoxGroup("Отдача оружия"), Range(1f, 2f), Tooltip("Во сколько раз сильнее отдача у измотанного персонажа")]
         public float tiredMultiplier = 1.35f;
 
+        [BoxGroup("Пружина отдачи оружия"), Range(0.01f, 0.15f), Tooltip("За сколько секунд ствол подлетает до верхней точки. Меньше — резче")]
+        public float recoilRiseTime = 0.035f;
+        [BoxGroup("Пружина отдачи оружия"), Range(0.05f, 0.8f), Tooltip("За сколько секунд оружие почти вернулось на место (на 90%)")]
+        public float recoilReturnTime = 0.22f;
+        [BoxGroup("Пружина отдачи оружия"), Range(0.4f, 1f), Tooltip("1 — возвращается ровно, без перелёта. Меньше — с лёгким «клевком» ниже исходного")]
+        public float recoilReturnDamping = 0.85f;
+
         [BoxGroup("Отдача камеры"), Range(0f, 3f), Tooltip("Насколько градусов коротко подбрасывает голову (потом возвращается)")]
         public float cameraFlip = 0.5f;
         [BoxGroup("Отдача камеры"), Range(0f, 2f), Tooltip("Случайный крен головы, градусы")]

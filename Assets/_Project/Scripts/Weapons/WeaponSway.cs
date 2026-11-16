@@ -12,28 +12,19 @@ namespace Pistol.Weapons
     // - Roll from turn speed: the faster the turn, the more the barrel rolls on Z towards the turn.
     // - Rotation around the wrist: the barrel travels noticeably more than the grip, so the wrists move, not the elbows.
     // - Free-Aim: the weapon rotates by FreeAimOffset from PlayerMovement (deadzone).
-    // - Movement bob, random hand drift, jump/landing kicks, lowered weapon while sprinting.
+    // - Movement bob, random hand drift, jump/landing kicks, lowered weapon while sprinting, inspect pose.
     //
-    // Goes on Revolver. On start it inserts WeaponSwayPivot between the camera and the revolver.
+    // Pose layer for ItemHolderWithPose (hand step): adds its angles and offsets to the frame,
+    // never writes the transform. Recoil is a separate layer (WeaponRecoil).
+    //
+    // Goes on the weapon root (Revolver).
     [RequireComponent(typeof(ItemRig))]
-    public class WeaponSway : MonoBehaviour
+    public class WeaponSway : MonoBehaviour, IPoseLayer
     {
         [BoxGroup("Профиль"), Required("Назначьте профиль: раскачивание оружия"), SerializeField]
         [Tooltip("Ассет с настройками. Кликните по полю, чтобы открыть его со всеми группами")]
         SwayProfile profile;
         public SwayProfile Profile => profile;
-
-        [BoxGroup("Геометрия модели"), Tooltip("Взять точку запястья из рига рук (ItemRig > Right Hand Grip)")]
-        public bool wristFromRig = true;
-        [BoxGroup("Геометрия модели"), HideIf("wristFromRig")]
-        [Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.2f), Tooltip("Вокруг какой точки (относительно Revolver) вращается оружие")]
-        public Vector3 wristPivot = new Vector3(0.015f, -0.03f, -0.07f);
-        [BoxGroup("Геометрия модели"), Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.1f)]
-        [Tooltip("Точка, вокруг которой подлетает ствол при отдаче: от кисти на рукояти. Ниже/назад — рукоять сильнее упирается, ствол сильнее подлетает")]
-        public Vector3 recoilPivotOffset = Vector3.zero;
-        [BoxGroup("Геометрия модели"), Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.15f)]
-        [Tooltip("Точка у целика (относительно Revolver). В прицеле оружие вращается вокруг неё: целик у глаза, а мушка гуляет")]
-        public Vector3 rearSightPoint = new Vector3(0f, 0.055f, 0.01f);
 
         [BoxGroup("Отладка"), Range(0f, 1f), Tooltip("Ставит позу осмотра без Alt — удобно подбирать ползунки в Play Mode (барабан при этом можно не открывать)")]
         public float inspectPreview = 0f;
@@ -41,17 +32,19 @@ namespace Pistol.Weapons
         public bool showAimPoint = false;
         [BoxGroup("Отладка"), ShowIf("showAimPoint"), Range(2f, 12f)] public float aimPointSize = 4f;
 
-        // 0..1, how far the weapon is in the inspect pose (set by RevolverInspect)
-        [HideInInspector] public float inspectAmount;   // TODO(stage 4): PoseStack layer instead of a public field
+        // Fallbacks when ItemRig has no Right Hand Grip / Rear Sight (weapon space)
+        static readonly Vector3 DefaultWrist = new Vector3(0.015f, -0.03f, -0.07f);
+        static readonly Vector3 DefaultRearSight = new Vector3(0f, 0.055f, 0.01f);
 
-        Transform pivot;
         Camera cam;
         Transform muzzle;
         ItemRig rig;
-        Vector3 wristPoint;          // wrist used at runtime: from the rig, or Wrist Pivot
+        Vector3 wristPoint;          // the wrist (right hand grip) in weapon space: rotation pivot from the hip
+        Vector3 rearSightPoint;      // the rear sight in weapon space: rotation pivot while aiming
         PlayerMovement movement;
         CharacterController controller;
-        WeaponAim weaponAim;
+
+        public int PoseOrder => Items.PoseOrder.Hand;
 
         // Weapon lag behind the view: x = pitch (down +), y = yaw (right +), z = roll
         Vector3 lag, lagVel;
@@ -63,23 +56,12 @@ namespace Pistol.Weapons
         bool wasGrounded = true;
         float lastAirVelocity;
         float aimBreathPhase, aimShakeTime, instability, instabilityTime;
-        Vector3 recoilRot, recoilRotVel, recoilPos, recoilPosVel;   // separate stiff recoil spring
 
         // External kick (e.g. the weapon reached the eye): rotation velocity (deg/s) and position velocity (m/s)
         public void AddKick(Vector3 rotationVelocity, Vector3 positionVelocity)
         {
             lagVel += rotationVelocity;
             posVel += positionVelocity;
-        }
-
-        // Shot recoil: how many degrees the barrel flips (x- = up, y = side, z = roll)
-        // and how many meters the weapon moves (z- = back towards the face). These are peaks, not velocities.
-        // Rotation is around the wrist on the grip: the barrel flips, the grip stays in the hand.
-        public void AddRecoil(Vector3 peakRotation, Vector3 peakPosition)
-        {
-            float k = RecoilSpring.ImpulseFor(1f, profile.recoilRiseTime);
-            recoilRotVel += peakRotation * k;
-            recoilPosVel += peakPosition * k;
         }
 
         // Disturb the grip (0..1): the barrel wanders until the grip settles (like after turning while aiming)
@@ -90,39 +72,31 @@ namespace Pistol.Weapons
         void Awake()
         {
             if (profile == null) { Debug.LogError("WeaponSway: no profile assigned.", this); enabled = false; return; }
-            pivot = new GameObject("WeaponSwayPivot").transform;
-            pivot.SetParent(transform.parent, false);
-            pivot.localPosition = Vector3.zero;
-            pivot.localRotation = Quaternion.identity;
-            transform.SetParent(pivot, false);
-
-            cam = GetComponentInParent<Camera>();
-            movement = GetComponentInParent<PlayerMovement>();
-            controller = movement != null ? movement.GetComponent<CharacterController>()
-                                          : GetComponentInParent<CharacterController>();
-            weaponAim = GetComponent<WeaponAim>();
             rig = ItemRig.On(this);
             muzzle = rig != null ? rig.MuzzleOrRoot : transform;
         }
 
-        void Start()
+        public void Bind(PoseContext context)
         {
-            wristPoint = wristPivot;
-            if (wristFromRig)
-            {
-                var hand = rig != null ? rig.RightHandGrip : null;
-                if (hand != null) wristPoint = transform.InverseTransformPoint(hand.position);
-                else Debug.LogWarning("WeaponSway: Wrist From Rig is on but ItemRig has no Right Hand Grip, using Wrist Pivot.", this);
-            }
+            cam = context.Camera;
+            movement = context.Movement;
+            controller = context.Controller;
         }
 
-        void Update()
+        void Start()
         {
-            float dt = Time.deltaTime;
-            if (dt <= 0f) return;
+            if (rig == null) return;
+            if (rig.RightHandGrip == null) Debug.LogWarning("WeaponSway: ItemRig has no Right Hand Grip, using a default wrist point.", this);
+            if (rig.RearSight == null) Debug.LogWarning("WeaponSway: ItemRig has no Rear Sight, using a default rear sight point.", this);
+            wristPoint = rig.LocalPoint(rig.RightHandGrip, DefaultWrist);
+            rearSightPoint = rig.LocalPoint(rig.RearSight, DefaultRearSight);
+        }
 
-            float aim = weaponAim != null ? weaponAim.AimAmount : 0f;
-            float ip = Mathf.SmoothStep(0f, 1f, Mathf.Max(inspectAmount, inspectPreview));   // inspect pose
+        public void ApplyPose(ref PoseFrame frame)
+        {
+            float dt = frame.DeltaTime;
+            float aim = frame.Aim;
+            float ip = Mathf.SmoothStep(0f, 1f, Mathf.Max(frame.Inspect, inspectPreview));   // inspect pose
             float k = profile.masterIntensity * Mathf.Lerp(1f, profile.aimMultiplier, aim)       // bob, drift
                     * Mathf.Lerp(1f, profile.inspectSwayMultiplier, ip);
             float kLag = profile.masterIntensity * Mathf.Lerp(1f, profile.aimLagMultiplier, aim); // inertia and lag
@@ -260,7 +234,6 @@ namespace Pistol.Weapons
 
             // ---------- Assembly ----------
             Vector3 euler = aimRot + lag * kLag + bobRot + driftRot + aimSway + profile.sprintRotation * rp + profile.inspectRotation * ip;
-            Quaternion rot = Quaternion.Euler(euler);
 
             // The hand shifts slightly after the rotation (as if leading with the wrist)
             Vector3 shift = new Vector3((aimRot.y + lag.y * kLag) * profile.handShift, -(aimRot.x + lag.x * kLag) * profile.handShift, 0f);
@@ -268,18 +241,9 @@ namespace Pistol.Weapons
 
             // From the hip rotate around the wrist (the barrel travels more than the grip);
             // while aiming, around the rear sight: it stays at the eye while the front sight wanders (sights misalign)
-            Vector3 localPivot = Vector3.Lerp(wristPoint, rearSightPoint, aim);
-            Vector3 wrist = transform.localPosition + transform.localRotation * localPivot;
-            Vector3 pivotPos = offset + wrist - rot * wrist;
-
-            // ---------- 9. Recoil: rotation around the wrist on the grip ----------
-            RecoilSpring.Step(ref recoilRot, ref recoilRotVel, profile.recoilRiseTime, profile.recoilReturnTime, profile.recoilReturnDamping, dt);
-            RecoilSpring.Step(ref recoilPos, ref recoilPosVel, profile.recoilRiseTime, profile.recoilReturnTime, profile.recoilReturnDamping, dt);
-            Quaternion gunFrame = rot * transform.localRotation;                    // weapon axes in camera space
-            Vector3 hand = pivotPos + rot * (transform.localPosition + transform.localRotation * (wristPoint + recoilPivotOffset));
-            Quaternion kick = gunFrame * Quaternion.Euler(recoilRot) * Quaternion.Inverse(gunFrame);
-            pivot.localRotation = kick * rot;
-            pivot.localPosition = hand + kick * (pivotPos - hand) + gunFrame * recoilPos;
+            frame.HandEuler += euler;
+            frame.HandOffset += offset;
+            frame.HandPivot = Vector3.Lerp(wristPoint, rearSightPoint, aim);
         }
 
         void OnGUI()

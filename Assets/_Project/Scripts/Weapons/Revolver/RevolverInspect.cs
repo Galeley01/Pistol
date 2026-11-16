@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering.PostProcessing;
 using NaughtyAttributes;
+using Pistol.Items;
 using Pistol.Player;
 
 namespace Pistol.Weapons.Revolver
@@ -9,7 +10,8 @@ namespace Pistol.Weapons.Revolver
     //
     // Cylinder open (R) -> left Alt enters inspect mode:
     //   - the camera stops turning, the cursor appears, movement is disabled;
-    //   - the weapon moves smoothly into the inspect pose (tuned in the WeaponSway inspect pose foldout);
+    //   - the weapon moves smoothly into the inspect pose (tuned in the SwayProfile inspect pose foldout;
+    //     this component publishes how far we are in it as a pose layer, WeaponSway applies the pose);
     //   - the screen edges get darker;
     //   - the eyes focus on the cylinder: distant objects blur slightly (Depth of Field).
     // Alt again or Esc leaves inspect mode (the cylinder stays open).
@@ -17,7 +19,7 @@ namespace Pistol.Weapons.Revolver
     //
     // Chamber picking lives in RevolverChamberPicker; loading and unloading by hand will build on this mode.
     [RequireComponent(typeof(RevolverFire))]
-    public class RevolverInspect : MonoBehaviour
+    public class RevolverInspect : MonoBehaviour, IPoseLayer
     {
         [BoxGroup("Переход"), Range(0.1f, 1.5f), Tooltip("За сколько секунд оружие поднимается в позу осмотра")]
         public float inTime = 0.45f;
@@ -49,7 +51,6 @@ namespace Pistol.Weapons.Revolver
         public event System.Action<bool> InspectChanged;
 
         RevolverFire fire;
-        WeaponSway sway;
         PlayerContext context;
         Camera cam;
         bool inspecting;
@@ -61,12 +62,20 @@ namespace Pistol.Weapons.Revolver
         Transform focusTarget;
         bool volumeFailed;
 
+        public int PoseOrder => Items.PoseOrder.State;
+
+        public void Bind(PoseContext pose)
+        {
+            context = pose.Player;
+            cam = pose.Camera;
+        }
+
+        public void ApplyPose(ref PoseFrame frame) => frame.Inspect = amount;
+
         void Start()
         {
             fire = GetComponent<RevolverFire>();
-            sway = GetComponent<WeaponSway>();
-            context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
-            cam = GetComponentInParent<Camera>();
+            if (context == null) Debug.LogError("RevolverInspect: not held by an ItemHolderWithPose, inspect mode is off.", this);
             var cyl = GetComponent<RevolverCylinder>();
             focusTarget = cyl != null && cyl.CylinderTransform != null ? cyl.CylinderTransform : transform;
         }
@@ -100,7 +109,6 @@ namespace Pistol.Weapons.Revolver
 
             amount = Mathf.MoveTowards(amount, inspecting ? 1f : 0f,
                                        Time.deltaTime / Mathf.Max(inspecting ? inTime : outTime, 0.01f));
-            if (sway != null) sway.inspectAmount = amount;   // TODO(stage 4): inspect pose becomes a PoseStack layer
             UpdateVolume(Mathf.SmoothStep(0f, 1f, amount));
         }
 

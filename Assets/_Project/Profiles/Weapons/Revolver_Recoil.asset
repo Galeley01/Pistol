@@ -21,6 +21,9 @@ MonoBehaviour:
   recoilUp: 0.002
   gripDisturb: 0.35
   tiredMultiplier: 1.35
+  recoilRiseTime: 0.035
+  recoilReturnTime: 0.22
+  recoilReturnDamping: 0.85
   cameraFlip: 0.5
   cameraRollAngle: 0.3
   cameraJolt: 0.06

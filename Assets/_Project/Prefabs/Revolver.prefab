@@ -124,6 +124,68 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1749805335459794143}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3656689656372050950
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4101562990694042455}
+  m_Layer: 0
+  m_Name: RearSight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4101562990694042455
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3656689656372050950}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.055, z: 0.01}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1749805335459794143}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2948607811729786726
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 370641474056219509}
+  m_Layer: 0
+  m_Name: FrontSight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &370641474056219509
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2948607811729786726}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.0536, z: 0.2551}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1749805335459794143}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &2288452944205933364
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -191,6 +253,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3886674426573576766}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4101562990694042455}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 370641474056219509}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
       insertIndex: -1
@@ -222,6 +290,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2290907684855445227}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 792802836645771926}
   m_SourcePrefab: {fileID: 100100000, guid: 0a3304ad35f416f4894c5ad4a86522b5, type: 3}
 --- !u!1 &1370042074813584997 stripped
 GameObject:
@@ -304,14 +375,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   profile: {fileID: 11400000, guid: eeccb6964ea1461b9a594a0bd2a347f2, type: 2}
-  wristFromRig: 1
-  wristPivot: {x: 0.015, y: -0.03, z: -0.07}
-  recoilPivotOffset: {x: 0, y: 0, z: 0}
   inspectPreview: 0
-  inspectAmount: 1
-  rearSightPoint: {x: 0, y: 0.055, z: 0.01}
   showAimPoint: 0
   aimPointSize: 4
+--- !u!114 &792802836645771926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1370042074813584997}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bff7da41fad04dbd8e99845afaee6cc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  profile: {fileID: 11400000, guid: cf7ad213f90f4c738e5b935a5aeea859, type: 2}
+  recoilPivotOffset: {x: 0, y: 0, z: 0}
 --- !u!114 &8511121920320663316
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -447,6 +527,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   muzzle: {fileID: 1794268172045670804}
+  rearSight: {fileID: 4101562990694042455}
+  frontSight: {fileID: 370641474056219509}
   rightHandGrip: {fileID: 3384759928529688348}
   leftHandGrip: {fileID: 7294991763659663895}
   rightElbowHint: {fileID: 7186432051075829394}

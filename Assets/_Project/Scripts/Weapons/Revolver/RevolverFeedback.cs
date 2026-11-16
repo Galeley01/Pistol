@@ -13,7 +13,7 @@ namespace Pistol.Weapons.Revolver
     // Listens to the cylinder: a shot triggers weapon and camera recoil, flash, light, smoke and sound;
     // a dry fire triggers only the sound.
     //
-    // Recoil is a kick of the WEAPON (a separate stiff spring in WeaponSway, "Recoil"): the barrel flips up
+    // Recoil is a kick of the WEAPON (a separate stiff spring, WeaponRecoil): the barrel flips up
     // sharply around the wrist on the grip and settles back calmly; the arms follow through IK.
     // The camera (head) jolts very slightly and rises a little. Each shot disturbs the grip (Instability),
     // so a quick follow-up shot is less accurate on its own.
@@ -65,6 +65,7 @@ namespace Pistol.Weapons.Revolver
 
         RevolverCylinder cylinder;
         WeaponSway sway;
+        WeaponRecoil recoil;
         WeaponAim weaponAim;
         CameraMotion cameraFx;
         PlayerMovement movement;
@@ -80,6 +81,8 @@ namespace Pistol.Weapons.Revolver
             if (profile == null) { Debug.LogError("RevolverFeedback: no profile assigned.", this); enabled = false; return; }
             cylinder = GetComponent<RevolverCylinder>();
             sway = GetComponent<WeaponSway>();
+            recoil = GetComponent<WeaponRecoil>();
+            if (recoil == null) Debug.LogWarning("RevolverFeedback: no WeaponRecoil, the weapon won't kick.", this);
             weaponAim = GetComponent<WeaponAim>();
             movement = GetComponentInParent<PlayerMovement>();
             cameraFx = GetComponentInParent<Camera>() != null ? GetComponentInParent<Camera>().GetComponent<CameraMotion>() : null;
@@ -108,7 +111,7 @@ namespace Pistol.Weapons.Revolver
             float m = Mathf.Lerp(1f, profile.tiredMultiplier, fatigue);
 
             // Weapon recoil: barrel up (-X), random side and roll; weapon back and slightly up
-            if (sway != null)
+            if (recoil != null)
             {
                 float aim = weaponAim != null ? weaponAim.AimAmount : 0f;
                 float flip = profile.flipAngle * Mathf.Lerp(1f, profile.aimFlipMultiplier, aim)
@@ -117,8 +120,8 @@ namespace Pistol.Weapons.Revolver
                                       Random.Range(-profile.sideAngle, profile.sideAngle),
                                       Random.Range(-profile.rollAngle, profile.rollAngle)) * m;
                 var pos = new Vector3(0f, profile.recoilUp, -profile.recoilBack) * m;
-                sway.AddRecoil(rot, pos);
-                sway.AddInstability(profile.gripDisturb * m);
+                recoil.AddRecoil(rot, pos);
+                if (sway != null) sway.AddInstability(profile.gripDisturb * m);
             }
 
             // Camera: short kick and shake, plus a small view climb

@@ -44,9 +44,6 @@ MonoBehaviour:
   sprintPoseInTime: 0.3
   sprintPoseOutTime: 0.6
   sprintPoseHold: 0.12
-  recoilRiseTime: 0.035
-  recoilReturnTime: 0.22
-  recoilReturnDamping: 0.85
   inspectPosition: {x: -0.014, y: 0.06, z: -0.123}
   inspectRotation: {x: -14.799988, y: -26.8, z: -14.100006}
   inspectSwayMultiplier: 0.3
