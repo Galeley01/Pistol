@@ -8,11 +8,9 @@ namespace Pistol.Weapons.Revolver
     // and rotates the cylinder itself on every shot.
     // Goes on Revolver. Sockets Chamber_0..5 are created inside Crane/Cylinder when the game starts.
     //
-    // Extractor: the model has two parts, the star (Crane/Ejector) and the rod (Crane/EjectorRod).
-    // Their meshes are built in cylinder space, but their FBX placement is unreliable,
-    // so the script places them by the cylinder: the star goes inside the cylinder (rotates with it),
-    // the rod stays on Crane at the cylinder's position (doesn't rotate). Outside Play Mode use the "place star and rod" button.
-    // The Eject Stroke slider (0..1) pushes the star and the rounds back and the rod inwards.
+    // Extractor: the star (Crane/Cylinder/Ejector) rotates with the cylinder, the rod (Crane/EjectorRod)
+    // stays on the crane. Both are placed by the model; the script only slides them along the cylinder axis:
+    // the Eject Stroke slider (0..1) pushes the star and the rounds back and the rod with them.
     //
     // Why the script rotates the cylinder instead of the animation: the Fire clip rotates it 0 -> -60 degrees
     // and then returns to 0. With an empty cylinder that's invisible (it's symmetric), but with rounds
@@ -37,7 +35,7 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Гнёзда камор"), Tooltip("Рисовать гнёзда в окне Scene")]
         public bool showGizmos = true;
 
-        [BoxGroup("Экстрактор"), Tooltip("Звезда экстрактора (найдётся сама: Crane/Ejector)")]
+        [BoxGroup("Экстрактор"), Tooltip("Звезда экстрактора (найдётся сама: Crane/Cylinder/Ejector)")]
         public Transform ejector;
         [BoxGroup("Экстрактор"), Tooltip("Шток экстрактора (найдётся сам: Crane/EjectorRod)")]
         public Transform ejectorRod;
@@ -74,7 +72,7 @@ namespace Pistol.Weapons.Revolver
 
             model = new CylinderModel();
             model.ChamberChanged += RefreshView;
-            if (cylinder != null) { BuildSockets(); SetupEjector(); }
+            if (cylinder != null) { BuildSockets(); FindExtractor(); }
             if (startLoaded) model.FillAll(ammoType);
             else for (int i = 0; i < CylinderModel.Count; i++) RefreshView(i);
         }
@@ -108,23 +106,15 @@ namespace Pistol.Weapons.Revolver
             }
         }
 
-        void SetupEjector()
+        Vector3 ejectorRest, ejectorRodRest;   // positions from the model, the stroke is added on top
+
+        void FindExtractor()
         {
-            if (ejector == null) ejector = transform.Find("Crane/Ejector");
+            // TODO(stage 2): explicit references in the weapon rig instead of paths
+            if (ejector == null) ejector = cylinder.Find("Ejector");
             if (ejectorRod == null) ejectorRod = transform.Find("Crane/EjectorRod");
-            if (ejector != null)
-            {
-                // The star mesh is already in cylinder space, so inside the cylinder it sits at zero
-                ejector.SetParent(cylinder, false);
-                ejector.localPosition = Vector3.zero;
-                ejector.localRotation = Quaternion.identity;
-                ejector.localScale = Vector3.one;
-            }
-            if (ejectorRod != null && cylinder.parent != null)
-            {
-                ejectorRod.SetParent(cylinder.parent, false);
-                ejectorRod.localScale = cylinder.localScale;
-            }
+            if (ejector != null) ejectorRest = ejector.localPosition;
+            if (ejectorRod != null) ejectorRodRest = ejectorRod.localPosition;
         }
 
         void ApplyEjector()
@@ -132,14 +122,9 @@ namespace Pistol.Weapons.Revolver
             float d = ejectorTravel * Mathf.Clamp01(ejectStroke);
             for (int k = 0; k < CylinderModel.Count; k++)
                 if (sockets[k] != null) sockets[k].localPosition = SocketLocalPosition(k) + new Vector3(0f, 0f, -d);
-            if (ejector != null) ejector.localPosition = new Vector3(0f, 0f, -d);
-            // The rod sits where the cylinder is, without its rotation, and slides inwards along the axis
-            if (ejectorRod != null)
-            {
-                ejectorRod.localRotation = Quaternion.identity;
-                // Inside Crane the cylinder is rotated only around its own Z axis, so "no rotation" means identity
-                ejectorRod.localPosition = cylinder.localPosition + new Vector3(0f, 0f, -d * cylinder.localScale.z);
-            }
+            // The cylinder and the rod are not rotated relative to the crane, so the cylinder axis is local Z for both
+            if (ejector != null) ejector.localPosition = ejectorRest + new Vector3(0f, 0f, -d);
+            if (ejectorRod != null) ejectorRod.localPosition = ejectorRodRest + new Vector3(0f, 0f, -d);
         }
 
         GameObject CreateView(Transform socket, GameObject prefab, bool spent)
@@ -237,26 +222,6 @@ namespace Pistol.Weapons.Revolver
         [Button("Зарядить все")] void BtnFill() { if (model != null) model.FillAll(ammoType); }
         [Button("Все — стреляные гильзы")] void BtnSpend() { if (model != null) model.SpendAll(); }
         [Button("Опустошить")] void BtnEmpty() { if (model != null) model.EmptyAll(); }
-
-        // Outside Play Mode: puts the star and rod where the cylinder is (so they don't hang off to the side in the Scene view).
-        // In Play Mode the script does this itself.
-        [Button("Поставить звезду и шток на место")]
-        void BtnPlaceEjector()
-        {
-            var cyl = cylinder != null ? cylinder : transform.Find("Crane/Cylinder");
-            if (cyl == null) { Debug.LogWarning("Crane/Cylinder not found"); return; }
-            foreach (var name in new[] { "Crane/Ejector", "Crane/EjectorRod" })
-            {
-                var t = transform.Find(name);
-                if (t == null) t = cyl.Find(name.Substring(6));
-                if (t == null) { Debug.LogWarning(name + " not found. Is Revolver.fbx up to date?"); continue; }
-#if UNITY_EDITOR
-                UnityEditor.Undo.RecordObject(t, "Place ejector");
-#endif
-                if (t.parent == cyl) { t.localPosition = Vector3.zero; t.localRotation = Quaternion.identity; t.localScale = Vector3.one; }
-                else { t.localPosition = cyl.localPosition; t.localRotation = cyl.localRotation; t.localScale = cyl.localScale; }
-            }
-        }
 
         void OnDrawGizmos()
         {
