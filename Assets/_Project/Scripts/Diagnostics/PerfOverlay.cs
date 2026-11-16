@@ -10,6 +10,7 @@ using UnityEngine.Rendering.PostProcessing;
 using UnityEngine.InputSystem;
 using Pistol.Core;
 using Pistol.Player;
+using Pistol.PostFx;
 using Pistol.Weapons;
 using Pistol.Weapons.Revolver;
 
@@ -23,7 +24,7 @@ namespace Pistol.Diagnostics
     //   F5  — VSync on / off (turn it off to measure HEADROOM)
     //   F6  — Motion Blur on / off
     //   F7  — all post-processing on / off
-    //   F8  — aim blur (DoF + edge blur) on / off
+    //   F8  — screen effects of aim and inspect (CameraEffects: focus, vignette, edge blur) on / off
     //   F9  — next resolution (Shift+F9 — previous). The list is built down from the screen resolution
     //   F10 — report: copied to the clipboard (paste it into the chat) and appended to a file on the Desktop
     //
@@ -99,7 +100,8 @@ namespace Pistol.Diagnostics
         PostProcessLayer ppLayer;
         readonly List<MotionBlur> motionBlurs = new List<MotionBlur>();
         bool mbSearched, motionBlurOn;
-        bool aimBlurOn = true, aimBlurKnown;
+        bool screenFxOn = true;
+        CameraEffects cameraEffects;
 
         // ---------- Game references ----------
         PlayerMovement movement;
@@ -234,7 +236,7 @@ namespace Pistol.Diagnostics
             HandleKeys();
 
             // Look objects up only while something is still missing
-            bool missing = movement == null || weaponAim == null || revolver == null || ppLayer == null;
+            bool missing = movement == null || weaponAim == null || revolver == null || ppLayer == null || cameraEffects == null;
             refSearchTimer -= Time.unscaledDeltaTime;
             if (missing && refSearchTimer <= 0f) { refSearchTimer = 1f; FindRefs(); }
             if (!mbSearched && Time.frameCount > 3) FindMotionBlur();
@@ -356,7 +358,7 @@ namespace Pistol.Diagnostics
             }
             if (f6) ToggleMotionBlur();
             if (f7) TogglePostFx();
-            if (f8) ToggleAimBlur();
+            if (f8) ToggleScreenFx();
             if (f9) NextResolution(shift ? -1 : 1);
             if (f10) SaveReport();
         }
@@ -440,10 +442,11 @@ namespace Pistol.Diagnostics
                 if (cam != null) ppLayer = cam.GetComponent<PostProcessLayer>();
                 if (ppLayer == null) ppLayer = FindFirstObjectByType<PostProcessLayer>();
             }
-            if (weaponAim != null && !aimBlurKnown)
+            if (cameraEffects == null)
             {
-                aimBlurKnown = true;
-                aimBlurOn = weaponAim.blurWeapon || weaponAim.edgeBlur;
+                var cam = Camera.main;
+                if (cam != null) cameraEffects = cam.GetComponent<CameraEffects>();
+                if (cameraEffects != null) screenFxOn = !cameraEffects.Suppressed;
             }
         }
 
@@ -454,7 +457,7 @@ namespace Pistol.Diagnostics
             motionBlurs.Clear();
             foreach (var v in FindObjectsByType<PostProcessVolume>(FindObjectsSortMode.None))
             {
-                // Only touch profiles that contain Motion Blur (the WeaponAim aim volume is left alone).
+                // Only touch profiles that contain Motion Blur (CameraEffects volumes are left alone).
                 // v.profile is a runtime copy of the profile — the profile asset in the project isn't changed.
                 if (v.sharedProfile == null || !v.sharedProfile.HasSettings<MotionBlur>()) continue;
                 if (v.profile.TryGetSettings(out MotionBlur mb)) motionBlurs.Add(mb);
@@ -479,14 +482,14 @@ namespace Pistol.Diagnostics
             OnSettingsChanged(ppLayer.enabled ? "post-processing on" : "post-processing off");
         }
 
-        void ToggleAimBlur()
+        void ToggleScreenFx()
         {
             FindRefs();
-            if (weaponAim == null) { ShowToast("WeaponAim not found"); return; }
-            // Suppress / restore without touching WeaponAim's own settings
-            aimBlurOn = !aimBlurOn;
-            weaponAim.SetPostFxSuppressed(!aimBlurOn);
-            OnSettingsChanged(aimBlurOn ? "aim blur on" : "aim blur off");
+            if (cameraEffects == null) { ShowToast("CameraEffects not found"); return; }
+            // Suppress / restore without touching any effect settings
+            screenFxOn = !screenFxOn;
+            cameraEffects.SetSuppressed(!screenFxOn);
+            OnSettingsChanged(screenFxOn ? "screen fx on" : "screen fx off");
         }
 
         static string OnOff(bool b) => b ? "on" : "off";
@@ -496,7 +499,7 @@ namespace Pistol.Diagnostics
             bool pp = ppLayer == null || ppLayer.enabled;
             string mb = motionBlurs.Count == 0 ? "none" : OnOff(motionBlurOn);
             return $"{Screen.width}x{Screen.height}, VSync {OnOff(VSyncOn)}, " +
-                   $"Motion Blur {mb}, post {OnOff(pp)}, aim blur {OnOff(aimBlurOn)}";
+                   $"Motion Blur {mb}, post {OnOff(pp)}, screen fx {OnOff(screenFxOn)}";
         }
 
         // The mode key is rebuilt only when something changed — otherwise a new string would be created
@@ -876,7 +879,7 @@ namespace Pistol.Diagnostics
                       $"hitches: <color={hitchColor}>{hitchCount}</color>   F10 — report\n");
             sb.Append(loadLines).Append('\n');
             sb.Append($"Render {Screen.width}x{Screen.height} of {nativeW}x{nativeH} ({pixPct:F0}% px)  F9\n");
-            sb.Append($"F6 Motion Blur {mb}  F7 post {OnOff(pp)}  F8 aim blur {OnOff(aimBlurOn)}\n");
+            sb.Append($"F6 Motion Blur {mb}  F7 post {OnOff(pp)}  F8 screen fx {OnOff(screenFxOn)}\n");
             sb.Append($"RAM {ram}  Unity {unityMem / 1048576} MB  VRAM {vram}  VSync {OnOff(vsync)} (F5)");
             foreach (var r in recentShort) sb.Append($"\n<color=#FFB060>  {(IsWeb ? "•" : "▸")} {r}</color>");
             if (Now < toastUntil && !string.IsNullOrEmpty(toast)) sb.Append($"\n<color=#8FD3FF>{toast}</color>");

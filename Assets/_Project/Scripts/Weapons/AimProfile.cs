@@ -4,7 +4,11 @@ using Pistol.Core;
 
 namespace Pistol.Weapons
 {
-    // Aiming tuning for WeaponAim: hip and aim positions, raise-to-face timing, aim FOV.
+    // Where the eye focuses while aiming
+    public enum AimFocusMode { FrontSight, Far, HandsAndSights }
+
+    // Aiming tuning for WeaponAim: hip and aim positions, raise-to-face timing, aim FOV, where the eye focuses.
+    // How the focus and the edges look is in the aim ScreenEffectsProfile.
     // Changes made in Play Mode are kept (it is an asset).
     [CreateAssetMenu(menuName = "Pistol/Profiles/Weapon Aim", fileName = "AimProfile")]
     public class AimProfile : ScriptableObject
@@ -38,6 +42,17 @@ namespace Pistol.Weapons
         public float transitionDip = 0.015f;
         [BoxGroup("Подъём к лицу"), Range(0f, 40f), Tooltip("Толчок, когда оружие упирается в плечо/встаёт у глаза (у уставшего сильнее)")]
         public float settleKick = 10f;
+
+        [BoxGroup("Фокус глаз в прицеле"),
+         Tooltip("FrontSight — глаз на мушке: мушка и целик резкие, даль слегка мягкая.\nHandsAndSights — резкие ладони, целик и мушка; предплечья (они ближе к глазу) и даль размыты.\nFar — глаз вдаль: оружие слегка размыто")]
+        public AimFocusMode focusMode = AimFocusMode.FrontSight;
+        [BoxGroup("Фокус глаз в прицеле"), Range(1f, 50f), Tooltip("Для режима Far: на каком расстоянии резкость, метры")]
+        public float farFocusDistance = 8f;
+        [BoxGroup("Фокус глаз в прицеле"), Range(0f, 1f),
+         Tooltip("Для HandsAndSights: где точка резкости. 0 — на ладонях, 1 — на мушке. Чем ближе к ладоням, тем сильнее размыты предплечья")]
+        public float focusBias = 0.3f;
+        [BoxGroup("Фокус глаз в прицеле"), Range(0f, 0.3f), Tooltip("Насколько сужается чёткая зона размытия по краям у измотанного персонажа (эффект тоннеля)")]
+        public float tiredTunnel = 0.1f;
 
         [BoxGroup("Камера")] public bool changeFov = true;
         [BoxGroup("Камера"), ShowIf("changeFov"), Range(40f, 100f), Tooltip("Угол обзора при прицеливании")]

@@ -6,7 +6,7 @@ namespace Pistol.PostFx
 {
     // Screen edge blur (aim "tunnel" effect) for the Post Processing package.
     // Works together with EdgeBlur.shader (Hidden/Custom/EdgeBlur).
-    // Driven by WeaponAim; no need to add it to a profile manually.
+    // Driven by CameraEffects; no need to add it to a profile manually.
     [Serializable]
     [PostProcess(typeof(EdgeBlurRenderer), PostProcessEvent.AfterStack, "Custom/Edge Blur")]
     public sealed class EdgeBlur : PostProcessEffectSettings

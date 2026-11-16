@@ -23,5 +23,9 @@ MonoBehaviour:
   transitionRoll: 8
   transitionDip: 0.015
   settleKick: 10
+  focusMode: 0
+  farFocusDistance: 8
+  focusBias: 0.3
+  tiredTunnel: 0.1
   changeFov: 1
   aimFov: 75

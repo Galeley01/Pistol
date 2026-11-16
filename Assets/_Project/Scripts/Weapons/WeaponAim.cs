@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Rendering.PostProcessing;
 using NaughtyAttributes;
 using Pistol.Core;
 using Pistol.Items;
@@ -21,35 +20,9 @@ namespace Pistol.Weapons
         AimProfile profile;
         public AimProfile Profile => profile;
 
-        public enum FocusMode { FrontSight, Far, HandsAndSights }
-
-        // TODO(stage 5): post-processing settings below move to CameraEffects
-        [BoxGroup("Фокус глаз в прицеле")] public bool blurWeapon = true;
-        [BoxGroup("Фокус глаз в прицеле"), ShowIf("blurWeapon"),
-         Tooltip("FrontSight — глаз на мушке: мушка и целик резкие, даль слегка мягкая.\nHandsAndSights — резкие ладони, целик и мушка; предплечья (они ближе к глазу) и даль размыты.\nFar — глаз вдаль: оружие слегка размыто")]
-        public FocusMode focusMode = FocusMode.FrontSight;
-        [BoxGroup("Фокус глаз в прицеле"), ShowIf("blurWeapon"), Range(0f, 1f), Tooltip("Сила размытия того, что не в фокусе")]
-        public float blurStrength = 0.25f;
-        [BoxGroup("Фокус глаз в прицеле"), ShowIf("blurWeapon"), Range(1f, 50f), Tooltip("Для режима Far: на каком расстоянии резкость, метры")]
-        public float farFocusDistance = 8f;
-        [BoxGroup("Фокус глаз в прицеле"), ShowIf("blurWeapon"), Range(0f, 1f),
-         Tooltip("Для HandsAndSights: где точка резкости. 0 — на ладонях, 1 — на мушке. Чем ближе к ладоням, тем сильнее размыты предплечья")]
-        public float focusBias = 0.3f;
-        [BoxGroup("Фокус глаз в прицеле"), ShowIf("blurWeapon"), Tooltip("Размер размытия. Large — мягче и сильнее, но дороже для видеокарты")]
-        public KernelSize blurQuality = KernelSize.Medium;
-
-        [BoxGroup("Размытие по краям экрана"), Tooltip("В прицеле края экрана размываются — взгляд сосредоточен в центре")]
-        public bool edgeBlur = true;
-        [BoxGroup("Размытие по краям экрана"), ShowIf("edgeBlur"), Range(0f, 1f), Tooltip("Сила размытия краёв")]
-        public float edgeBlurIntensity = 0.7f;
-        [BoxGroup("Размытие по краям экрана"), ShowIf("edgeBlur"), Range(0f, 0.8f), Tooltip("Радиус чёткой зоны в центре (доля высоты экрана)")]
-        public float edgeBlurRadius = 0.3f;
-        [BoxGroup("Размытие по краям экрана"), ShowIf("edgeBlur"), Range(0.05f, 1f), Tooltip("Плавность перехода от чёткого к размытому")]
-        public float edgeBlurSoftness = 0.45f;
-        [BoxGroup("Размытие по краям экрана"), ShowIf("edgeBlur"), Range(0.005f, 0.08f), Tooltip("Ширина размытия")]
-        public float edgeBlurSpread = 0.025f;
-        [BoxGroup("Размытие по краям экрана"), ShowIf("edgeBlur"), Range(0f, 0.3f), Tooltip("Насколько сужается чёткая зона у измотанного персонажа (эффект тоннеля)")]
-        public float tiredTunnel = 0.1f;
+        [BoxGroup("Эффекты экрана"), SerializeField]
+        [Tooltip("Фокус глаз и размытие краёв в прицеле. Где именно фокус — в профиле прицела (Фокус глаз в прицеле). Пусто — без эффектов")]
+        ScreenEffectsProfile effects;
 
         [BoxGroup("Настройка"), Tooltip("Держать прицел без ПКМ — удобно, чтобы подбирать положение в Play Mode")]
         public bool forceAim;
@@ -65,12 +38,10 @@ namespace Pistol.Weapons
         PlayerMovement movement;
         float aim, baseFov = -1f, currentAimIn;
         WeaponSway sway;
-        PostProcessVolume dofVolume;
-        DepthOfField dof;
-        EdgeBlur edge;
+        CameraEffects cameraEffects;
+        ScreenEffectsRequest effectsRequest;
         Vector3 hip;                 // hip pose used at runtime (never written back to the profile)
         float aimT, aimArc;          // smoothed aim (0..1) and the arc to the face (0 at the ends, 1 halfway)
-        bool postFxSuppressed;
 
         // Default front sight above the muzzle when ItemRig has no Front Sight
         const float DefaultFrontSightHeight = 0.012f;
@@ -82,6 +53,7 @@ namespace Pistol.Weapons
             cam = pose.Camera;
             movement = pose.Movement;
             context = pose.Player;
+            cameraEffects = pose.Effects;
         }
 
         void Start()
@@ -139,74 +111,18 @@ namespace Pistol.Weapons
         // 0 = rested, 1 = exhausted (panting after a sprint)
         float Fatigue() => movement != null ? movement.Fatigue : 0f;
 
+        // Eye focus and edge blur: a request to CameraEffects, its strength follows the aim
         void UpdateBlur(float t)
         {
-            bool useDof = blurWeapon && !postFxSuppressed, useEdge = edgeBlur && !postFxSuppressed;
-            if (!useDof && !useEdge)
+            if (effectsRequest == null)
             {
-                if (dofVolume) { dofVolume.weight = 0f; dofVolume.enabled = false; }
-                return;
+                if (effects == null || cameraEffects == null) return;
+                effectsRequest = cameraEffects.CreateRequest(effects, "Aim");
             }
-            if (dofVolume == null && !CreateAimVolume()) return;
-
-            // Eye focus (Depth of Field)
-            dof.enabled.value = useDof;
-            dof.focusDistance.value = CurrentFocusDistance();
-            dof.aperture.value = Mathf.Lerp(22f, 2.8f, blurStrength);   // smaller aperture = stronger blur
-            dof.focalLength.value = Mathf.Lerp(18f, 70f, blurStrength);
-            dof.kernelSize.value = blurQuality;
-
-            // Edge blur: the sharp zone is narrower when tired
-            edge.enabled.value = useEdge;
-            edge.intensity.value = edgeBlurIntensity;
-            edge.radius.value = Mathf.Max(0f, edgeBlurRadius - tiredTunnel * Fatigue());
-            edge.softness.value = edgeBlurSoftness;
-            edge.spread.value = edgeBlurSpread;
-
-            dofVolume.weight = t;
-            dofVolume.enabled = t > 0.001f;
+            effectsRequest.Set(t, CurrentFocusDistance(), profile.tiredTunnel * Fatigue());
         }
 
-        // A separate global Volume for aiming (focus + edges); its weight rises smoothly while aiming
-        bool CreateAimVolume()
-        {
-            var layer = cam.GetComponent<PostProcessLayer>();
-            if (layer == null)
-            {
-                Debug.LogWarning("WeaponAim: no Post-process Layer on the camera, blur disabled.");
-                blurWeapon = false; edgeBlur = false;
-                return false;
-            }
-            int mask = layer.volumeLayer.value, layerIndex = 0;
-            while (layerIndex < 32 && (mask & (1 << layerIndex)) == 0) layerIndex++;
-            if (layerIndex >= 32) { blurWeapon = false; edgeBlur = false; return false; }
-
-            if (Shader.Find("Hidden/Custom/EdgeBlur") == null && edgeBlur)
-                Debug.LogWarning("WeaponAim: EdgeBlur.shader not found. Add it to the project, otherwise edges won't blur.");
-
-            dof = ScriptableObject.CreateInstance<DepthOfField>();
-            dof.enabled.Override(blurWeapon);
-            dof.focusDistance.Override(CurrentFocusDistance());
-            dof.aperture.Override(16f);
-            dof.focalLength.Override(30f);
-            dof.kernelSize.Override(KernelSize.Medium);
-
-            edge = ScriptableObject.CreateInstance<EdgeBlur>();
-            edge.enabled.Override(edgeBlur);
-            edge.intensity.Override(edgeBlurIntensity);
-            edge.radius.Override(edgeBlurRadius);
-            edge.softness.Override(edgeBlurSoftness);
-            edge.spread.Override(edgeBlurSpread);
-
-            dofVolume = PostProcessManager.instance.QuickVolume(layerIndex, 100f, dof, edge);
-            dofVolume.weight = 0f;
-            return true;
-        }
-
-        void OnDestroy()
-        {
-            if (dofVolume != null) RuntimeUtilities.DestroyVolume(dofVolume, true, true);
-        }
+        void OnDestroy() => effectsRequest?.Release();
 
         // ---------- Buttons (write into the profile asset, with Undo) ----------
         bool UsesScenePosition => profile != null && profile.useScenePosition;
@@ -239,21 +155,18 @@ namespace Pistol.Weapons
 #endif
         }
 
-        // Debug overlay: temporarily switch aim blur off without touching the settings
-        public void SetPostFxSuppressed(bool suppressed) => postFxSuppressed = suppressed;
-
         // The eye focuses on the front sight (muzzle) or far away
         float CurrentFocusDistance()
         {
-            if (focusMode == FocusMode.Far || cam == null) return farFocusDistance;
-            if (focusMode == FocusMode.HandsAndSights)
+            if (profile.focusMode == AimFocusMode.Far || cam == null) return profile.farFocusDistance;
+            if (profile.focusMode == AimFocusMode.HandsAndSights)
             {
                 // Between the palms (grip point) and the front sight; everything closer to the eye (forearms) goes out of focus
                 Transform hand = rig != null ? rig.RightHandGrip : null;
                 Vector3 palms = hand != null ? hand.position : transform.position;
                 float dHands = Vector3.Distance(cam.transform.position, palms);
                 float dFront = Vector3.Distance(cam.transform.position, FrontSightWorld());
-                return Mathf.Max(0.1f, Mathf.Lerp(dHands, dFront, focusBias));
+                return Mathf.Max(0.1f, Mathf.Lerp(dHands, dFront, profile.focusBias));
             }
             return Mathf.Max(0.1f, Vector3.Distance(cam.transform.position, FrontSightWorld()));
         }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Pistol.Player;
+using Pistol.PostFx;
 
 namespace Pistol.Items
 {
@@ -12,12 +13,14 @@ namespace Pistol.Items
         public PlayerMovement Movement { get; }
         public CharacterController Controller { get; }
         public PlayerContext Player { get; }
+        public CameraEffects Effects { get; }   // may be null: then items show no screen effects
         public ItemHolderWithPose Holder { get; }
 
         public PoseContext(Camera camera, PlayerMovement movement, CharacterController controller,
-                           PlayerContext player, ItemHolderWithPose holder)
+                           PlayerContext player, CameraEffects effects, ItemHolderWithPose holder)
         {
             Camera = camera;
+            Effects = effects;
             Movement = movement;
             Controller = controller;
             Player = player;

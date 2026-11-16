@@ -349,18 +349,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   profile: {fileID: 11400000, guid: 0d90f40935e74127beeb81d3fcdeda75, type: 2}
-  blurWeapon: 1
-  focusMode: 0
-  blurStrength: 0.258
-  farFocusDistance: 8
-  focusBias: 0.3
-  blurQuality: 1
-  edgeBlur: 1
-  edgeBlurIntensity: 0.7
-  edgeBlurRadius: 0.3
-  edgeBlurSoftness: 0.45
-  edgeBlurSpread: 0.025
-  tiredTunnel: 0.1
+  effects: {fileID: 11400000, guid: 15d4f4313fb2439bb359bfa722d8b8ac, type: 2}
   forceAim: 0
 --- !u!114 &4367989739772825465
 MonoBehaviour:
@@ -480,12 +469,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inTime: 0.45
   outTime: 0.35
-  vignetteIntensity: 0.42
-  vignetteSmoothness: 0.45
-  vignetteRoundness: 1
-  focusBlur: 1
-  blurStrength: 0.3
-  blurQuality: 1
+  effects: {fileID: 11400000, guid: 8aff47ca530a447ea5c5c1a259bfa617, type: 2}
   focusOffset: 0
   logEvents: 1
 --- !u!114 &411669031343072513

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c3150d8666d46af800bf5a41ed98694, type: 3}
+  m_Name: Revolver_AimEffects
+  m_EditorClassIdentifier: 
+  priority: 100
+  focus: 1
+  aperture: 17.0464
+  focalLength: 31.416
+  kernelSize: 1
+  fadeByAperture: 0
+  closedAperture: 32
+  vignette: 0
+  vignetteIntensity: 0.42
+  vignetteSmoothness: 0.45
+  vignetteRoundness: 1
+  edgeBlur: 1
+  edgeBlurIntensity: 0.7
+  edgeBlurRadius: 0.3
+  edgeBlurSoftness: 0.45
+  edgeBlurSpread: 0.025

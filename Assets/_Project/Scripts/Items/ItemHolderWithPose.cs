@@ -1,6 +1,7 @@
 using UnityEngine;
 using NaughtyAttributes;
 using Pistol.Player;
+using Pistol.PostFx;
 
 namespace Pistol.Items
 {
@@ -46,7 +47,9 @@ namespace Pistol.Items
                 Debug.LogWarning("ItemHolderWithPose: the item should be a child of this object, otherwise its pose is in the wrong space.", this);
 
             var controller = movement != null ? movement.GetComponent<CharacterController>() : null;
-            Context = new PoseContext(viewCamera, movement, controller, player, this);
+            var effects = viewCamera != null ? viewCamera.GetComponent<CameraEffects>() : null;
+            if (effects == null) Debug.LogWarning("ItemHolderWithPose: no CameraEffects on the camera, aim and inspect screen effects are off.", this);
+            Context = new PoseContext(viewCamera, movement, controller, player, effects, this);
 
             // Pose without any layers: where the item is placed in the scene
             restPosition = item.localPosition;
