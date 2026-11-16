@@ -10,11 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5ebf6482432188e4bbb0dda8b0aaeca2, type: 3}
-  m_Name: Revolver_HandGrip
+  m_Name: Revolver_Grip
   m_EditorClassIdentifier: 
+  rotationSpace: 1
   right:
     wristPosition: {x: 0.036, y: -0.049, z: -0.114}
-    wristRotation: {x: 16, y: 88, z: 91}
+    wristRotation: {x: 0.37564233, y: -0.44622803, z: 69.781845}
     elbowHint: {x: -0.1, y: -1, z: -0.79}
     thumb: -4.5
     index: 10.8
@@ -23,7 +24,7 @@ MonoBehaviour:
     pinky: 75
   left:
     wristPosition: {x: -0.049, y: -0.022, z: -0.096}
-    wristRotation: {x: -5, y: -87, z: -107}
+    wristRotation: {x: 15.719664, y: -0.07757568, z: -91.42612}
     elbowHint: {x: -0.05, y: -0.72, z: -0.25}
     thumb: -10.7
     index: 44.3

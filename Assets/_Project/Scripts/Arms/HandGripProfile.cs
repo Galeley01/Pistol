@@ -4,18 +4,23 @@ using Pistol.Core;
 
 namespace Pistol.Arms
 {
-    // How the hands hold a specific weapon. Everything is in weapon space:
+    // How the hands hold a specific item (used by ItemGrip on the item). Everything is in item space:
     // X right, Y up, Z forward along the barrel, in meters and degrees.
+    // The wrist rotation is the rotation of the "anatomical" hand (Z = towards the fingers, Y = where the palm faces),
+    // not of a hand bone, so every arms skin holds the item the same way.
     // The asset can be edited in Play Mode; changes persist after leaving Play Mode.
-    [CreateAssetMenu(menuName = "Weapons/Hand Grip Profile", fileName = "HandGripProfile")]
+    [CreateAssetMenu(menuName = "Pistol/Profiles/Hand Grip", fileName = "HandGripProfile")]
     public class HandGripProfile : ScriptableObject
     {
+        // 0 = old format (rotations of one skin's hand bone), 1 = anatomical hand. Converted by the arms prefab builder.
+        [HideInInspector] public int rotationSpace = 1;
+
         [System.Serializable]
         public class HandPose
         {
             [Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.25f), Tooltip("Где запястье относительно оружия, метры")]
             public Vector3 wristPosition;
-            [Vector3Slider(Vector3SliderAttribute.Kind.Rotation, 180f), Tooltip("Поворот кисти относительно оружия, градусы")]
+            [Vector3Slider(Vector3SliderAttribute.Kind.Rotation, 180f), Tooltip("Поворот кисти относительно оружия, градусы (Z — к пальцам, Y — куда смотрит ладонь)")]
             public Vector3 wristRotation;
             [Vector3Slider(Vector3SliderAttribute.Kind.Position, 1f), Tooltip("Куда направлен локоть (подсказка для IK), метры")]
             public Vector3 elbowHint;
