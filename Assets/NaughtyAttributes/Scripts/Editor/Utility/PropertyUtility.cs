@@ -51,10 +51,11 @@ namespace NaughtyAttributes.Editor
             FieldInfo fieldInfo = ReflectionUtility.GetField(GetTargetObjectWithProperty(property), property.name);
             if (fieldInfo == null)
             {
-                return new T[] { };
+                return Array.Empty<T>();
             }
 
-            return (T[])fieldInfo.GetCustomAttributes(typeof(T), true);
+            // Local patch (Pistol project): cached, see AttributeCache. Callers must not modify the array.
+            return AttributeCache<T>.All(fieldInfo);
         }
 
         public static GUIContent GetLabel(SerializedProperty property)
@@ -331,6 +332,13 @@ namespace NaughtyAttributes.Editor
         /// <returns></returns>
         public static object GetTargetObjectWithProperty(SerializedProperty property)
         {
+            // Local patch (Pistol project): a top-level field belongs to the target itself,
+            // so skip the string parsing below (same result, called many times per repaint).
+            if (property.propertyPath.IndexOf('.') < 0)
+            {
+                return property.serializedObject.targetObject;
+            }
+
             string path = property.propertyPath.Replace(".Array.data[", "[");
             object obj = property.serializedObject.targetObject;
             string[] elements = path.Split('.');

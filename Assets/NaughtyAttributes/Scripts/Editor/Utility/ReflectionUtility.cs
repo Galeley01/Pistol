@@ -77,19 +77,61 @@ namespace NaughtyAttributes.Editor
             }
         }
 
+        // Local patch (Pistol project): lookups by name are cached per type (null results too),
+        // because the Inspector repeats them for every field on every repaint.
+        private static readonly Dictionary<(Type, string), FieldInfo> _fieldCache = new Dictionary<(Type, string), FieldInfo>();
+        private static readonly Dictionary<(Type, string), PropertyInfo> _propertyCache = new Dictionary<(Type, string), PropertyInfo>();
+        private static readonly Dictionary<(Type, string), MethodInfo> _methodCache = new Dictionary<(Type, string), MethodInfo>();
+
         public static FieldInfo GetField(object target, string fieldName)
         {
-            return GetAllFields(target, f => f.Name.Equals(fieldName, StringComparison.Ordinal)).FirstOrDefault();
+            if (target == null)
+            {
+                return GetAllFields(target, f => f.Name.Equals(fieldName, StringComparison.Ordinal)).FirstOrDefault();
+            }
+
+            var key = (target.GetType(), fieldName);
+            if (!_fieldCache.TryGetValue(key, out FieldInfo field))
+            {
+                field = GetAllFields(target, f => f.Name.Equals(fieldName, StringComparison.Ordinal)).FirstOrDefault();
+                _fieldCache[key] = field;
+            }
+
+            return field;
         }
 
         public static PropertyInfo GetProperty(object target, string propertyName)
         {
-            return GetAllProperties(target, p => p.Name.Equals(propertyName, StringComparison.Ordinal)).FirstOrDefault();
+            if (target == null)
+            {
+                return GetAllProperties(target, p => p.Name.Equals(propertyName, StringComparison.Ordinal)).FirstOrDefault();
+            }
+
+            var key = (target.GetType(), propertyName);
+            if (!_propertyCache.TryGetValue(key, out PropertyInfo property))
+            {
+                property = GetAllProperties(target, p => p.Name.Equals(propertyName, StringComparison.Ordinal)).FirstOrDefault();
+                _propertyCache[key] = property;
+            }
+
+            return property;
         }
 
         public static MethodInfo GetMethod(object target, string methodName)
         {
-            return GetAllMethods(target, m => m.Name.Equals(methodName, StringComparison.Ordinal)).FirstOrDefault();
+            if (target == null)
+            {
+                return GetAllMethods(target, m => m.Name.Equals(methodName, StringComparison.Ordinal)).FirstOrDefault();
+            }
+
+            var key = (target.GetType(), methodName);
+            if (!_methodCache.TryGetValue(key, out MethodInfo method))
+            {
+                method = GetAllMethods(target, m => m.Name.Equals(methodName, StringComparison.Ordinal)).FirstOrDefault();
+                _methodCache[key] = method;
+            }
+
+            return method;
         }
 
         public static Type GetListElementType(Type listType)

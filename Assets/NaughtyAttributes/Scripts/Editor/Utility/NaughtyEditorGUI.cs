@@ -132,6 +132,32 @@ namespace NaughtyAttributes.Editor
             }
         }
 
+        // Local patch (Pistol project): per-method data for buttons is computed once, not on every repaint.
+        private static readonly Dictionary<MethodInfo, bool> _buttonParametersOptional = new Dictionary<MethodInfo, bool>();
+        private static readonly Dictionary<MethodInfo, string> _buttonTexts = new Dictionary<MethodInfo, string>();
+
+        private static bool ButtonParametersAreOptional(MethodInfo methodInfo)
+        {
+            if (!_buttonParametersOptional.TryGetValue(methodInfo, out bool optional))
+            {
+                optional = methodInfo.GetParameters().All(p => p.IsOptional);
+                _buttonParametersOptional[methodInfo] = optional;
+            }
+
+            return optional;
+        }
+
+        private static string GetButtonText(MethodInfo methodInfo, ButtonAttribute buttonAttribute)
+        {
+            if (!_buttonTexts.TryGetValue(methodInfo, out string text))
+            {
+                text = string.IsNullOrEmpty(buttonAttribute.Text) ? ObjectNames.NicifyVariableName(methodInfo.Name) : buttonAttribute.Text;
+                _buttonTexts[methodInfo] = text;
+            }
+
+            return text;
+        }
+
         public static void Button(UnityEngine.Object target, MethodInfo methodInfo)
         {
             bool visible = ButtonUtility.IsVisible(target, methodInfo);
@@ -140,10 +166,10 @@ namespace NaughtyAttributes.Editor
                 return;
             }
 
-            if (methodInfo.GetParameters().All(p => p.IsOptional))
+            if (ButtonParametersAreOptional(methodInfo))
             {
-                ButtonAttribute buttonAttribute = (ButtonAttribute)methodInfo.GetCustomAttributes(typeof(ButtonAttribute), true)[0];
-                string buttonText = string.IsNullOrEmpty(buttonAttribute.Text) ? ObjectNames.NicifyVariableName(methodInfo.Name) : buttonAttribute.Text;
+                ButtonAttribute buttonAttribute = AttributeCache<ButtonAttribute>.First(methodInfo);
+                string buttonText = GetButtonText(methodInfo, buttonAttribute);
 
                 bool buttonEnabled = ButtonUtility.IsEnabled(target, methodInfo);
 

@@ -16,16 +16,105 @@ namespace NaughtyAttributes.Editor
         private IEnumerable<MethodInfo> _methods;
         private Dictionary<string, SavedBool> _foldouts = new Dictionary<string, SavedBool>();
 
+        // Local patch (Pistol project). The original re-ran reflection and LINQ grouping on every
+        // repaint (each frame in Play Mode), which made big inspectors lag and dropped game FPS.
+        // Members are now collected once per type and the property layout once per editor.
+        private sealed class TypeMembers
+        {
+            public List<FieldInfo> NonSerializedFields;
+            public List<PropertyInfo> NativeProperties;
+            public List<MethodInfo> Methods;
+        }
+
+        private sealed class PropertyGroup
+        {
+            public string Name;
+            public List<SerializedProperty> Properties = new List<SerializedProperty>();
+        }
+
+        private static readonly Dictionary<System.Type, TypeMembers> _membersByType = new Dictionary<System.Type, TypeMembers>();
+
+        private bool _layoutReady;
+        private bool _anyNaughtyAttribute;
+        private readonly List<SerializedProperty> _nonGroupedProperties = new List<SerializedProperty>();
+        private readonly List<PropertyGroup> _boxGroups = new List<PropertyGroup>();
+        private readonly List<PropertyGroup> _foldoutGroups = new List<PropertyGroup>();
+        private readonly List<SerializedProperty> _visibleProperties = new List<SerializedProperty>();
+
         protected virtual void OnEnable()
         {
-            _nonSerializedFields = ReflectionUtility.GetAllFields(
-                target, f => f.GetCustomAttributes(typeof(ShowNonSerializedFieldAttribute), true).Length > 0);
+            if (ReferenceEquals(target, null))
+            {
+                // Same as the original: ReflectionUtility logs an error and there is nothing to draw
+                _nonSerializedFields = ReflectionUtility.GetAllFields(target, f => false).ToList();
+                _nativeProperties = new List<PropertyInfo>();
+                _methods = new List<MethodInfo>();
+                _layoutReady = false;
+                return;
+            }
 
-            _nativeProperties = ReflectionUtility.GetAllProperties(
-                target, p => p.GetCustomAttributes(typeof(ShowNativePropertyAttribute), true).Length > 0);
+            System.Type type = target.GetType();
+            if (!_membersByType.TryGetValue(type, out TypeMembers members))
+            {
+                members = new TypeMembers
+                {
+                    NonSerializedFields = ReflectionUtility.GetAllFields(
+                        target, f => f.GetCustomAttributes(typeof(ShowNonSerializedFieldAttribute), true).Length > 0).ToList(),
+                    NativeProperties = ReflectionUtility.GetAllProperties(
+                        target, p => p.GetCustomAttributes(typeof(ShowNativePropertyAttribute), true).Length > 0).ToList(),
+                    Methods = ReflectionUtility.GetAllMethods(
+                        target, m => m.GetCustomAttributes(typeof(ButtonAttribute), true).Length > 0).ToList(),
+                };
+                _membersByType[type] = members;
+            }
 
-            _methods = ReflectionUtility.GetAllMethods(
-                target, m => m.GetCustomAttributes(typeof(ButtonAttribute), true).Length > 0);
+            _nonSerializedFields = members.NonSerializedFields;
+            _nativeProperties = members.NativeProperties;
+            _methods = members.Methods;
+            _layoutReady = false;
+        }
+
+        private void EnsureLayout()
+        {
+            if (_layoutReady)
+            {
+                return;
+            }
+
+            GetSerializedProperties(ref _serializedProperties);
+            _anyNaughtyAttribute = _serializedProperties.Any(p => PropertyUtility.GetAttribute<INaughtyAttribute>(p) != null);
+
+            _nonGroupedProperties.Clear();
+            _nonGroupedProperties.AddRange(GetNonGroupedProperties(_serializedProperties));
+            FillGroups(_boxGroups, GetGroupedProperties(_serializedProperties));
+            FillGroups(_foldoutGroups, GetFoldoutProperties(_serializedProperties));
+
+            _layoutReady = true;
+        }
+
+        private static void FillGroups(List<PropertyGroup> groups, IEnumerable<IGrouping<string, SerializedProperty>> source)
+        {
+            groups.Clear();
+            foreach (var grouping in source)
+            {
+                var group = new PropertyGroup { Name = grouping.Key };
+                group.Properties.AddRange(grouping);
+                groups.Add(group);
+            }
+        }
+
+        private List<SerializedProperty> CollectVisible(List<SerializedProperty> properties)
+        {
+            _visibleProperties.Clear();
+            foreach (var property in properties)
+            {
+                if (PropertyUtility.IsVisible(property))
+                {
+                    _visibleProperties.Add(property);
+                }
+            }
+
+            return _visibleProperties;
         }
 
         protected virtual void OnDisable()
@@ -35,10 +124,9 @@ namespace NaughtyAttributes.Editor
 
         public override void OnInspectorGUI()
         {
-            GetSerializedProperties(ref _serializedProperties);
+            EnsureLayout();
 
-            bool anyNaughtyAttribute = _serializedProperties.Any(p => PropertyUtility.GetAttribute<INaughtyAttribute>(p) != null);
-            if (!anyNaughtyAttribute)
+            if (!_anyNaughtyAttribute)
             {
                 DrawDefaultInspector();
             }
@@ -70,10 +158,11 @@ namespace NaughtyAttributes.Editor
 
         protected void DrawSerializedProperties()
         {
+            EnsureLayout();
             serializedObject.Update();
 
             // Draw non-grouped serialized properties
-            foreach (var property in GetNonGroupedProperties(_serializedProperties))
+            foreach (var property in _nonGroupedProperties)
             {
                 if (property.name.Equals("m_Script", System.StringComparison.Ordinal))
                 {
@@ -89,15 +178,15 @@ namespace NaughtyAttributes.Editor
             }
 
             // Draw grouped serialized properties
-            foreach (var group in GetGroupedProperties(_serializedProperties))
+            foreach (var group in _boxGroups)
             {
-                IEnumerable<SerializedProperty> visibleProperties = group.Where(p => PropertyUtility.IsVisible(p));
-                if (!visibleProperties.Any())
+                List<SerializedProperty> visibleProperties = CollectVisible(group.Properties);
+                if (visibleProperties.Count == 0)
                 {
                     continue;
                 }
 
-                NaughtyEditorGUI.BeginBoxGroup_Layout(group.Key);
+                NaughtyEditorGUI.BeginBoxGroup_Layout(group.Name);
                 foreach (var property in visibleProperties)
                 {
                     NaughtyEditorGUI.PropertyField_Layout(property, includeChildren: true);
@@ -107,25 +196,25 @@ namespace NaughtyAttributes.Editor
             }
 
             // Draw foldout serialized properties
-            foreach (var group in GetFoldoutProperties(_serializedProperties))
+            foreach (var group in _foldoutGroups)
             {
-                IEnumerable<SerializedProperty> visibleProperties = group.Where(p => PropertyUtility.IsVisible(p));
-                if (!visibleProperties.Any())
+                List<SerializedProperty> visibleProperties = CollectVisible(group.Properties);
+                if (visibleProperties.Count == 0)
                 {
                     continue;
                 }
 
-                if (!_foldouts.ContainsKey(group.Key))
+                if (!_foldouts.ContainsKey(group.Name))
                 {
 #if UNITY_6000_4_OR_NEWER
-                    _foldouts[group.Key] = new SavedBool($"{EntityId.ToULong(target.GetEntityId())}.{group.Key}", false);
+                    _foldouts[group.Name] = new SavedBool($"{EntityId.ToULong(target.GetEntityId())}.{group.Name}", false);
 #else
-                    _foldouts[group.Key] = new SavedBool($"{target.GetInstanceID()}.{group.Key}", false);
+                    _foldouts[group.Name] = new SavedBool($"{target.GetInstanceID()}.{group.Name}", false);
 #endif
                 }
 
-                _foldouts[group.Key].Value = EditorGUILayout.Foldout(_foldouts[group.Key].Value, group.Key, true);
-                if (_foldouts[group.Key].Value)
+                _foldouts[group.Name].Value = EditorGUILayout.Foldout(_foldouts[group.Name].Value, group.Name, true);
+                if (_foldouts[group.Name].Value)
                 {
                     foreach (var property in visibleProperties)
                     {
