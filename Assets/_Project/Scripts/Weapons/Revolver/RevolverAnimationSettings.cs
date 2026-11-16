@@ -8,6 +8,8 @@ using UnityEditor.Animations;
 
 namespace Pistol.Weapons.Revolver
 {
+    using Ids = RevolverAnimatorIds;
+
     // Revolver animation settings. Stored in an asset (Assets/Pistol/RevolverAnimationSettings.asset)
     // and shown right in the revolver's Inspector (RevolverFire > Animation Settings).
     //
@@ -42,9 +44,14 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Раскрутка барабана"), MinValue(1)] public int spinTurns = 2;
         [BoxGroup("Раскрутка барабана"), MinValue(0.2f)] public float spinDuration = 1.2f;
 
+        [BoxGroup("Скорость анимаций"), Range(0.25f, 3f), Tooltip("Множитель скорости, применяется в игре без пересоздания анимаций")]
+        public float fireSpeed = 1f;
+        [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float openSpeed = 1f;
+        [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float closeSpeed = 1f;
+        [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float spinSpeed = 1f;
+
         // Paths to parts inside Revolver
         public const string TRIGGER = "Trigger", HAMMER = "Hammer", CRANE = "Crane", CYLINDER = "Crane/Cylinder";
-        public static readonly string[] SpeedParams = { "FireSpeed", "OpenSpeed", "CloseSpeed", "SpinSpeed" };
 
         [Button("Создать недостающие анимации")]
         public void CreateMissingButton()
@@ -108,7 +115,7 @@ namespace Pistol.Weapons.Revolver
                                        new Key(drop, 0, true), new Key(d, 0));
                 Rot(c, CYLINDER, 'z', d, new Key(0, 0), new Key(fireCockTime, cylinderStep), new Key(d, cylinderStep));
                 Rot(c, CRANE, 'z', d, K(0, 0));
-                Event(c, drop, "OnShot");
+                Event(c, drop, nameof(RevolverFire.OnShot));
             });
 
             var open = Clip("Revolver_Open", overwrite, made, c =>
@@ -131,7 +138,7 @@ namespace Pistol.Weapons.Revolver
                 Rot(c, CRANE, 'z', d, K(0, craneOpen));
                 Rot(c, CYLINDER, 'z', d, new Key(0, 0), new Key(d * 0.125f, spinAngle * 0.28f),
                                          new Key(d * 0.46f, spinAngle * 0.78f), new Key(d, spinAngle));
-                Event(c, 0.02f, "OnSpinStart");
+                Event(c, 0.02f, nameof(RevolverFire.OnSpinStart));
             });
 
             var close = Clip("Revolver_Close", overwrite, made, c =>
@@ -140,7 +147,7 @@ namespace Pistol.Weapons.Revolver
                 Rot(c, CRANE, 'z', d, new Key(0, craneOpen), new Key(d * 0.57f, -3f * Mathf.Sign(craneOpen), true),
                                       new Key(d * 0.77f, 1f * Mathf.Sign(craneOpen)), new Key(d, 0));
                 Rot(c, CYLINDER, 'z', d, K(0, 0)); Rot(c, TRIGGER, 'x', d, K(0, 0)); Rot(c, HAMMER, 'x', d, K(0, 0));
-                Event(c, d * 0.57f, "OnCylinderClosed");
+                Event(c, d * 0.57f, nameof(RevolverFire.OnCylinderClosed));
             });
 
             var ctrl = GetOrCreateController(idle, fire, open, openIdle, spin, close, made);
@@ -236,29 +243,29 @@ namespace Pistol.Weapons.Revolver
             if (ctrl == null)
             {
                 ctrl = AnimatorController.CreateAnimatorControllerAtPath(path);
-                foreach (var p in new[] { "Fire", "Open", "Close", "Spin" })
+                foreach (var p in Ids.Triggers)
                     ctrl.AddParameter(p, AnimatorControllerParameterType.Trigger);
 
                 var sm = ctrl.layers[0].stateMachine;
-                var sIdle = State(sm, "Idle", idle, new Vector3(300, 0));
-                var sFire = State(sm, "Fire", fire, new Vector3(300, -120));
-                var sOpen = State(sm, "Open", open, new Vector3(560, 0));
-                var sOpenIdle = State(sm, "OpenIdle", openIdle, new Vector3(820, 0));
-                var sSpin = State(sm, "Spin", spin, new Vector3(820, -120));
-                var sClose = State(sm, "Close", close, new Vector3(560, 120));
+                var sIdle = State(sm, Ids.IdleState, idle, new Vector3(300, 0));
+                var sFire = State(sm, Ids.FireState, fire, new Vector3(300, -120));
+                var sOpen = State(sm, Ids.OpenState, open, new Vector3(560, 0));
+                var sOpenIdle = State(sm, Ids.OpenIdleState, openIdle, new Vector3(820, 0));
+                var sSpin = State(sm, Ids.SpinState, spin, new Vector3(820, -120));
+                var sClose = State(sm, Ids.CloseState, close, new Vector3(560, 120));
                 sm.defaultState = sIdle;
 
-                ByTrigger(sIdle, sFire, "Fire"); ByExit(sFire, sIdle);
-                ByTrigger(sIdle, sOpen, "Open"); ByExit(sOpen, sOpenIdle);
-                ByTrigger(sOpenIdle, sSpin, "Spin"); ByExit(sSpin, sOpenIdle);
-                ByTrigger(sOpenIdle, sClose, "Close");
-                ByTrigger(sSpin, sClose, "Close"); ByExit(sClose, sIdle);
+                ByTrigger(sIdle, sFire, Ids.Fire); ByExit(sFire, sIdle);
+                ByTrigger(sIdle, sOpen, Ids.Open); ByExit(sOpen, sOpenIdle);
+                ByTrigger(sOpenIdle, sSpin, Ids.Spin); ByExit(sSpin, sOpenIdle);
+                ByTrigger(sOpenIdle, sClose, Ids.Close);
+                ByTrigger(sSpin, sClose, Ids.Close); ByExit(sClose, sIdle);
                 made.Add("Revolver.controller");
             }
 
             // Soft update of an existing Animator: add speed parameters, remove nothing
             bool changed = false;
-            foreach (var p in SpeedParams)
+            foreach (var p in Ids.SpeedParams)
             {
                 bool has = false;
                 foreach (var e in ctrl.parameters) if (e.name == p) has = true;
@@ -269,11 +276,10 @@ namespace Pistol.Weapons.Revolver
                     changed = true;
                 }
             }
-            var map = new Dictionary<string, string>
-                { { "Fire", "FireSpeed" }, { "Open", "OpenSpeed" }, { "Close", "CloseSpeed" }, { "Spin", "SpinSpeed" } };
             foreach (var cs in ctrl.layers[0].stateMachine.states)
             {
-                if (map.TryGetValue(cs.state.name, out var param) && !cs.state.speedParameterActive)
+                string param = Ids.SpeedParamFor(cs.state.name);
+                if (param != null && !cs.state.speedParameterActive)
                 {
                     cs.state.speedParameterActive = true;
                     cs.state.speedParameter = param;
@@ -282,6 +288,22 @@ namespace Pistol.Weapons.Revolver
             }
             if (changed) { EditorUtility.SetDirty(ctrl); made.Add("speed parameters in Animator"); }
             return ctrl;
+        }
+
+        // Names the game expects that are missing from the controller (empty = everything is in place)
+        public static List<string> FindMissing(RuntimeAnimatorController runtimeController)
+        {
+            var missing = new List<string>();
+            var ctrl = runtimeController as AnimatorController;
+            if (ctrl == null) { missing.Add("Animator Controller is not assigned"); return missing; }
+            var parameters = new HashSet<string>();
+            foreach (var p in ctrl.parameters) parameters.Add(p.name);
+            foreach (var p in Ids.Triggers) if (!parameters.Contains(p)) missing.Add("trigger " + p);
+            foreach (var p in Ids.SpeedParams) if (!parameters.Contains(p)) missing.Add("float " + p);
+            var states = new HashSet<string>();
+            foreach (var cs in ctrl.layers[0].stateMachine.states) states.Add(cs.state.name);
+            foreach (var s in Ids.States) if (!states.Contains(s)) missing.Add("state " + s);
+            return missing;
         }
 
         static AnimatorState State(AnimatorStateMachine sm, string name, Motion m, Vector3 pos)

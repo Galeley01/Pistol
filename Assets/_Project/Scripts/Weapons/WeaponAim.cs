@@ -15,42 +15,14 @@ namespace Pistol.Weapons
     [RequireComponent(typeof(ItemRig))]
     public class WeaponAim : MonoBehaviour
     {
-        [BoxGroup("Положение оружия"), Tooltip("Вкл: обычным положением считается то, где револьвер стоит в сцене. Ничего настраивать не нужно")]
-        public bool useScenePosition = true;
-
-        [BoxGroup("Положение оружия"), HideIf("useScenePosition")]
-        [Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.5f), Tooltip("Обычное положение (от бедра)")]
-        public Vector3 hipPosition = new Vector3(0.06f, -0.12f, 0.3f);
-
-        [BoxGroup("Положение оружия")]
-        [Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.5f),
-         Tooltip("Положение при прицеливании. X = 0 — ровно по центру. Y — опустите так, чтобы мушка была в центре экрана")]
-        public Vector3 aimPosition = new Vector3(0f, -0.055f, 0.35f);
-
-        [BoxGroup("Положение оружия"), Range(0.15f, 0.6f), Tooltip("Расстояние от глаза до целика в прицеле, м. Больше = руки вытянуты, оружие меньше на экране")]
-        public float aimDistance = 0.36f;
-
-        [BoxGroup("Подъём к лицу"), Range(0.08f, 1f), Tooltip("За сколько секунд оружие поднимается к лицу у отдохнувшего персонажа")]
-        public float aimInTime = 0.24f;
-        [BoxGroup("Подъём к лицу"), Range(0.1f, 2f), Tooltip("За сколько секунд — у измотанного (после бега, при отдышке)")]
-        public float tiredAimInTime = 0.6f;
-        [BoxGroup("Подъём к лицу"), Range(0f, 0.6f), Tooltip("Сколько секунд добавляется, если поднимать оружие прямо с бега")]
-        public float fromSprintExtraTime = 0.15f;
-        [BoxGroup("Подъём к лицу"), Range(0.05f, 1f), Tooltip("За сколько секунд оружие опускается из прицела")]
-        public float aimOutTime = 0.18f;
-        [BoxGroup("Подъём к лицу"), Range(0f, 25f), Tooltip("Крен оружия на середине подъёма, градусы")]
-        public float transitionRoll = 8f;
-        [BoxGroup("Подъём к лицу"), Range(0f, 0.05f), Tooltip("Оружие идёт к лицу по дуге снизу, м")]
-        public float transitionDip = 0.015f;
-        [BoxGroup("Подъём к лицу"), Range(0f, 40f), Tooltip("Толчок, когда оружие упирается в плечо/встаёт у глаза (у уставшего сильнее)")]
-        public float settleKick = 10f;
-
-        [BoxGroup("Камера")] public bool changeFov = true;
-        [BoxGroup("Камера"), ShowIf("changeFov"), Range(40f, 100f), Tooltip("Угол обзора при прицеливании")]
-        public float aimFov = 75f;
+        [BoxGroup("Профиль"), Required("Назначьте профиль: прицеливание"), SerializeField]
+        [Tooltip("Ассет с настройками. Кликните по полю, чтобы открыть его со всеми группами")]
+        AimProfile profile;
+        public AimProfile Profile => profile;
 
         public enum FocusMode { FrontSight, Far, HandsAndSights }
 
+        // TODO(stage 5): post-processing settings below move to CameraEffects
         [BoxGroup("Фокус глаз в прицеле")] public bool blurWeapon = true;
         [BoxGroup("Фокус глаз в прицеле"), ShowIf("blurWeapon"),
          Tooltip("FrontSight — глаз на мушке: мушка и целик резкие, даль слегка мягкая.\nHandsAndSights — резкие ладони, целик и мушка; предплечья (они ближе к глазу) и даль размыты.\nFar — глаз вдаль: оружие слегка размыто")]
@@ -95,17 +67,21 @@ namespace Pistol.Weapons
         PostProcessVolume dofVolume;
         DepthOfField dof;
         EdgeBlur edge;
+        Vector3 hip;                 // hip pose used at runtime (never written back to the profile)
+        bool postFxSuppressed;
 
         void Start()
         {
+            if (profile == null) { Debug.LogError("WeaponAim: no profile assigned.", this); enabled = false; return; }
             cam = GetComponentInParent<Camera>();
             revolver = GetComponent<RevolverFire>();
             rig = ItemRig.On(this);
             movement = GetComponentInParent<PlayerMovement>();
             context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
             sway = GetComponent<WeaponSway>();
-            if (useScenePosition) hipPosition = transform.localPosition;   // take the scene position as is
-            else transform.localPosition = hipPosition;
+            // Hip pose: the position the weapon has in the scene/prefab, or the one from the profile
+            hip = profile.useScenePosition ? transform.localPosition : profile.hipPosition;
+            transform.localPosition = hip;
         }
 
         void Update()
@@ -118,27 +94,27 @@ namespace Pistol.Weapons
 
             // The more exhausted the character, the slower the weapon comes up to the face
             float fatigue = Fatigue();
-            currentAimIn = Mathf.Lerp(aimInTime, tiredAimInTime, fatigue)
-                         + (movement != null && movement.IsRunning ? fromSprintExtraTime : 0f);
+            currentAimIn = Mathf.Lerp(profile.aimInTime, profile.tiredAimInTime, fatigue)
+                         + (movement != null && movement.IsRunning ? profile.fromSprintExtraTime : 0f);
             float prevAim = aim;
-            float time = want ? currentAimIn : aimOutTime;
+            float time = want ? currentAimIn : profile.aimOutTime;
             aim = Mathf.MoveTowards(aim, want ? 1f : 0f, Time.deltaTime / Mathf.Max(time, 0.01f));
             float t = Mathf.SmoothStep(0f, 1f, aim);
 
             // Weapon reached the eye: a small "into the shoulder" kick, stronger and less even when tired
             if (prevAim < 1f && aim >= 1f && sway != null)
             {
-                float f = settleKick * Mathf.Lerp(1f, 2f, fatigue);
+                float f = profile.settleKick * Mathf.Lerp(1f, 2f, fatigue);
                 sway.AddKick(new Vector3(f, Random.Range(-0.4f, 0.4f) * f, Random.Range(-0.6f, 0.6f) * f),
                              new Vector3(0f, -0.02f, -0.02f) * (f / 10f));
             }
 
             // The path to the face is an arc from below with a roll halfway, not a straight line
             float mid = Mathf.Sin(t * Mathf.PI);
-            transform.localPosition = Vector3.Lerp(hipPosition, aimPosition, t) + Vector3.down * (transitionDip * mid);
-            transform.localRotation = Quaternion.Euler(0f, 0f, transitionRoll * mid);
-            if (movement != null) movement.freeAimScale = 1f - t;   // the deadzone disappears while aiming, weapon centered
-            if (changeFov) cam.fieldOfView = Mathf.Lerp(baseFov, aimFov, t);
+            transform.localPosition = Vector3.Lerp(hip, profile.aimPosition, t) + Vector3.down * (profile.transitionDip * mid);
+            transform.localRotation = Quaternion.Euler(0f, 0f, profile.transitionRoll * mid);
+            if (movement != null) movement.SetFreeAimScale(1f - t);   // the deadzone disappears while aiming, weapon centered
+            if (profile.changeFov) cam.fieldOfView = Mathf.Lerp(baseFov, profile.aimFov, t);
 
             UpdateBlur(t);
         }
@@ -148,7 +124,8 @@ namespace Pistol.Weapons
 
         void UpdateBlur(float t)
         {
-            if (!blurWeapon && !edgeBlur)
+            bool useDof = blurWeapon && !postFxSuppressed, useEdge = edgeBlur && !postFxSuppressed;
+            if (!useDof && !useEdge)
             {
                 if (dofVolume) { dofVolume.weight = 0f; dofVolume.enabled = false; }
                 return;
@@ -156,14 +133,14 @@ namespace Pistol.Weapons
             if (dofVolume == null && !CreateAimVolume()) return;
 
             // Eye focus (Depth of Field)
-            dof.enabled.value = blurWeapon;
+            dof.enabled.value = useDof;
             dof.focusDistance.value = CurrentFocusDistance();
             dof.aperture.value = Mathf.Lerp(22f, 2.8f, blurStrength);   // smaller aperture = stronger blur
             dof.focalLength.value = Mathf.Lerp(18f, 70f, blurStrength);
             dof.kernelSize.value = blurQuality;
 
             // Edge blur: the sharp zone is narrower when tired
-            edge.enabled.value = edgeBlur;
+            edge.enabled.value = useEdge;
             edge.intensity.value = edgeBlurIntensity;
             edge.radius.value = Mathf.Max(0f, edgeBlurRadius - tiredTunnel * Fatigue());
             edge.softness.value = edgeBlurSoftness;
@@ -214,24 +191,38 @@ namespace Pistol.Weapons
             if (dofVolume != null) RuntimeUtilities.DestroyVolume(dofVolume, true, true);
         }
 
-        // ---------- Buttons ----------
-        // When the component is added, remember the revolver's current position
-        void Reset() => hipPosition = transform.localPosition;
+        // ---------- Buttons (write into the profile asset, with Undo) ----------
+        bool UsesScenePosition => profile != null && profile.useScenePosition;
 
-        [Button("Запомнить текущее положение как обычное"), HideIf("useScenePosition")]
-        void CaptureHip() => hipPosition = transform.localPosition;
+        [Button("Запомнить текущее положение как обычное"), HideIf("UsesScenePosition")]
+        void CaptureHip() => ChangeProfile("Capture Hip Position", p => p.hipPosition = transform.localPosition);
 
         [Button("Запомнить текущее положение как прицел")]
-        void CaptureAim() => aimPosition = transform.localPosition;
+        void CaptureAim() => ChangeProfile("Capture Aim Position", p => p.aimPosition = transform.localPosition);
 
         [Button("Поставить целик и мушку в центр экрана")]
         void AlignSights()
         {
             var s = GetComponent<WeaponSway>();
             Vector3 rear = s != null ? s.rearSightPoint : new Vector3(0f, 0.055f, 0.01f);
-            aimPosition = new Vector3(-rear.x, -rear.y, aimDistance - rear.z);
-            Debug.Log("Aim Position = " + aimPosition.ToString("F3"));
+            ChangeProfile("Align Sights", p => p.aimPosition = new Vector3(-rear.x, -rear.y, p.aimDistance - rear.z));
+            if (profile != null) Debug.Log("Aim Position = " + profile.aimPosition.ToString("F3"));
         }
+
+        void ChangeProfile(string undoName, System.Action<AimProfile> change)
+        {
+            if (profile == null) { Debug.LogWarning("WeaponAim: assign a profile first.", this); return; }
+#if UNITY_EDITOR
+            UnityEditor.Undo.RecordObject(profile, undoName);
+#endif
+            change(profile);
+#if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(profile);
+#endif
+        }
+
+        // Debug overlay: temporarily switch aim blur off without touching the settings
+        public void SetPostFxSuppressed(bool suppressed) => postFxSuppressed = suppressed;
 
         // The eye focuses on the front sight (muzzle) or far away
         float CurrentFocusDistance()

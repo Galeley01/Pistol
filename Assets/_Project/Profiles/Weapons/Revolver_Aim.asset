@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 689a75f1b6b14c88a11415c56c451115, type: 3}
+  m_Name: Revolver_Aim
+  m_EditorClassIdentifier: 
+  useScenePosition: 1
+  hipPosition: {x: 0.06, y: -0.120000005, z: 0.3}
+  aimPosition: {x: -0, y: -0.055, z: 0.35000002}
+  aimDistance: 0.36
+  aimInTime: 0.24
+  tiredAimInTime: 0.6
+  fromSprintExtraTime: 0.15
+  aimOutTime: 0.18
+  transitionRoll: 8
+  transitionDip: 0.015
+  settleKick: 10
+  changeFov: 1
+  aimFov: 75

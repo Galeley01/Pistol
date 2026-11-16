@@ -87,13 +87,13 @@ namespace Pistol.Diagnostics
                 $"Speed: <b>{speed:0.00} m/s</b>  ({speed * 3.6f:0.0} km/h)", label); y += line;
             GUI.Label(new Rect(x, y, w, line),
                 $"Target: {m.TargetSpeed:0.00} m/s   Run limit: {m.CurrentRunSpeed:0.00}", label); y += line;
-            Bar(new Rect(x, y, w, barH), speed / Mathf.Max(m.runSpeed, 0.01f), new Color(0.3f, 0.7f, 1f)); y += barH + 8;
+            Bar(new Rect(x, y, w, barH), speed / Mathf.Max(m.Profile.runSpeed, 0.01f), new Color(0.3f, 0.7f, 1f)); y += barH + 8;
 
             // ---- Sprint until exhaustion ----
-            float sprint = m.IsExhausted ? m.sprintTimeBeforeTired : m.SprintTimer;
-            float sprint01 = sprint / Mathf.Max(m.sprintTimeBeforeTired, 0.01f);
+            float sprint = m.IsExhausted ? m.Profile.sprintTimeBeforeTired : m.SprintTimer;
+            float sprint01 = sprint / Mathf.Max(m.Profile.sprintTimeBeforeTired, 0.01f);
             GUI.Label(new Rect(x, y, w, line),
-                $"Sprint: {sprint:0.0} / {m.sprintTimeBeforeTired:0.0} s", label); y += line;
+                $"Sprint: {sprint:0.0} / {m.Profile.sprintTimeBeforeTired:0.0} s", label); y += line;
             Bar(new Rect(x, y, w, barH), sprint01, Color.Lerp(new Color(0.3f, 0.9f, 0.3f), new Color(1f, 0.3f, 0.2f), sprint01)); y += barH + 8;
 
             // ---- Exhaustion / recovery ----
@@ -101,8 +101,8 @@ namespace Pistol.Diagnostics
                 "Exhausted: " + (m.IsExhausted ? "<color=#ff5544><b>YES</b></color>" : "<color=#66dd66>no</color>"), label); y += line;
             float rec = m.IsExhausted ? m.RecoveryTimer : 0f;
             GUI.Label(new Rect(x, y, w, line),
-                $"Recovery: {rec:0.0} / {m.recoveryDuration:0.0} s" + (m.IsExhausted && m.IsRunning ? "  (reset)" : ""), label); y += line;
-            Bar(new Rect(x, y, w, barH), rec / Mathf.Max(m.recoveryDuration, 0.01f), new Color(1f, 0.6f, 0.1f)); y += barH + 8;
+                $"Recovery: {rec:0.0} / {m.Profile.recoveryDuration:0.0} s" + (m.IsExhausted && m.IsRunning ? "  (reset)" : ""), label); y += line;
+            Bar(new Rect(x, y, w, barH), rec / Mathf.Max(m.Profile.recoveryDuration, 0.01f), new Color(1f, 0.6f, 0.1f)); y += barH + 8;
 
             // ---- Breathlessness (camera shake) ----
             GUI.Label(new Rect(x, y, w, line), $"Breathless: {m.Breathless:0.00}", label); y += line;
@@ -116,7 +116,7 @@ namespace Pistol.Diagnostics
             if (!m.IsGrounded) return "<color=#88ccff>in air</color>";
             if (m.ActualSpeed < 0.1f) return m.IsCrouching ? "crouching" : "standing";
             if (m.IsRunning) return m.IsExhausted ? "<color=#ff5544>running (tired)</color>" : "<color=#ffdd44>running</color>";
-            if (m.IsCrouching) return m.TargetSpeed > m.crouchWalkSpeed + 0.01f ? "crouch run" : "crouch walk";
+            if (m.IsCrouching) return m.TargetSpeed > m.Profile.crouchWalkSpeed + 0.01f ? "crouch run" : "crouch walk";
             return "walking";
         }
 

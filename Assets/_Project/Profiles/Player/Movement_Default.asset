@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b0e477de860434e970206cefbb0fda5, type: 3}
+  m_Name: Movement_Default
+  m_EditorClassIdentifier: 
+  walkSpeed: 3
+  runSpeed: 6
+  acceleration: 10
+  runAcceleration: 5
+  deceleration: 9
+  sprintTurnSpeed: 170
+  jumpHeight: 1.2
+  gravity: -20
+  sprintTimeBeforeTired: 8
+  fatigueBuildStart: 6
+  tiredRunSpeed: 4.5
+  recoveryDuration: 5
+  sprintCooldownRate: 2
+  tiredSpeedChange: 1.5
+  crouchHeight: 1.2
+  crouchWalkSpeed: 1.6
+  crouchRunSpeed: 3
+  crouchTransitionSpeed: 10
+  mouseSensitivity: 1
+  maxLookAngle: 85
+  freeAim: 1
+  deadzoneYaw: 3
+  deadzonePitch: 2
+  fastTurnSpeed: 450
+  bodyFollowSpeed: 0

@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25eeb8e1c8ef4b28a53d1a57ac442b54, type: 3}
+  m_Name: Revolver_Sway
+  m_EditorClassIdentifier: 
+  masterIntensity: 1
+  aimMultiplier: 0.3
+  weaponWeight: 4
+  responsiveness: 220
+  dampingRatio: 0.6
+  maxLag: 14
+  rollPerTurnSpeed: 0.025
+  maxRoll: 14
+  dipPerTurnSpeed: 0.006
+  handShift: 0.0006
+  moveLag: 0.004
+  strafeRoll: 1.3
+  forwardDip: 0.6
+  walkStepRate: 1.9
+  runStepRate: 2.6
+  stepKickPosition: 0.194
+  stepKickRotation: 18.3
+  speedCurve: 1.6
+  moveNoisePosition: 0.006
+  moveNoiseRotation: 1.8
+  driftPosition: 0.01248
+  driftRotation: 2.77
+  driftSpeed: 0.923
+  breathlessDrift: 3
+  jumpKick: 0.5
+  landKick: 0.09
+  lowerWhileRunning: 1
+  sprintPosition: {x: -0.05, y: -0.09, z: -0.08}
+  sprintRotation: {x: 35, y: -22, z: 18}
+  sprintPoseInTime: 0.3
+  sprintPoseOutTime: 0.6
+  sprintPoseHold: 0.12
+  recoilRiseTime: 0.035
+  recoilReturnTime: 0.22
+  recoilReturnDamping: 0.85
+  inspectPosition: {x: -0.014, y: 0.06, z: -0.123}
+  inspectRotation: {x: -14.799988, y: -26.8, z: -14.100006}
+  inspectSwayMultiplier: 0.3
+  aimLagMultiplier: 0.85
+  aimBreathCalm: 0.15
+  aimBreathTired: 2.2
+  aimShakeCalm: 0.1
+  aimShakeTired: 1.6
+  instabilityGain: 0.005
+  instabilityAmount: 2.2
+  stabilizeTime: 0.9
+  tiredStabilizeTime: 2

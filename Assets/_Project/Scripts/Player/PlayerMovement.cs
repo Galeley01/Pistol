@@ -19,54 +19,15 @@ namespace Pistol.Player
         [BoxGroup("Ссылки"), Tooltip("Находится сам на этом объекте")]
         [SerializeField] PlayerContext context;
 
-        [BoxGroup("Движение"), MinValue(0)] public float walkSpeed = 3f;
-        [BoxGroup("Движение"), MinValue(0)] public float runSpeed = 6f;
-        [BoxGroup("Движение"), Tooltip("Плавность разгона/торможения при ходьбе")] public float acceleration = 10f;
-
-        [BoxGroup("Инерция тела"), Range(1f, 20f), Tooltip("Разгон до бега, м/с². Меньше = тяжелее разгоняется")]
-        public float runAcceleration = 5f;
-        [BoxGroup("Инерция тела"), Range(1f, 30f), Tooltip("Торможение, м/с². Меньше = дольше останавливается")]
-        public float deceleration = 9f;
-        [BoxGroup("Инерция тела"), Range(30f, 720f), Tooltip("Максимальная скорость поворота на бегу, °/с")]
-        public float sprintTurnSpeed = 170f;
-        [BoxGroup("Движение")] public float jumpHeight = 1.2f;
-        [BoxGroup("Движение")] public float gravity = -20f;
-
-        [BoxGroup("Усталость"), MinValue(0.1f)] public float sprintTimeBeforeTired = 8f;
-        [BoxGroup("Усталость"), MinValue(0)]
-        [ValidateInput("IsBuildStartValid", "Должно быть меньше Sprint Time Before Tired")]
-        [Tooltip("С какой секунды бега начинает нарастать тряска перед усталостью")]
-        public float fatigueBuildStart = 6f;
-        [BoxGroup("Усталость"), MinValue(0)] public float tiredRunSpeed = 4.5f;
-        [BoxGroup("Усталость"), MinValue(0)] public float recoveryDuration = 5f;
-        [BoxGroup("Усталость"), Tooltip("Как быстро «остывает» счётчик бега, если остановился раньше, чем устал")]
-        public float sprintCooldownRate = 2f;
-        [BoxGroup("Усталость"), Tooltip("Насколько плавно падает скорость при усталости")]
-        public float tiredSpeedChange = 1.5f;
-
-        [BoxGroup("Приседание (C)")] public float crouchHeight = 1.2f;
-        [BoxGroup("Приседание (C)")] public float crouchWalkSpeed = 1.6f;
-        [BoxGroup("Приседание (C)"), Tooltip("Медленнее бега стоя, без усталости")] public float crouchRunSpeed = 3f;
-        [BoxGroup("Приседание (C)")] public float crouchTransitionSpeed = 10f;
-
-        [BoxGroup("Обзор")] public float mouseSensitivity = 1f;
-        [BoxGroup("Обзор"), Range(10f, 89f)] public float maxLookAngle = 85f;
-
-        [BoxGroup("Свободное прицеливание (Free-Aim)"), Tooltip("Небольшие движения мыши сначала двигают только оружие, а камера поворачивается, когда оружие выходит за мёртвую зону")]
-        public bool freeAim = true;
-        [BoxGroup("Свободное прицеливание (Free-Aim)"), ShowIf("freeAim"), Range(0f, 20f), Tooltip("Мёртвая зона по горизонтали, градусы")]
-        public float deadzoneYaw = 7f;
-        [BoxGroup("Свободное прицеливание (Free-Aim)"), ShowIf("freeAim"), Range(0f, 15f), Tooltip("Мёртвая зона по вертикали, градусы")]
-        public float deadzonePitch = 4f;
-        [BoxGroup("Свободное прицеливание (Free-Aim)"), ShowIf("freeAim"), Range(100f, 2000f), Tooltip("Скорость мыши (°/с), при которой камера поворачивается сразу, минуя мёртвую зону (резкий разворот)")]
-        public float fastTurnSpeed = 450f;
-        [BoxGroup("Свободное прицеливание (Free-Aim)"), ShowIf("freeAim"), Range(0f, 5f), Tooltip("Корпус медленно доворачивается за оружием. 0 = выключено")]
-        public float bodyFollowSpeed = 0f;
+        [BoxGroup("Профиль"), Required("Назначьте профиль: движение"), SerializeField]
+        [Tooltip("Ассет с настройками. Кликните по полю, чтобы открыть его со всеми группами")]
+        MovementProfile profile;
+        public MovementProfile Profile => profile;
 
         // Deadzone scale: WeaponAim lowers it to 0 while aiming so the weapon centers exactly
-        [HideInInspector] public float freeAimScale = 1f;
+        float freeAimScale = 1f;
+        public void SetFreeAimScale(float scale) => freeAimScale = Mathf.Clamp01(scale);
 
-        bool IsBuildStartValid(float value) => value < sprintTimeBeforeTired;
 
         // ---- State read by CameraMotion ----
         public bool IsRunning { get; private set; }       // running while standing
@@ -104,6 +65,7 @@ namespace Pistol.Player
 
         void Awake()
         {
+            if (profile == null) { Debug.LogError("PlayerMovement: no profile assigned.", this); enabled = false; return; }
             if (context == null) context = GetComponent<PlayerContext>();
             if (context == null)
             {
@@ -124,7 +86,7 @@ namespace Pistol.Player
             standHeight = controller.height;
             standCenter = controller.center;
             standCameraY = cameraTransform.localPosition.y;
-            currentRunSpeed = runSpeed;
+            currentRunSpeed = profile.runSpeed;
         }
 
         void Update()
@@ -142,10 +104,10 @@ namespace Pistol.Player
 
         void Look()
         {
-            Vector2 look = context.LookDelta * mouseSensitivity;
+            Vector2 look = context.LookDelta * profile.mouseSensitivity;
             Vector2 toCamera;
 
-            if (!freeAim)
+            if (!profile.freeAim)
             {
                 toCamera = look;
                 FreeAimOffset = Vector2.zero;
@@ -154,20 +116,20 @@ namespace Pistol.Player
             {
                 // Fast flick: with a fast mouse the rotation goes straight into the camera
                 float speed = look.magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
-                float direct = Mathf.InverseLerp(fastTurnSpeed * 0.5f, fastTurnSpeed, speed);
+                float direct = Mathf.InverseLerp(profile.fastTurnSpeed * 0.5f, profile.fastTurnSpeed, speed);
                 toCamera = look * direct;
                 Vector2 fa = FreeAimOffset + look * (1f - direct);
 
                 // The body slowly turns after the weapon (if enabled)
-                if (bodyFollowSpeed > 0f)
+                if (profile.bodyFollowSpeed > 0f)
                 {
-                    Vector2 follow = fa * (1f - Mathf.Exp(-bodyFollowSpeed * Time.deltaTime));
+                    Vector2 follow = fa * (1f - Mathf.Exp(-profile.bodyFollowSpeed * Time.deltaTime));
                     fa -= follow;
                     toCamera += follow;
                 }
 
                 // Anything outside the deadzone turns the camera
-                Vector2 clamped = ClampEllipse(fa, deadzoneYaw * freeAimScale, deadzonePitch * freeAimScale);
+                Vector2 clamped = ClampEllipse(fa, profile.deadzoneYaw * freeAimScale, profile.deadzonePitch * freeAimScale);
                 toCamera += fa - clamped;
                 FreeAimOffset = clamped;
             }
@@ -181,15 +143,15 @@ namespace Pistol.Player
             }
 
             // No sharp turns while running: turn speed is limited
-            float sprintBlend = Mathf.InverseLerp(walkSpeed, runSpeed, new Vector3(horizontalVelocity.x, 0f, horizontalVelocity.z).magnitude);
+            float sprintBlend = Mathf.InverseLerp(profile.walkSpeed, profile.runSpeed, new Vector3(horizontalVelocity.x, 0f, horizontalVelocity.z).magnitude);
             if (IsRunning && sprintBlend > 0f)
             {
-                float limit = Mathf.Lerp(10000f, sprintTurnSpeed, sprintBlend) * Time.deltaTime;
+                float limit = Mathf.Lerp(10000f, profile.sprintTurnSpeed, sprintBlend) * Time.deltaTime;
                 toCamera.x = Mathf.Clamp(toCamera.x, -limit, limit);
             }
 
             transform.Rotate(Vector3.up * toCamera.x);
-            float newPitch = Mathf.Clamp(pitch - toCamera.y, -maxLookAngle, maxLookAngle);
+            float newPitch = Mathf.Clamp(pitch - toCamera.y, -profile.maxLookAngle, profile.maxLookAngle);
             AppliedLookDelta = new Vector2(toCamera.x, pitch - newPitch);
             pitch = newPitch;
             cameraTransform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
@@ -212,10 +174,10 @@ namespace Pistol.Player
                 else if (CanStandUp()) IsCrouching = false;   // can't stand up under a low ceiling
             }
 
-            CrouchAmount = Smoothing.Damp(CrouchAmount, IsCrouching ? 1f : 0f, crouchTransitionSpeed, Time.deltaTime);
+            CrouchAmount = Smoothing.Damp(CrouchAmount, IsCrouching ? 1f : 0f, profile.crouchTransitionSpeed, Time.deltaTime);
 
             // Change the capsule height so the feet stay in place
-            float height = Mathf.Lerp(standHeight, crouchHeight, CrouchAmount);
+            float height = Mathf.Lerp(standHeight, profile.crouchHeight, CrouchAmount);
             float drop = standHeight - height;
             controller.height = height;
             controller.center = standCenter - new Vector3(0f, drop * 0.5f, 0f);
@@ -250,8 +212,8 @@ namespace Pistol.Player
             UpdateStamina();
 
             float targetSpeed = IsCrouching
-                ? (wantsRun ? crouchRunSpeed : crouchWalkSpeed)
-                : (IsRunning ? currentRunSpeed : walkSpeed);
+                ? (wantsRun ? profile.crouchRunSpeed : profile.crouchWalkSpeed)
+                : (IsRunning ? currentRunSpeed : profile.walkSpeed);
             if (!moving) targetSpeed = 0f;
             TargetSpeed = targetSpeed;
 
@@ -261,12 +223,12 @@ namespace Pistol.Player
             Vector3 targetVel = dir * targetSpeed;
             Vector3 prevVel = horizontalVelocity;
             float curSpeed = horizontalVelocity.magnitude;
-            if (targetSpeed > walkSpeed + 0.05f && targetVel.magnitude > curSpeed && curSpeed >= walkSpeed * 0.9f)
-                horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVel, runAcceleration * Time.deltaTime);
+            if (targetSpeed > profile.walkSpeed + 0.05f && targetVel.magnitude > curSpeed && curSpeed >= profile.walkSpeed * 0.9f)
+                horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVel, profile.runAcceleration * Time.deltaTime);
             else if (targetVel.magnitude < curSpeed - 0.01f)
-                horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVel, deceleration * Time.deltaTime);
+                horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVel, profile.deceleration * Time.deltaTime);
             else
-                horizontalVelocity = Vector3.Lerp(horizontalVelocity, targetVel, 1f - Mathf.Exp(-acceleration * Time.deltaTime));
+                horizontalVelocity = Vector3.Lerp(horizontalVelocity, targetVel, 1f - Mathf.Exp(-profile.acceleration * Time.deltaTime));
             LocalAcceleration = transform.InverseTransformDirection((horizontalVelocity - prevVel) / Mathf.Max(Time.deltaTime, 0.0001f));
 
             if (controller.isGrounded && verticalVelocity < 0f)
@@ -280,12 +242,12 @@ namespace Pistol.Player
                 }
                 else
                 {
-                    verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                    verticalVelocity = Mathf.Sqrt(profile.jumpHeight * -2f * profile.gravity);
                     JumpedThisFrame = true;
                 }
             }
 
-            verticalVelocity += gravity * Time.deltaTime;
+            verticalVelocity += profile.gravity * Time.deltaTime;
             controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * Time.deltaTime);
         }
 
@@ -299,21 +261,21 @@ namespace Pistol.Player
                 if (IsRunning)
                 {
                     sprintTimer += dt;
-                    if (sprintTimer >= sprintTimeBeforeTired)
+                    if (sprintTimer >= profile.sprintTimeBeforeTired)
                     {
                         IsExhausted = true;
-                        recoveryTimer = recoveryDuration;
+                        recoveryTimer = profile.recoveryDuration;
                     }
                 }
                 else
                 {
-                    sprintTimer = Mathf.Max(0f, sprintTimer - sprintCooldownRate * dt);
+                    sprintTimer = Mathf.Max(0f, sprintTimer - profile.sprintCooldownRate * dt);
                 }
             }
             else
             {
                 if (IsRunning)
-                    recoveryTimer = recoveryDuration;      // started running again: recovery restarts
+                    recoveryTimer = profile.recoveryDuration;      // started running again: recovery restarts
                 else
                 {
                     recoveryTimer -= dt;
@@ -326,18 +288,18 @@ namespace Pistol.Player
             }
 
             // Run speed smoothly drops to tiredRunSpeed and recovers after resting
-            currentRunSpeed = Smoothing.Damp(currentRunSpeed, IsExhausted ? tiredRunSpeed : runSpeed, tiredSpeedChange, Time.deltaTime);
+            currentRunSpeed = Smoothing.Damp(currentRunSpeed, IsExhausted ? profile.tiredRunSpeed : profile.runSpeed, profile.tiredSpeedChange, Time.deltaTime);
 
             // Build-up before exhaustion: 0 until fatigueBuildStart, smoothly up to 1 at exhaustion
             PreFatigue = IsExhausted ? 1f
-                : Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(fatigueBuildStart, sprintTimeBeforeTired, sprintTimer));
+                : Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(profile.fatigueBuildStart, profile.sprintTimeBeforeTired, sprintTimer));
 
             // Breathlessness for the camera
             float target;
             if (IsExhausted)
                 target = IsRunning ? 1f : Mathf.Clamp01(recoveryTimer / 1.5f); // fades out over the last 1.5 s
             else
-                target = sprintTimer / sprintTimeBeforeTired * 0.35f;          // breathing gradually gets heavier
+                target = sprintTimer / profile.sprintTimeBeforeTired * 0.35f;          // breathing gradually gets heavier
             Breathless = Smoothing.Damp(Breathless, target, 3f, Time.deltaTime);
         }
     }

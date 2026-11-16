@@ -1345,82 +1345,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0083df6ebef5d94d8b8cb50a8175a44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  profile: {fileID: 11400000, guid: e9c12398021c427ba2d11b1d281d156d, type: 2}
   controller: {fileID: 0}
   movement: {fileID: 0}
-  fieldOfView: 90
-  walkStepRate: 1.9
-  runStepRate: 2.6
-  tiredStepLength: 0.7
-  walkBobVertical: 0.022
-  walkBobHorizontal: 0.008
-  walkBobRoll: 0.4
-  walkBobPitch: 0.5
-  crouchBobMultiplier: 0.6
-  runBobVertical: 0.055
-  runBobHorizontal: 0.02
-  runBobRoll: 1
-  runBobPitch: 1.3
-  tiredBobVertical: 0.081
-  tiredBobHorizontal: 0.054
-  tiredBobRoll: 2.7
-  tiredBobPitch: 1.8
-  preFatigueShake: 0.8
-  preFatigueJitter: 0.35
-  preFatigueStepImpact: 0.1
-  preFatigueBobBlend: 0.4
-  stepImpactWalk: 0.05
-  stepImpactRun: 0.18
-  stepImpactAngle: 3
-  stepImpactSpeed: 8
-  stepImpactDecay: 3
-  shakeIdle: 0.35
-  shakeMoving: 0.9
-  shakeRunning: 1.4
-  shakeSpeed: 1.4
-  runShakeSpeedBoost: 0.3
-  runJitter: 0.25
-  runJitterSpeed: 5
-  runShakeSmoothing: 7
-  impactMaxAngle: 5
-  impactMaxOffset: 0.03
-  impactSpeed: 22
-  impactDecay: 2.2
-  jumpImpact: 0.45
-  jumpKickAngle: 2.5
-  landingStrength: 0.03
-  landingMax: 0.3
-  landingRecover: 6
-  landingImpact: 0.07
-  breathSpeed: 1.3
-  breathAmount: 0.006
-  breathPitch: 0.3
-  heavyBreathSpeed: 6
-  heavyBreathAmount: 0.025
-  heavyBreathPitch: 1.5
-  breathlessShake: 1.4
-  swayAmount: 0.12
-  swayMaxAngle: 5
-  swaySmooth: 8
-  strafeTilt: 2.5
-  recoilRiseTime: 0.04
-  recoilReturnTime: 0.18
-  leanAngle: 14
-  leanOffset: 0.4
-  leanSpeed: 4
-  crouchLeanMultiplier: 0.7
-  leanCollisionMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  runForwardLean: 3
-  walkTorsoTwist: 0.6
-  runTorsoTwist: 2.4
-  runTorsoShift: 0.02
-  accelerationNod: 0.55
-  accelerationRoll: 0.25
-  maxNod: 6
-  bodyEffectsWhenTired: 0
-  aimCameraShake: 0.35
-  smoothing: 14
 --- !u!4 &1892785950 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -5603230859222213449, guid: acf2fc5ed3b6d2c469da3dfb84e32a37, type: 3}
@@ -1625,34 +1552,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4257bf29eb9d0294897cd717fd484321, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  profile: {fileID: 11400000, guid: 43e333f0a0354dfb81ead48b90937abe, type: 2}
   cameraTransform: {fileID: 1544992738}
   context: {fileID: 0}
-  walkSpeed: 3
-  runSpeed: 6
-  acceleration: 10
-  runAcceleration: 5
-  deceleration: 9
-  sprintTurnSpeed: 170
-  jumpHeight: 1.2
-  gravity: -20
-  sprintTimeBeforeTired: 8
-  fatigueBuildStart: 6
-  tiredRunSpeed: 4.5
-  recoveryDuration: 5
-  sprintCooldownRate: 2
-  tiredSpeedChange: 1.5
-  crouchHeight: 1.2
-  crouchWalkSpeed: 1.6
-  crouchRunSpeed: 3
-  crouchTransitionSpeed: 10
-  mouseSensitivity: 1
-  maxLookAngle: 85
-  freeAim: 1
-  deadzoneYaw: 3
-  deadzonePitch: 2
-  fastTurnSpeed: 450
-  bodyFollowSpeed: 0
-  freeAimScale: 1
 --- !u!114 &1942477187
 MonoBehaviour:
   m_ObjectHideFlags: 0

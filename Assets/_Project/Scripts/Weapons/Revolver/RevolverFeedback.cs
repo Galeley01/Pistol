@@ -20,36 +20,12 @@ namespace Pistol.Weapons.Revolver
     [RequireComponent(typeof(ItemRig))]
     public class RevolverFeedback : MonoBehaviour
     {
-        [BoxGroup("Отдача оружия"), Range(0f, 30f), Tooltip("На сколько градусов подлетает ствол от бедра (верхняя точка)")]
-        public float flipAngle = 10f;
-        [BoxGroup("Отдача оружия"), Range(0f, 1.5f), Tooltip("Во сколько раз подлёт в прицеле (хват двумя руками у глаза крепче)")]
-        public float aimFlipMultiplier = 0.7f;
-        [BoxGroup("Отдача оружия"), Range(0f, 0.3f), Tooltip("Разброс силы подлёта от выстрела к выстрелу (0.1 = ±10%)")]
-        public float flipVariation = 0.1f;
-        [BoxGroup("Отдача оружия"), Range(0f, 5f), Tooltip("Случайный увод ствола вбок, градусы. Маленький — револьвер не мотает")]
-        public float sideAngle = 0.6f;
-        [BoxGroup("Отдача оружия"), Range(0f, 8f), Tooltip("Случайный крен, градусы")]
-        public float rollAngle = 1f;
-        [BoxGroup("Отдача оружия"), Range(0f, 0.06f), Tooltip("На сколько оружие уходит назад, к лицу, м")]
-        public float recoilBack = 0.018f;
-        [BoxGroup("Отдача оружия"), Range(0f, 0.02f), Tooltip("На сколько всё оружие поднимается целиком, м. Обычно почти ноль — подлетает ствол, а не руки")]
-        public float recoilUp = 0.002f;
-        [BoxGroup("Отдача оружия"), Range(0f, 1f), Tooltip("Насколько выстрел сбивает хват (ствол гуляет, пока не стабилизируется)")]
-        public float gripDisturb = 0.35f;
-        [BoxGroup("Отдача оружия"), Range(1f, 2f), Tooltip("Во сколько раз сильнее отдача у измотанного персонажа")]
-        public float tiredMultiplier = 1.35f;
+        [BoxGroup("Профиль"), Required("Назначьте профиль: отдача"), SerializeField]
+        [Tooltip("Ассет с настройками. Кликните по полю, чтобы открыть его со всеми группами")]
+        RecoilProfile profile;
+        public RecoilProfile Profile => profile;
 
-        [BoxGroup("Отдача камеры"), Range(0f, 3f), Tooltip("Насколько градусов коротко подбрасывает голову (потом возвращается)")]
-        public float cameraFlip = 0.5f;
-        [BoxGroup("Отдача камеры"), Range(0f, 2f), Tooltip("Случайный крен головы, градусы")]
-        public float cameraRollAngle = 0.3f;
-        [BoxGroup("Отдача камеры"), Range(0f, 1f), Tooltip("Резкая тряска камеры. Для револьвера — совсем немного")]
-        public float cameraJolt = 0.06f;
-        [BoxGroup("Отдача камеры"), Range(0f, 3f), Tooltip("Насколько взгляд остаётся выше после выстрела, градусы (подъём прицела)")]
-        public float viewClimb = 0.4f;
-        [BoxGroup("Отдача камеры"), Range(0f, 1f), Tooltip("Случайный увод взгляда вбок, градусы")]
-        public float viewClimbSide = 0.15f;
-
+        // TODO(stage 5-6): flash and smoke move to an FX prefab, sound to GameAudio + SoundEvent assets
         [BoxGroup("Вспышка")] public bool muzzleFlash = true;
         [BoxGroup("Вспышка"), ShowIf("muzzleFlash"), Range(0.3f, 5f), Tooltip("Размер огненной вспышки")]
         public float flashSize = 3f;
@@ -101,6 +77,7 @@ namespace Pistol.Weapons.Revolver
 
         void Start()
         {
+            if (profile == null) { Debug.LogError("RevolverFeedback: no profile assigned.", this); enabled = false; return; }
             cylinder = GetComponent<RevolverCylinder>();
             sway = GetComponent<WeaponSway>();
             weaponAim = GetComponent<WeaponAim>();
@@ -128,30 +105,30 @@ namespace Pistol.Weapons.Revolver
         void OnFired()
         {
             float fatigue = movement != null ? movement.Fatigue : 0f;
-            float m = Mathf.Lerp(1f, tiredMultiplier, fatigue);
+            float m = Mathf.Lerp(1f, profile.tiredMultiplier, fatigue);
 
             // Weapon recoil: barrel up (-X), random side and roll; weapon back and slightly up
             if (sway != null)
             {
                 float aim = weaponAim != null ? weaponAim.AimAmount : 0f;
-                float flip = flipAngle * Mathf.Lerp(1f, aimFlipMultiplier, aim)
-                           * Random.Range(1f - flipVariation, 1f + flipVariation);
+                float flip = profile.flipAngle * Mathf.Lerp(1f, profile.aimFlipMultiplier, aim)
+                           * Random.Range(1f - profile.flipVariation, 1f + profile.flipVariation);
                 var rot = new Vector3(-flip,
-                                      Random.Range(-sideAngle, sideAngle),
-                                      Random.Range(-rollAngle, rollAngle)) * m;
-                var pos = new Vector3(0f, recoilUp, -recoilBack) * m;
+                                      Random.Range(-profile.sideAngle, profile.sideAngle),
+                                      Random.Range(-profile.rollAngle, profile.rollAngle)) * m;
+                var pos = new Vector3(0f, profile.recoilUp, -profile.recoilBack) * m;
                 sway.AddRecoil(rot, pos);
-                sway.AddInstability(gripDisturb * m);
+                sway.AddInstability(profile.gripDisturb * m);
             }
 
             // Camera: short kick and shake, plus a small view climb
             if (cameraFx != null)
             {
-                cameraFx.AddRecoilPunch(cameraFlip * m, Random.Range(-cameraRollAngle, cameraRollAngle));
-                if (cameraJolt > 0f) cameraFx.AddShake(cameraJolt);
+                cameraFx.AddRecoilPunch(profile.cameraFlip * m, Random.Range(-profile.cameraRollAngle, profile.cameraRollAngle));
+                if (profile.cameraJolt > 0f) cameraFx.AddShake(profile.cameraJolt);
             }
-            if (movement != null && viewClimb > 0f)
-                movement.AddRecoilLook(new Vector2(Random.Range(-viewClimbSide, viewClimbSide), viewClimb * m));
+            if (movement != null && profile.viewClimb > 0f)
+                movement.AddRecoilLook(new Vector2(Random.Range(-profile.viewClimbSide, profile.viewClimbSide), profile.viewClimb * m));
 
             // Flash, light, smoke
             // Emit spawns particles immediately, even if the previous smoke is still around

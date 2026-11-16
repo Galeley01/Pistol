@@ -212,7 +212,7 @@ namespace Pistol.Weapons.Revolver
 
             // Take only the open-cylinder spin from the animation; the Fire clip rotation is replaced by our own angle
             float spinAngle = 0f;
-            if (animator != null && animator.GetCurrentAnimatorStateInfo(0).IsName("Spin"))
+            if (animator != null && animator.GetCurrentAnimatorStateInfo(0).shortNameHash == RevolverAnimatorIds.Hash.SpinState)
                 spinAngle = Mathf.DeltaAngle(0f, cylinder.localEulerAngles.z);
 
             cylinder.localRotation = Quaternion.Euler(0f, 0f, indexAngle + spinAngle);

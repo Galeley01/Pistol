@@ -4,6 +4,8 @@ using Pistol.Player;
 
 namespace Pistol.Weapons.Revolver
 {
+    using Hash = RevolverAnimatorIds.Hash;
+
     // Goes on the Revolver root (next to the Animator).
     // LMB = fire (cylinder closed) or spin the cylinder (cylinder open).
     // Firing: the cylinder advances one chamber (RevolverCylinder), the hammer falls (OnShot),
@@ -16,19 +18,14 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Стрельба"), MinValue(0.05f), Tooltip("Минимальная пауза между выстрелами, сек")]
         public float fireCooldown = 0.35f;
 
-        [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float fireSpeed = 1f;
-        [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float openSpeed = 1f;
-        [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float closeSpeed = 1f;
-        [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float spinSpeed = 1f;
-
-        [BoxGroup("Анимации"), Expandable, Tooltip("Углы и тайминги анимаций. Раскройте, чтобы править")]
+        [BoxGroup("Анимации"), Expandable, Tooltip("Углы, тайминги и скорости анимаций. Раскройте, чтобы править")]
         public RevolverAnimationSettings animationSettings;
 
         [BoxGroup("Отладка")] public bool logEvents = true;
 
         [ShowNativeProperty] public bool IsOpen => isOpen;
         // Cylinder is open and still (not opening, not spinning): it can be inspected
-        public bool IsOpenIdle => isOpen && animator != null && InState("OpenIdle");
+        public bool IsOpenIdle => isOpen && animator != null && InState(Hash.OpenIdleState);
 
         // The arms (FPSArmsRig) subscribe to move the left hand away / back
         public event System.Action CylinderOpening;
@@ -38,27 +35,33 @@ namespace Pistol.Weapons.Revolver
         PlayerContext context;
         RevolverCylinder cylinder;
         RevolverShooter shooter;
-        readonly System.Collections.Generic.HashSet<string> animParams = new System.Collections.Generic.HashSet<string>();
+        readonly System.Collections.Generic.HashSet<int> animParams = new System.Collections.Generic.HashSet<int>();
         bool isOpen;
         float nextShotTime;
 
         void Start()
         {
             animator = GetComponent<Animator>();
-            foreach (var p in animator.parameters) animParams.Add(p.name);
+            foreach (var p in animator.parameters) animParams.Add(p.nameHash);
             cylinder = GetComponent<RevolverCylinder>();
             shooter = GetComponent<RevolverShooter>();
             context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
             if (context == null) Debug.LogError("RevolverFire: no PlayerContext above the revolver, input is disabled.", this);
         }
 
+        // Speeds come from the animation settings every frame, so they can be tuned live
+        float FireSpeed => animationSettings != null ? animationSettings.fireSpeed : 1f;
+
         void ApplySpeeds()
         {
-            SetSpeed("FireSpeed", fireSpeed); SetSpeed("OpenSpeed", openSpeed);
-            SetSpeed("CloseSpeed", closeSpeed); SetSpeed("SpinSpeed", spinSpeed);
+            var s = animationSettings;
+            SetSpeed(Hash.FireSpeed, FireSpeed);
+            SetSpeed(Hash.OpenSpeed, s != null ? s.openSpeed : 1f);
+            SetSpeed(Hash.CloseSpeed, s != null ? s.closeSpeed : 1f);
+            SetSpeed(Hash.SpinSpeed, s != null ? s.spinSpeed : 1f);
         }
 
-        void SetSpeed(string param, float value)
+        void SetSpeed(int param, float value)
         {
             if (animParams.Contains(param)) animator.SetFloat(param, value);
         }
@@ -82,38 +85,38 @@ namespace Pistol.Weapons.Revolver
         // ---------- Actions ----------
         public void Fire()
         {
-            if (isOpen || Time.time < nextShotTime || !InState("Idle")) return;
+            if (isOpen || Time.time < nextShotTime || !InState(Hash.IdleState)) return;
             nextShotTime = Time.time + fireCooldown;
-            animator.SetTrigger("Fire");
+            animator.SetTrigger(Hash.Fire);
 
             // Double action: while the trigger is pulled the cylinder turns one chamber
-            float cock = (animationSettings != null ? animationSettings.fireCockTime : 0.117f) / Mathf.Max(fireSpeed, 0.01f);
+            float cock = (animationSettings != null ? animationSettings.fireCockTime : 0.117f) / Mathf.Max(FireSpeed, 0.01f);
             if (cylinder != null) cylinder.AdvanceForShot(cock);
         }
 
         public void ToggleCylinder()
         {
-            if (!isOpen && InState("Idle"))
+            if (!isOpen && InState(Hash.IdleState))
             {
                 isOpen = true;
-                animator.SetTrigger("Open");
+                animator.SetTrigger(Hash.Open);
                 CylinderOpening?.Invoke();
             }
-            else if (isOpen && (InState("OpenIdle") || InState("Spin")))
+            else if (isOpen && (InState(Hash.OpenIdleState) || InState(Hash.SpinState)))
             {
                 isOpen = false;
-                animator.ResetTrigger("Spin");
-                animator.SetTrigger("Close");
+                animator.ResetTrigger(Hash.Spin);
+                animator.SetTrigger(Hash.Close);
                 CylinderClosing?.Invoke();
             }
         }
 
         public void Spin()
         {
-            if (isOpen && InState("OpenIdle")) animator.SetTrigger("Spin");
+            if (isOpen && InState(Hash.OpenIdleState)) animator.SetTrigger(Hash.Spin);
         }
 
-        bool InState(string state) => animator.GetCurrentAnimatorStateInfo(0).IsName(state) && !animator.IsInTransition(0);
+        bool InState(int stateHash) => animator.GetCurrentAnimatorStateInfo(0).shortNameHash == stateHash && !animator.IsInTransition(0);
 
         // ---------- Animation Events ----------
         // The hammer fell on the chamber under it
@@ -159,6 +162,16 @@ namespace Pistol.Weapons.Revolver
         [Button("Тест: раскрутить")] void TestSpin() { if (Application.isPlaying) Spin(); }
 
         // ---------- Animation buttons (editor only) ----------
+        [Button("Проверить Animator")]
+        void ValidateAnimator()
+        {
+#if UNITY_EDITOR
+            var missing = RevolverAnimationSettings.FindMissing(GetComponent<Animator>().runtimeAnimatorController);
+            if (missing.Count == 0) Debug.Log("Revolver Animator: all parameters and states are in place.", this);
+            else Debug.LogWarning("Revolver Animator is missing: " + string.Join(", ", missing), this);
+#endif
+        }
+
         [Button("Создать недостающие анимации")]
         void CreateMissingAnimations()
         {

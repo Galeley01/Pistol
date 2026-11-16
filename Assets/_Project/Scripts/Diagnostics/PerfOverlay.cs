@@ -99,7 +99,7 @@ namespace Pistol.Diagnostics
         PostProcessLayer ppLayer;
         readonly List<MotionBlur> motionBlurs = new List<MotionBlur>();
         bool mbSearched, motionBlurOn;
-        bool aimBlurOn = true, savedBlur = true, savedEdge = true, aimBlurKnown;
+        bool aimBlurOn = true, aimBlurKnown;
 
         // ---------- Game references ----------
         PlayerMovement movement;
@@ -483,21 +483,9 @@ namespace Pistol.Diagnostics
         {
             FindRefs();
             if (weaponAim == null) { ShowToast("WeaponAim not found"); return; }
-            if (aimBlurOn)
-            {
-                savedBlur = weaponAim.blurWeapon;
-                savedEdge = weaponAim.edgeBlur;
-                weaponAim.blurWeapon = false;
-                weaponAim.edgeBlur = false;
-                aimBlurOn = false;
-            }
-            else
-            {
-                if (!savedBlur && !savedEdge) { savedBlur = true; savedEdge = true; }
-                weaponAim.blurWeapon = savedBlur;
-                weaponAim.edgeBlur = savedEdge;
-                aimBlurOn = true;
-            }
+            // Suppress / restore without touching WeaponAim's own settings
+            aimBlurOn = !aimBlurOn;
+            weaponAim.SetPostFxSuppressed(!aimBlurOn);
             OnSettingsChanged(aimBlurOn ? "aim blur on" : "aim blur off");
         }
 
