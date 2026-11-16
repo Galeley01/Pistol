@@ -1,5 +1,6 @@
 using UnityEngine;
 using NaughtyAttributes;
+using Pistol.Core;
 using Pistol.Player;
 
 namespace Pistol.Weapons.Revolver
@@ -72,9 +73,9 @@ namespace Pistol.Weapons.Revolver
             context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
             block = new MaterialPropertyBlock();
 
-            if (cylinder == null || cylinder.cylinder == null || cylinder.Model == null)
+            if (cylinder == null || cylinder.CylinderTransform == null || cylinder.Model == null)
             {
-                Debug.LogWarning("RevolverChamberPicker: needs a RevolverCylinder with its cylinder found (Crane/Cylinder).");
+                Debug.LogWarning("RevolverChamberPicker: needs a RevolverCylinder with the Cylinder assigned.", this);
                 enabled = false;
                 return;
             }
@@ -83,7 +84,7 @@ namespace Pistol.Weapons.Revolver
 
             for (int i = 0; i < CylinderModel.Count; i++)
                 rings[i] = CreatePart("ChamberRing_" + i, cylinder.GetSocket(i), ringMesh, new Vector3(0f, 0f, ringDepth));
-            outline = CreatePart("RearOutline", cylinder.cylinder, outlineMesh, new Vector3(0f, 0f, outlineDepth));
+            outline = CreatePart("RearOutline", cylinder.CylinderTransform, outlineMesh, new Vector3(0f, 0f, outlineDepth));
             SetVisible(false);
         }
 
@@ -207,13 +208,7 @@ namespace Pistol.Weapons.Revolver
         {
             // Built-in shader (present in every build): color = vertex color x _Color, with transparency.
             // Writes depth so the background blur (inspect focus) doesn't blur the rings themselves.
-            material = new Material(Shader.Find("Hidden/Internal-Colored")) { hideFlags = HideFlags.HideAndDontSave };
-            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            material.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
-            material.SetInt("_ZWrite", 1);
-            material.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
-            material.renderQueue = 3100;
+            material = DebugMaterials.CreateColored(zWrite: true, renderQueue: 3100);
         }
 
         void RebuildMeshes()

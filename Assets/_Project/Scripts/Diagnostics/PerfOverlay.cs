@@ -8,6 +8,7 @@ using Unity.Profiling;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering.PostProcessing;
 using UnityEngine.InputSystem;
+using Pistol.Core;
 using Pistol.Player;
 using Pistol.Weapons;
 using Pistol.Weapons.Revolver;
@@ -989,12 +990,7 @@ namespace Pistol.Diagnostics
 
             if (lineMaterial == null)
             {
-                lineMaterial = new Material(Shader.Find("Hidden/Internal-Colored")) { hideFlags = HideFlags.HideAndDontSave };
-                lineMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                lineMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                lineMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
-                lineMaterial.SetInt("_ZWrite", 0);
-                lineMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+                lineMaterial = DebugMaterials.CreateColored(zWrite: false, zTest: UnityEngine.Rendering.CompareFunction.Always);
             }
 
             float target = 1000f / budget;

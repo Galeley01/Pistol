@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.Rendering.PostProcessing;
 using NaughtyAttributes;
 using Pistol.Core;
+using Pistol.Items;
 using Pistol.Player;
 using Pistol.PostFx;
 using Pistol.Weapons.Revolver;
@@ -11,6 +12,7 @@ namespace Pistol.Weapons
     // Aiming on RMB. Goes on Revolver (inside Main Camera).
     // The weapon moves smoothly to the center in front of the eye, the camera zooms slightly,
     // and Depth of Field focuses the eye according to the focus mode.
+    [RequireComponent(typeof(ItemRig))]
     public class WeaponAim : MonoBehaviour
     {
         [BoxGroup("Положение оружия"), Tooltip("Вкл: обычным положением считается то, где револьвер стоит в сцене. Ничего настраивать не нужно")]
@@ -85,7 +87,8 @@ namespace Pistol.Weapons
 
         Camera cam;
         PlayerContext context;
-        RevolverFire revolver;
+        RevolverFire revolver;   // TODO(stage 6): ask the held item whether it can aim
+        ItemRig rig;
         PlayerMovement movement;
         float aim, baseFov = -1f, currentAimIn;
         WeaponSway sway;
@@ -97,6 +100,7 @@ namespace Pistol.Weapons
         {
             cam = GetComponentInParent<Camera>();
             revolver = GetComponent<RevolverFire>();
+            rig = ItemRig.On(this);
             movement = GetComponentInParent<PlayerMovement>();
             context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
             sway = GetComponent<WeaponSway>();
@@ -236,7 +240,7 @@ namespace Pistol.Weapons
             if (focusMode == FocusMode.HandsAndSights)
             {
                 // Between the palms (grip point) and the front sight; everything closer to the eye (forearms) goes out of focus
-                Transform hand = transform.Find("IK_RightHand");
+                Transform hand = rig != null ? rig.RightHandGrip : null;
                 Vector3 palms = hand != null ? hand.position : transform.position;
                 float dHands = Vector3.Distance(cam.transform.position, palms);
                 float dFront = Vector3.Distance(cam.transform.position, FrontSightWorld());
@@ -245,10 +249,10 @@ namespace Pistol.Weapons
             return Mathf.Max(0.1f, Vector3.Distance(cam.transform.position, FrontSightWorld()));
         }
 
+        // TODO(stage 4): front and rear sight become explicit ItemRig points
         Vector3 FrontSightWorld()
         {
-            var fire = GetComponent<RevolverFire>();
-            Transform m = fire != null && fire.muzzle != null ? fire.muzzle : transform.Find("Muzzle");
+            Transform m = rig != null ? rig.Muzzle : null;
             return m != null ? m.position + transform.up * 0.012f : transform.position + transform.forward * 0.25f;
         }
     }

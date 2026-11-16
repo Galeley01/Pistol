@@ -68,8 +68,7 @@ namespace Pistol.Weapons.Revolver
             context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
             cam = GetComponentInParent<Camera>();
             var cyl = GetComponent<RevolverCylinder>();
-            focusTarget = cyl != null && cyl.cylinder != null ? cyl.cylinder : transform.Find("Crane/Cylinder");
-            if (focusTarget == null) focusTarget = transform;
+            focusTarget = cyl != null && cyl.CylinderTransform != null ? cyl.CylinderTransform : transform;
         }
 
         void Update()
@@ -101,7 +100,7 @@ namespace Pistol.Weapons.Revolver
 
             amount = Mathf.MoveTowards(amount, inspecting ? 1f : 0f,
                                        Time.deltaTime / Mathf.Max(inspecting ? inTime : outTime, 0.01f));
-            if (sway != null) sway.inspectAmount = amount;
+            if (sway != null) sway.inspectAmount = amount;   // TODO(stage 4): inspect pose becomes a PoseStack layer
             UpdateVolume(Mathf.SmoothStep(0f, 1f, amount));
         }
 

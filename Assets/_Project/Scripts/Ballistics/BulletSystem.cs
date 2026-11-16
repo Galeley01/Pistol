@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using NaughtyAttributes;
+using Pistol.Core;
 
 namespace Pistol.Ballistics
 {
@@ -173,11 +174,7 @@ namespace Pistol.Ballistics
         {
             if (sharedMaterial == null)
             {
-                sharedMaterial = new Material(Shader.Find("Hidden/Internal-Colored")) { hideFlags = HideFlags.HideAndDontSave };
-                sharedMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                sharedMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                sharedMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
-                sharedMaterial.SetInt("_ZWrite", 0);
+                sharedMaterial = DebugMaterials.CreateColored(zWrite: false);
             }
             return sharedMaterial;
         }

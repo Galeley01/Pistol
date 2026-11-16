@@ -4,6 +4,7 @@ using NaughtyAttributes;
 using UnityEditor;
 #endif
 using Pistol.Cameras;
+using Pistol.Items;
 using Pistol.Player;
 
 namespace Pistol.Weapons.Revolver
@@ -16,6 +17,7 @@ namespace Pistol.Weapons.Revolver
     // sharply around the wrist on the grip and settles back calmly; the arms follow through IK.
     // The camera (head) jolts very slightly and rises a little. Each shot disturbs the grip (Instability),
     // so a quick follow-up shot is less accurate on its own.
+    [RequireComponent(typeof(ItemRig))]
     public class RevolverFeedback : MonoBehaviour
     {
         [BoxGroup("Отдача оружия"), Range(0f, 30f), Tooltip("На сколько градусов подлетает ствол от бедра (верхняя точка)")]
@@ -104,9 +106,8 @@ namespace Pistol.Weapons.Revolver
             weaponAim = GetComponent<WeaponAim>();
             movement = GetComponentInParent<PlayerMovement>();
             cameraFx = GetComponentInParent<Camera>() != null ? GetComponentInParent<Camera>().GetComponent<CameraMotion>() : null;
-            var fire = GetComponent<RevolverFire>();
-            muzzle = fire != null && fire.muzzle != null ? fire.muzzle : transform.Find("Muzzle");
-            if (muzzle == null) muzzle = transform;
+            var rig = ItemRig.On(this);
+            muzzle = rig != null ? rig.MuzzleOrRoot : transform;
 
             if (cylinder != null && cylinder.Model != null)
             {
@@ -249,7 +250,7 @@ namespace Pistol.Weapons.Revolver
             SetupSmoke(smokePs, new ParticleSystem.MinMaxCurve(0.3f, 1.6f), 6f);
 
             // Side blast from the cylinder gap: a point at the cylinder's front face, on top
-            var cyl = transform.Find("Crane/Cylinder");
+            var cyl = cylinder != null ? cylinder.CylinderTransform : null;
             if (cyl != null)
             {
                 var gap = new GameObject("CylinderGap").transform;

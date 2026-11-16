@@ -2,21 +2,21 @@ using System.Collections.Generic;
 using UnityEngine;
 using NaughtyAttributes;
 using Pistol.Ballistics;
+using Pistol.Items;
 using Pistol.Player;
 
 namespace Pistol.Weapons.Revolver
 {
-    // Fires from the muzzle along the barrel, plus a debug "future bullet" line.
+    // Fires from the muzzle (ItemRig) along the barrel, plus a debug "future bullet" line.
     // Goes on Revolver. The bullet flies where the barrel actually points at the moment of the shot:
     // all weapon motion (inertia, roll, breathing, Free-Aim) is accounted for automatically.
     //
     // Zeroing: the barrel sits below the eye, so it is tilted up slightly so the bullet crosses
     // the sight line (rear sight to front sight) at the zero distance.
     [DefaultExecutionOrder(1000)]   // after the camera, so the line doesn't lag the weapon by a frame
+    [RequireComponent(typeof(ItemRig))]
     public class RevolverShooter : MonoBehaviour
     {
-        [BoxGroup("Ствол"), Tooltip("Точка дула (найдётся сама: Muzzle)")]
-        public Transform muzzle;
         [BoxGroup("Ствол"), Range(5f, 50f), Tooltip("На какой дистанции пуля попадает точно в точку прицеливания, м")]
         public float zeroDistance = 15f;
         [BoxGroup("Ствол"), Range(0f, 0.04f), Tooltip("Насколько линия прицела выше оси ствола, м")]
@@ -30,6 +30,8 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Линия будущей пули"), ShowIf("showTrajectory")] public Color hitColor = new Color(1f, 0.2f, 0.15f, 0.95f);
 
         Transform ignoreRoot;
+        Transform muzzle;
+        AmmoType fallbackAmmo;   // used when there is no cylinder; created once
         RevolverCylinder cylinder;
         LineRenderer line;
         GameObject hitMarker;
@@ -37,7 +39,9 @@ namespace Pistol.Weapons.Revolver
 
         void Start()
         {
-            if (muzzle == null) muzzle = transform.Find("Muzzle");
+            var rig = ItemRig.On(this);
+            muzzle = rig != null ? rig.MuzzleOrRoot : transform;
+            if (rig != null && rig.Muzzle == null) Debug.LogError("RevolverShooter: ItemRig has no Muzzle, shooting from the weapon root.", this);
             cylinder = GetComponent<RevolverCylinder>();
             var player = GetComponentInParent<PlayerMovement>();
             ignoreRoot = player != null ? player.transform : transform.root;
@@ -55,8 +59,7 @@ namespace Pistol.Weapons.Revolver
         // Where the bullet would start and go if fired now (zeroing included)
         public void GetShot(AmmoType ammo, out Vector3 origin, out Vector3 direction)
         {
-            Transform from = muzzle != null ? muzzle : transform;
-            origin = from.position;
+            origin = muzzle != null ? muzzle.position : transform.position;
 
             float v = ammo != null ? ammo.muzzleVelocity : 440f;
             float g = Physics.gravity.magnitude * (ammo != null ? ammo.gravityScale : 1f);
@@ -69,7 +72,12 @@ namespace Pistol.Weapons.Revolver
         // Called from RevolverFire when the hammer strikes a live round
         public void Fire(AmmoType ammo)
         {
-            if (ammo == null) ammo = cylinder != null ? cylinder.Ammo : AmmoType.CreateDefault();
+            if (ammo == null && cylinder != null) ammo = cylinder.Ammo;
+            if (ammo == null)
+            {
+                if (fallbackAmmo == null) fallbackAmmo = AmmoType.CreateDefault();
+                ammo = fallbackAmmo;
+            }
             GetShot(ammo, out var origin, out var dir);
             BulletSystem.Instance.Fire(origin, dir, ammo, ignoreRoot);
         }
@@ -129,8 +137,9 @@ namespace Pistol.Weapons.Revolver
         void SightHeightFromRearSight()
         {
             var sway = GetComponent<WeaponSway>();
-            var m = muzzle != null ? muzzle : transform.Find("Muzzle");
-            if (sway == null || m == null) { Debug.LogWarning("WeaponSway and Muzzle are required"); return; }
+            var rig = GetComponent<ItemRig>();
+            var m = rig != null ? rig.Muzzle : null;
+            if (sway == null || m == null) { Debug.LogWarning("WeaponSway and the ItemRig Muzzle are required"); return; }
             sightHeight = Mathf.Max(0f, sway.rearSightPoint.y - m.localPosition.y);
             Debug.Log($"Sight height above the bore: {sightHeight * 1000f:F1} mm");
         }

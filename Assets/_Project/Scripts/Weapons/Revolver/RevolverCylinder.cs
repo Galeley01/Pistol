@@ -6,9 +6,10 @@ namespace Pistol.Weapons.Revolver
 {
     // Cylinder: holds the chamber logic (CylinderModel), shows rounds in 6 sockets
     // and rotates the cylinder itself on every shot.
-    // Goes on Revolver. Sockets Chamber_0..5 are created inside Crane/Cylinder when the game starts.
+    // Goes on Revolver. Sockets Chamber_0..5 are created inside the cylinder when the game starts.
+    // The cylinder, extractor star and rod are assigned in the prefab.
     //
-    // Extractor: the star (Crane/Cylinder/Ejector) rotates with the cylinder, the rod (Crane/EjectorRod)
+    // Extractor: the star (child of the cylinder) rotates with the cylinder, the rod (child of the crane)
     // stays on the crane. Both are placed by the model; the script only slides them along the cylinder axis:
     // the Eject Stroke slider (0..1) pushes the star and the rounds back and the rod with them.
     //
@@ -24,8 +25,8 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Патроны"), Tooltip("Зарядить все 6 камор при запуске")]
         public bool startLoaded = true;
 
-        [BoxGroup("Гнёзда камор"), Tooltip("Барабан (найдётся сам: Crane/Cylinder)")]
-        public Transform cylinder;
+        [BoxGroup("Гнёзда камор"), SerializeField, Tooltip("Барабан (Crane/Cylinder)")]
+        Transform cylinder;
         [BoxGroup("Гнёзда камор"), Range(0.005f, 0.02f), Tooltip("Расстояние от оси барабана до оси каморы, м")]
         public float chamberRadius = 0.0100f;
         [BoxGroup("Гнёзда камор"), Range(-0.04f, 0.04f), Tooltip("Где задний торец барабана по оси Z (донца патронов), м")]
@@ -35,25 +36,27 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Гнёзда камор"), Tooltip("Рисовать гнёзда в окне Scene")]
         public bool showGizmos = true;
 
-        [BoxGroup("Экстрактор"), Tooltip("Звезда экстрактора (найдётся сама: Crane/Cylinder/Ejector)")]
-        public Transform ejector;
-        [BoxGroup("Экстрактор"), Tooltip("Шток экстрактора (найдётся сам: Crane/EjectorRod)")]
-        public Transform ejectorRod;
+        [BoxGroup("Экстрактор"), SerializeField, Tooltip("Звезда экстрактора (Crane/Cylinder/Ejector)")]
+        Transform ejector;
+        [BoxGroup("Экстрактор"), SerializeField, Tooltip("Шток экстрактора (Crane/EjectorRod)")]
+        Transform ejectorRod;
         [BoxGroup("Экстрактор"), Range(0f, 0.03f), Tooltip("Полный ход звезды назад, м")]
         public float ejectorTravel = 0.012f;
         [BoxGroup("Экстрактор"), Range(0f, 1f), Tooltip("Насколько выдвинута звезда: 0 — на месте, 1 — до конца. Можно двигать в Play Mode для проверки")]
         public float ejectStroke = 0f;
 
-        [BoxGroup("Поворот"), Tooltip("Шаг поворота на одну камору (берётся из настроек анимаций, обычно −60)")]
-        public float stepAngle = -60f;
+        // Step per chamber, taken from the animation settings (Cylinder Step)
+        [ShowNativeProperty] public float StepAngle => stepAngle;
 
         [ShowNativeProperty] public string ChambersState => model != null ? model.Describe() : "—";
         [ShowNativeProperty] public int LiveRounds => model != null ? model.CountOf(RoundState.Live) : 0;
 
         public CylinderModel Model => model;
+        public Transform CylinderTransform => cylinder;
         public AmmoType Ammo => ammoType;
 
         CylinderModel model;
+        float stepAngle = -60f;
         readonly Transform[] sockets = new Transform[CylinderModel.Count];
         readonly GameObject[] liveViews = new GameObject[CylinderModel.Count];
         readonly GameObject[] spentViews = new GameObject[CylinderModel.Count];
@@ -64,17 +67,21 @@ namespace Pistol.Weapons.Revolver
         void Awake()
         {
             if (ammoType == null) ammoType = AmmoType.CreateDefault();
-            if (cylinder == null) cylinder = transform.Find("Crane/Cylinder");
             animator = GetComponent<Animator>();
-
-            var fire = GetComponent<RevolverFire>();
-            if (fire != null && fire.animationSettings != null) stepAngle = fire.animationSettings.cylinderStep;
+            ReadStepAngle();
 
             model = new CylinderModel();
             model.ChamberChanged += RefreshView;
-            if (cylinder != null) { BuildSockets(); FindExtractor(); }
+            if (cylinder != null) { BuildSockets(); StoreExtractorRest(); }
+            else Debug.LogError("RevolverCylinder: Cylinder is not assigned, rounds and cylinder rotation are disabled.", this);
             if (startLoaded) model.FillAll(ammoType);
             else for (int i = 0; i < CylinderModel.Count; i++) RefreshView(i);
+        }
+
+        void ReadStepAngle()
+        {
+            var fire = GetComponent<RevolverFire>();
+            if (fire != null && fire.animationSettings != null) stepAngle = fire.animationSettings.cylinderStep;
         }
 
         // ---------- Sockets and visuals ----------
@@ -90,13 +97,8 @@ namespace Pistol.Weapons.Revolver
         {
             for (int k = 0; k < CylinderModel.Count; k++)
             {
-                string n = "Chamber_" + k;
-                var t = cylinder.Find(n);
-                if (t == null)
-                {
-                    t = new GameObject(n).transform;
-                    t.SetParent(cylinder, false);
-                }
+                var t = new GameObject("Chamber_" + k).transform;
+                t.SetParent(cylinder, false);
                 t.localPosition = SocketLocalPosition(k);
                 t.localRotation = Quaternion.identity;   // +Z points from case head to bullet (towards the muzzle)
                 sockets[k] = t;
@@ -108,11 +110,10 @@ namespace Pistol.Weapons.Revolver
 
         Vector3 ejectorRest, ejectorRodRest;   // positions from the model, the stroke is added on top
 
-        void FindExtractor()
+        void StoreExtractorRest()
         {
-            // TODO(stage 2): explicit references in the weapon rig instead of paths
-            if (ejector == null) ejector = cylinder.Find("Ejector");
-            if (ejectorRod == null) ejectorRod = transform.Find("Crane/EjectorRod");
+            if (ejector == null || ejectorRod == null)
+                Debug.LogWarning("RevolverCylinder: Ejector or Ejector Rod is not assigned, that part won't slide.", this);
             if (ejector != null) ejectorRest = ejector.localPosition;
             if (ejectorRod != null) ejectorRodRest = ejectorRod.localPosition;
         }
@@ -225,9 +226,9 @@ namespace Pistol.Weapons.Revolver
 
         void OnDrawGizmos()
         {
-            if (!showGizmos) return;
-            var cyl = cylinder != null ? cylinder : transform.Find("Crane/Cylinder");
-            if (cyl == null) return;
+            if (!showGizmos || cylinder == null) return;
+            if (!Application.isPlaying) ReadStepAngle();
+            var cyl = cylinder;
             for (int k = 0; k < CylinderModel.Count; k++)
             {
                 Vector3 p = cyl.TransformPoint(SocketLocalPosition(k));

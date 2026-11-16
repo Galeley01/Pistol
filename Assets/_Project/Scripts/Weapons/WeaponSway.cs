@@ -1,8 +1,8 @@
 using UnityEngine;
 using NaughtyAttributes;
 using Pistol.Core;
+using Pistol.Items;
 using Pistol.Player;
-using Pistol.Weapons.Revolver;
 
 namespace Pistol.Weapons
 {
@@ -15,6 +15,7 @@ namespace Pistol.Weapons
     // - Movement bob, random hand drift, jump/landing kicks, lowered weapon while sprinting.
     //
     // Goes on Revolver. On start it inserts WeaponSwayPivot between the camera and the revolver.
+    [RequireComponent(typeof(ItemRig))]
     public class WeaponSway : MonoBehaviour
     {
         [BoxGroup("Общее"), Range(0f, 2f), Tooltip("Общая сила раскачивания (на Free-Aim не влияет)")]
@@ -142,6 +143,7 @@ namespace Pistol.Weapons
         Transform pivot;
         Camera cam;
         Transform muzzle;
+        ItemRig rig;
         PlayerMovement movement;
         CharacterController controller;
         WeaponAim weaponAim;
@@ -193,16 +195,17 @@ namespace Pistol.Weapons
             controller = movement != null ? movement.GetComponent<CharacterController>()
                                           : GetComponentInParent<CharacterController>();
             weaponAim = GetComponent<WeaponAim>();
-            var fire = GetComponent<RevolverFire>();
-            muzzle = fire != null && fire.muzzle != null ? fire.muzzle : transform.Find("Muzzle");
+            rig = ItemRig.On(this);
+            muzzle = rig != null ? rig.MuzzleOrRoot : transform;
         }
 
         void Start()
         {
             if (wristFromRig)
             {
-                var hand = transform.Find("IK_RightHand");
-                if (hand != null) wristPivot = hand.localPosition;
+                var hand = rig != null ? rig.RightHandGrip : null;
+                if (hand != null) wristPivot = transform.InverseTransformPoint(hand.position);
+                else Debug.LogWarning("WeaponSway: Wrist From Rig is on but ItemRig has no Right Hand Grip, using Wrist Pivot.", this);
             }
         }
 
@@ -274,8 +277,8 @@ namespace Pistol.Weapons
             // ---------- Springs with mass ----------
             float stiffness = responsiveness / Mathf.Max(weaponWeight, 0.05f);
             float damping = 2f * dampingRatio * Mathf.Sqrt(stiffness);
-            StepSpring(ref lag, ref lagVel, lagTarget, stiffness, damping, dt);
-            StepSpring(ref posSpring, ref posVel, posTarget, stiffness, damping, dt);
+            Spring.Step(ref lag, ref lagVel, lagTarget, stiffness, damping, dt);
+            Spring.Step(ref posSpring, ref posVel, posTarget, stiffness, damping, dt);
 
             // ---------- 5. Chaotic movement bob ----------
             // Strength follows speed smoothly: a calm walk is weak, running is strong.
@@ -305,14 +308,14 @@ namespace Pistol.Weapons
 
             // Uneven "floating": frequency and strength grow with speed
             moveNoiseTime += dt * Mathf.Lerp(0.5f, 2.4f, speed01);
-            Vector3 bobPos = Noise3(moveNoiseTime, 80f) * moveNoisePosition * intensity * k;
-            Vector3 bobRot = Noise3(moveNoiseTime, 120f) * moveNoiseRotation * intensity * k;
+            Vector3 bobPos = Noise.Perlin3(moveNoiseTime, 80f) * moveNoisePosition * intensity * k;
+            Vector3 bobRot = Noise.Perlin3(moveNoiseTime, 120f) * moveNoiseRotation * intensity * k;
 
             // ---------- 6. Random hand drift ----------
             float driftMul = Mathf.Lerp(1f, breathlessDrift, breathless) * k;
             driftTime += dt * driftSpeed * Mathf.Lerp(1f, 2.2f, breathless);
-            Vector3 driftPos = Noise3(driftTime, 0f) * driftPosition * driftMul;
-            Vector3 driftRot = Noise3(driftTime, 40f) * driftRotation * driftMul;
+            Vector3 driftPos = Noise.Perlin3(driftTime, 0f) * driftPosition * driftMul;
+            Vector3 driftRot = Noise.Perlin3(driftTime, 40f) * driftRotation * driftMul;
 
             // ---------- 7. Weapon lowered while sprinting ----------
             bool sprintPose = lowerWhileRunning && running && grounded && aim < 0.5f;
@@ -337,14 +340,14 @@ namespace Pistol.Weapons
 
             // Chaotic tremor: faster and stronger when tired
             aimShakeTime += dt * Mathf.Lerp(0.6f, 2.6f, fatigue);
-            Vector3 aimShake = (Noise3(aimShakeTime, 200f) + Noise3(aimShakeTime * 2.7f, 260f) * 0.4f)
+            Vector3 aimShake = (Noise.Perlin3(aimShakeTime, 200f) + Noise.Perlin3(aimShakeTime * 2.7f, 260f) * 0.4f)
                              * Mathf.Lerp(aimShakeCalm, aimShakeTired, fatigue) * aim;
 
             // Barrel settling: turning while aiming disturbs the grip, the barrel wanders until it settles
             instability = Mathf.Clamp01(instability + Mathf.Abs(worldYawRate) * instabilityGain * aim * dt);
             instability = Mathf.MoveTowards(instability, 0f, dt / Mathf.Lerp(stabilizeTime, tiredStabilizeTime, fatigue));
             instabilityTime += dt * 3.5f;
-            Vector3 aimInstab = Noise3(instabilityTime, 320f) * instabilityAmount * instability * aim;
+            Vector3 aimInstab = Noise.Perlin3(instabilityTime, 320f) * instabilityAmount * instability * aim;
 
             Vector3 aimSway = aimBreath + aimShake + aimInstab;
 
@@ -371,23 +374,6 @@ namespace Pistol.Weapons
             pivot.localRotation = kick * rot;
             pivot.localPosition = hand + kick * (pivotPos - hand) + gunFrame * recoilPos;
         }
-
-        static void StepSpring(ref Vector3 x, ref Vector3 v, Vector3 target, float stiffness, float damping, float dt)
-        {
-            int steps = Mathf.CeilToInt(dt / 0.005f);
-            float h = dt / steps;
-            for (int i = 0; i < steps; i++)
-            {
-                Vector3 a = (target - x) * stiffness - v * damping;
-                v += a * h;
-                x += v * h;
-            }
-        }
-
-        static Vector3 Noise3(float t, float seed) => new Vector3(
-            Mathf.PerlinNoise(t, seed + 0.1f) * 2f - 1f,
-            Mathf.PerlinNoise(seed + 3.3f, t) * 2f - 1f,
-            Mathf.PerlinNoise(t, seed + 7.7f) * 2f - 1f);
 
         void OnGUI()
         {

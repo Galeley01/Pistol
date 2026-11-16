@@ -16,9 +16,6 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Стрельба"), MinValue(0.05f), Tooltip("Минимальная пауза между выстрелами, сек")]
         public float fireCooldown = 0.35f;
 
-        [BoxGroup("Стрельба"), Tooltip("Точка дула (дочерний объект Muzzle)")]
-        public Transform muzzle;
-
         [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float fireSpeed = 1f;
         [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float openSpeed = 1f;
         [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float closeSpeed = 1f;
@@ -48,7 +45,6 @@ namespace Pistol.Weapons.Revolver
         void Start()
         {
             animator = GetComponent<Animator>();
-            if (muzzle == null) muzzle = transform.Find("Muzzle");
             foreach (var p in animator.parameters) animParams.Add(p.name);
             cylinder = GetComponent<RevolverCylinder>();
             shooter = GetComponent<RevolverShooter>();
@@ -168,7 +164,7 @@ namespace Pistol.Weapons.Revolver
         {
 #if UNITY_EDITOR
             if (animationSettings == null) animationSettings = RevolverAnimationSettings.GetOrCreateDefault();
-            animationSettings.Generate(false);
+            animationSettings.Generate(false, this);
 #endif
         }
 
@@ -177,7 +173,7 @@ namespace Pistol.Weapons.Revolver
         {
 #if UNITY_EDITOR
             if (animationSettings == null) animationSettings = RevolverAnimationSettings.GetOrCreateDefault();
-            animationSettings.OverwriteButton();
+            animationSettings.OverwriteButton(this);
 #endif
         }
     }

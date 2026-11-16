@@ -11,7 +11,7 @@ namespace Pistol.EditorTools
     //  - sets up texture import (normal map, sRGB off, alpha from texture),
     //  - creates the M_Cartridge357 material (Standard: Albedo, Metallic+Smoothness, Normal, Occlusion),
     //  - assigns it to the model,
-    //  - creates the Ammo_357 cartridge asset and assigns it to the RevolverCylinder in the scene.
+    //  - creates the Ammo_357 cartridge asset and assigns it to the selected revolver (RevolverCylinder).
     public static class AmmoSetup
     {
         [MenuItem("Tools/Revolver/Настроить патрон .357")]
@@ -79,8 +79,9 @@ namespace Pistol.EditorTools
             EditorUtility.SetDirty(ammo);
             AssetDatabase.SaveAssets();
 
-            // ---------- Assign to the cylinder in the scene ----------
-            var cyl = Object.FindFirstObjectByType<RevolverCylinder>();
+            // ---------- Assign to the selected revolver ----------
+            var selected = Selection.activeGameObject;
+            var cyl = selected != null ? selected.GetComponentInParent<RevolverCylinder>() : null;
             if (cyl != null)
             {
                 Undo.RecordObject(cyl, "Assign Ammo");
@@ -91,7 +92,7 @@ namespace Pistol.EditorTools
             }
 
             Selection.activeObject = ammo;
-            Debug.Log("Cartridge .357 set up: material, model and Ammo_357" + (cyl != null ? " (assigned to the cylinder)." : ". Assign it to RevolverCylinder manually."));
+            Debug.Log("Cartridge .357 set up: material, model and Ammo_357" + (cyl != null ? " (assigned to the selected revolver)." : ". Select the Revolver before running the menu, or assign it to RevolverCylinder manually."));
         }
 
         static Texture2D Texture(string path, bool srgb, bool normal, bool alphaFromInput)

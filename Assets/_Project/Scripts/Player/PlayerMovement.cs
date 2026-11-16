@@ -1,5 +1,6 @@
 using UnityEngine;
 using NaughtyAttributes;
+using Pistol.Core;
 
 namespace Pistol.Player
 {
@@ -211,7 +212,7 @@ namespace Pistol.Player
                 else if (CanStandUp()) IsCrouching = false;   // can't stand up under a low ceiling
             }
 
-            CrouchAmount = Damp(CrouchAmount, IsCrouching ? 1f : 0f, crouchTransitionSpeed);
+            CrouchAmount = Smoothing.Damp(CrouchAmount, IsCrouching ? 1f : 0f, crouchTransitionSpeed, Time.deltaTime);
 
             // Change the capsule height so the feet stay in place
             float height = Mathf.Lerp(standHeight, crouchHeight, CrouchAmount);
@@ -325,7 +326,7 @@ namespace Pistol.Player
             }
 
             // Run speed smoothly drops to tiredRunSpeed and recovers after resting
-            currentRunSpeed = Damp(currentRunSpeed, IsExhausted ? tiredRunSpeed : runSpeed, tiredSpeedChange);
+            currentRunSpeed = Smoothing.Damp(currentRunSpeed, IsExhausted ? tiredRunSpeed : runSpeed, tiredSpeedChange, Time.deltaTime);
 
             // Build-up before exhaustion: 0 until fatigueBuildStart, smoothly up to 1 at exhaustion
             PreFatigue = IsExhausted ? 1f
@@ -337,10 +338,7 @@ namespace Pistol.Player
                 target = IsRunning ? 1f : Mathf.Clamp01(recoveryTimer / 1.5f); // fades out over the last 1.5 s
             else
                 target = sprintTimer / sprintTimeBeforeTired * 0.35f;          // breathing gradually gets heavier
-            Breathless = Damp(Breathless, target, 3f);
+            Breathless = Smoothing.Damp(Breathless, target, 3f, Time.deltaTime);
         }
-
-        static float Damp(float current, float target, float speed)
-            => Mathf.Lerp(current, target, 1f - Mathf.Exp(-speed * Time.deltaTime));
     }
 }

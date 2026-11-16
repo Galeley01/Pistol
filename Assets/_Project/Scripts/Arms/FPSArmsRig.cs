@@ -5,6 +5,7 @@ using NaughtyAttributes;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+using Pistol.Items;
 using Pistol.Weapons.Revolver;
 
 namespace Pistol.Arms
@@ -140,12 +141,7 @@ namespace Pistol.Arms
         {
 #if UNITY_EDITOR
             if (Application.isPlaying) { Debug.LogWarning("Build the rig outside Play Mode: the arms must be in their rest pose."); return; }
-            if (weapon == null)
-            {
-                var gun = FindFirstObjectByType<RevolverFire>();
-                if (gun != null) weapon = gun.transform;
-            }
-            if (weapon == null) { Debug.LogError("No weapon found. Drag the Revolver into the Weapon field."); return; }
+            if (weapon == null) { Debug.LogError("Weapon is not assigned. Drag the Revolver into the Weapon field.", this); return; }
 
             Undo.RegisterFullObjectHierarchyUndo(gameObject, "Build Arms Rig");
             transform.localPosition = armsLocalPosition;
@@ -161,11 +157,15 @@ namespace Pistol.Arms
             foreach (var l in rigBuilder.layers) if (l.rig == rig) hasLayer = true;
             if (!hasLayer) rigBuilder.layers.Add(new RigLayer(rig, true));
 
-            // Targets on the weapon
-            rightTarget = GetOrCreateChild(weapon, "IK_RightHand");
-            leftTarget  = GetOrCreateChild(weapon, "IK_LeftHand");
-            rightHint   = GetOrCreateChild(weapon, "IK_RightElbow");
-            leftHint    = GetOrCreateChild(weapon, "IK_LeftElbow");
+            // Targets on the weapon: taken from its ItemRig; missing ones are created and written back into the ItemRig
+            var itemRig = weapon.GetComponent<ItemRig>();
+            if (itemRig == null) itemRig = Undo.AddComponent<ItemRig>(weapon.gameObject);
+            var rigSo = new SerializedObject(itemRig);
+            rightTarget = RigPoint(rigSo, "rightHandGrip", "IK_RightHand");
+            leftTarget  = RigPoint(rigSo, "leftHandGrip", "IK_LeftHand");
+            rightHint   = RigPoint(rigSo, "rightElbowHint", "IK_RightElbow");
+            leftHint    = RigPoint(rigSo, "leftElbowHint", "IK_LeftElbow");
+            rigSo.ApplyModifiedProperties();
 
             rightIK = SetupIK(rigT, "RightHandIK", "R", rightTarget, rightHint);
             leftIK  = SetupIK(rigT, "LeftHandIK", "L", leftTarget, leftHint);
@@ -226,6 +226,18 @@ namespace Pistol.Arms
                 if (t.name == boneName) return t;
             return null;
         }
+
+#if UNITY_EDITOR
+        // Editor only: the ItemRig point if assigned, otherwise a new child of the weapon assigned into the ItemRig
+        Transform RigPoint(SerializedObject rigSo, string field, string childName)
+        {
+            var prop = rigSo.FindProperty(field);
+            if (prop.objectReferenceValue is Transform t && t != null) return t;
+            t = GetOrCreateChild(weapon, childName);
+            prop.objectReferenceValue = t;
+            return t;
+        }
+#endif
 
         static Transform GetOrCreateChild(Transform parent, string childName)
         {

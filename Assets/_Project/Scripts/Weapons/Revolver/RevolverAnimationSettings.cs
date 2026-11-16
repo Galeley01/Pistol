@@ -50,18 +50,21 @@ namespace Pistol.Weapons.Revolver
         public void CreateMissingButton()
         {
 #if UNITY_EDITOR
-            Generate(false);
+            Generate(false, null);
 #endif
         }
 
         [Button("Перезаписать анимации из этих настроек")]
-        public void OverwriteButton()
+        void OverwriteFromAsset() => OverwriteButton(null);
+
+        // target: the revolver that gets the generated Animator Controller (null = only create the assets)
+        public void OverwriteButton(RevolverFire target)
         {
 #if UNITY_EDITOR
             if (EditorUtility.DisplayDialog("Перезаписать анимации?",
                 "Все .anim револьвера будут пересчитаны по этим настройкам. Ручные правки в окне Animation пропадут.",
                 "Перезаписать", "Отмена"))
-                Generate(true);
+                Generate(true, target);
 #endif
         }
 
@@ -69,7 +72,7 @@ namespace Pistol.Weapons.Revolver
         const string DefaultAssetPath = "Assets/Pistol/RevolverAnimationSettings.asset";
 
         [MenuItem("Tools/Revolver/Создать недостающие анимации")]
-        static void MenuCreateMissing() => GetOrCreateDefault().Generate(false);
+        static void MenuCreateMissing() => GetOrCreateDefault().Generate(false, null);
 
         public static RevolverAnimationSettings GetOrCreateDefault()
         {
@@ -83,7 +86,8 @@ namespace Pistol.Weapons.Revolver
             return s;
         }
 
-        public void Generate(bool overwrite)
+        // target: the revolver that gets the generated Animator Controller (null = only create the assets)
+        public void Generate(bool overwrite, RevolverFire target)
         {
             EnsureFolder(folder);
             float drop = fireCockTime + hammerDropTime;
@@ -142,23 +146,17 @@ namespace Pistol.Weapons.Revolver
             var ctrl = GetOrCreateController(idle, fire, open, openIdle, spin, close, made);
             AssetDatabase.SaveAssets();
 
-            var gun = FindFirstObjectByType<RevolverFire>();
-            if (gun != null)
+            if (target != null)
             {
-                var anim = gun.GetComponent<Animator>();
+                var anim = target.GetComponent<Animator>();
                 if (anim.runtimeAnimatorController != ctrl)
                 {
                     Undo.RecordObject(anim, "Assign Revolver Controller");
                     anim.runtimeAnimatorController = ctrl;
-                    UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(gun.gameObject.scene);
-                }
-                if (gun.animationSettings == null)
-                {
-                    Undo.RecordObject(gun, "Assign Revolver Settings");
-                    gun.animationSettings = this;
-                    EditorUtility.SetDirty(gun);
+                    EditorUtility.SetDirty(anim);
                 }
             }
+            else Debug.Log("Revolver: Animator Controller not assigned to any revolver. Use the animation buttons on RevolverFire to assign it.");
 
             Debug.Log(made.Count == 0
                 ? "Revolver: everything already exists, nothing overwritten."

@@ -180,9 +180,9 @@ namespace Pistol.Cameras
 
             // ---------- Head bob ----------
             float moveFactor = grounded ? Mathf.Clamp01(hSpeed / walk) : 0f;
-            bobWeight = Damp(bobWeight, moveFactor, 8f, dt);
-            runWeight = Damp(runWeight, running && grounded ? 1f : 0f, 5f, dt);
-            tiredWeight = Damp(tiredWeight, running && exhausted ? 1f : 0f, 3f, dt);
+            bobWeight = Smoothing.Damp(bobWeight, moveFactor, 8f, dt);
+            runWeight = Smoothing.Damp(runWeight, running && grounded ? 1f : 0f, 5f, dt);
+            tiredWeight = Smoothing.Damp(tiredWeight, running && exhausted ? 1f : 0f, 3f, dt);
 
             // Fatigue build-up (seconds 6 to 8 of sprinting): the run gradually gets heavier.
             // pre = build-up strength, fade = removes the extra effects once exhaustion kicks in,
@@ -216,7 +216,7 @@ namespace Pistol.Cameras
 
             // ---------- Body while running: forward lean and torso twist from step to step ----------
             float bodyMask = bodyEffectsWhenTired ? 1f : 1f - tiredWeight;
-            bodyRun = Damp(bodyRun, running && grounded ? 1f : 0f, 3f, dt);
+            bodyRun = Smoothing.Damp(bodyRun, running && grounded ? 1f : 0f, 3f, dt);
             float twist = Mathf.Lerp(walkTorsoTwist, runTorsoTwist, runWeight) * bobWeight * bodyMask
                         * Mathf.Lerp(1f, crouchBobMultiplier, crouch);
             bobRot += new Vector3(runForwardLean * bodyRun * bodyMask, Mathf.Sin(bobPhase) * twist, 0f);
@@ -255,7 +255,7 @@ namespace Pistol.Cameras
             sway = Vector3.Lerp(sway, swayTarget, 1f - Mathf.Exp(-swaySmooth * dt));
 
             // ---------- Strafe tilt ----------
-            strafe = Damp(strafe, -Mathf.Clamp(localVel.x / walk, -1f, 1f) * strafeTilt, 6f, dt);
+            strafe = Smoothing.Damp(strafe, -Mathf.Clamp(localVel.x / walk, -1f, 1f) * strafeTilt, 6f, dt);
 
             // ---------- Jump ----------
             if (movement != null && movement.JumpedThisFrame)
@@ -263,7 +263,7 @@ namespace Pistol.Cameras
                 AddImpact(jumpImpact);
                 jumpKick = 1f;
             }
-            jumpKick = Damp(jumpKick, 0f, 5f, dt);
+            jumpKick = Smoothing.Damp(jumpKick, 0f, 5f, dt);
 
             // ---------- Landing ----------
             if (!grounded) lastAirVelocity = controller.velocity.y;
@@ -273,7 +273,7 @@ namespace Pistol.Cameras
                 AddImpact(-lastAirVelocity * landingImpact);
             }
             wasGrounded = grounded;
-            landing = Damp(landing, 0f, landingRecover, dt);
+            landing = Smoothing.Damp(landing, 0f, landingRecover, dt);
             Vector3 landPos = new Vector3(0f, -landing, 0f);
             Vector3 landRot = new Vector3(landing * 20f - jumpKick * jumpKickAngle, 0f, 0f);
 
@@ -282,7 +282,7 @@ namespace Pistol.Cameras
             float maxLean = leanOffset * leanMul;
             float leanInput = movement != null ? movement.LeanInput : 0f;
             UpdateLeanLimits(maxLean);
-            lean = Damp(lean, leanInput, leanSpeed, dt);
+            lean = Smoothing.Damp(lean, leanInput, leanSpeed, dt);
             float limit = lean > 0f ? leanLimitRight : leanLimitLeft;
             float limitRatio = maxLean > 0.001f ? limit / maxLean : 0f;
             float leanDist = lean * limit;
@@ -303,16 +303,16 @@ namespace Pistol.Cameras
                            + breathlessShake * breathless
                            + preFatigueShake * pre * fade;
             shakeTime += dt * shakeSpeed * (1f + breathless * 1.5f + runWeight * runShakeSpeedBoost);
-            Vector3 shakeRot = Noise3(shakeTime, 0f) * shakeAmt;
+            Vector3 shakeRot = Noise.Perlin3(shakeTime, 0f) * shakeAmt;
 
             // 2) fine jitter while running
-            Vector3 jitterRot = Noise3(Time.time * runJitterSpeed, 50f)
+            Vector3 jitterRot = Noise.Perlin3(Time.time * runJitterSpeed, 50f)
                               * (runJitter * runWeight + preFatigueJitter * pre * fade) * bobWeight;
 
             // 3) soft footstep impacts
             stepImpact = Mathf.Max(0f, stepImpact - stepImpactDecay * dt);
             stepImpactTime += dt * stepImpactSpeed;
-            Vector3 stepRot = Noise3(stepImpactTime, 300f) * stepImpactAngle * stepImpact;
+            Vector3 stepRot = Noise.Perlin3(stepImpactTime, 300f) * stepImpactAngle * stepImpact;
 
             // While running and not yet exhausted, the shake is filtered so it doesn't jerk.
             // Once exhausted the filter is off and the shake is sharp again.
@@ -326,8 +326,8 @@ namespace Pistol.Cameras
             impact = Mathf.Max(0f, impact - impactDecay * dt);
             impactTime += dt * impactSpeed;
             float imp = impact * impact;
-            Vector3 impactRot = Noise3(impactTime, 100f) * impactMaxAngle * imp;
-            Vector3 impactPos = Noise3(impactTime, 200f) * impactMaxOffset * imp;
+            Vector3 impactRot = Noise.Perlin3(impactTime, 100f) * impactMaxAngle * imp;
+            Vector3 impactPos = Noise.Perlin3(impactTime, 200f) * impactMaxOffset * imp;
 
             // 5) recoil: sharp and unsmoothed, otherwise it "floats"
             RecoilSpring.Step(ref recoilCam, ref recoilCamVel, recoilRiseTime, recoilReturnTime, 1f, dt);
@@ -348,12 +348,6 @@ namespace Pistol.Cameras
         public void AddRecoilPunch(float pitchUpDegrees, float rollDegrees)
             => recoilCamVel += new Vector3(pitchUpDegrees, 0f, rollDegrees) * RecoilSpring.ImpulseFor(1f, recoilRiseTime);
 
-        // Perlin noise in the -1..1 range on three axes
-        static Vector3 Noise3(float t, float seed) => new Vector3(
-            Mathf.PerlinNoise(t, seed + 0.1f) * 2f - 1f,
-            Mathf.PerlinNoise(seed + 3.3f, t) * 2f - 1f,
-            Mathf.PerlinNoise(t, seed + 7.7f) * 2f - 1f);
-
         // Keep the lean from going through walls
         void UpdateLeanLimits(float maxLean)
         {
@@ -371,8 +365,5 @@ namespace Pistol.Cameras
                 return Mathf.Max(0f, hit.distance - 0.05f);
             return maxLean;
         }
-
-        static float Damp(float current, float target, float speed, float dt)
-            => Mathf.Lerp(current, target, 1f - Mathf.Exp(-speed * dt));
     }
 }
