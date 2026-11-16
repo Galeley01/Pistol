@@ -42,6 +42,14 @@ namespace Pistol.Arms
             rig.Attach(holder.Current);
         }
 
+#if UNITY_EDITOR
+        // Live tuning: the root position from the ArmsDefinition is applied every frame in the editor
+        void Update()
+        {
+            if (rig != null) rig.transform.localPosition = arms.rootLocalPosition;
+        }
+#endif
+
         void OnDestroy()
         {
             if (rig != null && holder != null) holder.ItemChanged -= rig.Attach;

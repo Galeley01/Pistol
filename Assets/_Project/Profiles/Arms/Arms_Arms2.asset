@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9faf31e886f40bba5572a48f68228e7, type: 3}
+  m_Name: Arms_Arms2
+  m_EditorClassIdentifier: 
+  model: {fileID: 919132149155446097, guid: e0e808bb982364ddea355206287d627c, type: 3}
+  prefab: {fileID: 2570786818546762819, guid: dc312f722731a4b66aeab4c25c9facb3, type: 3}
+  rootLocalPosition: {x: 0, y: 0.1, z: 0.14}
+  rightFingerOffsets:
+    thumb: 6.9
+    index: -7.3
+    middle: -44
+    ring: -49
+    pinky: -37.1
+  leftFingerOffsets:
+    thumb: 0
+    index: 0
+    middle: 0
+    ring: 0
+    pinky: 0
+  right:
+    upperArm: arm.R
+    forearm: elbow.R
+    hand: hand.R
+    thumb:
+      joint1: thumb1.R
+      joint2: thumb2.R
+      joint3: thumb3.R
+    index:
+      joint1: point1.R
+      joint2: point2.R
+      joint3: point3.R
+    middle:
+      joint1: middle1.R
+      joint2: middle2.R
+      joint3: middle3.R
+    ring:
+      joint1: ring1.R
+      joint2: ring2.R
+      joint3: ring3.R
+    pinky:
+      joint1: pink1.R
+      joint2: pink2.R
+      joint3: pink3.R
+  left:
+    upperArm: arm.L
+    forearm: elbow.L
+    hand: hand.L
+    thumb:
+      joint1: thumb1.L
+      joint2: thumb2.L
+      joint3: thumb3.L
+    index:
+      joint1: point1.L
+      joint2: point2.L
+      joint3: point3.L
+    middle:
+      joint1: middle1.L
+      joint2: middle2.L
+      joint3: middle3.L
+    ring:
+      joint1: ring1.L
+      joint2: ring2.L
+      joint3: ring3.L
+    pinky:
+      joint1: pink1.L
+      joint2: pink2.L
+      joint3: pink3.L
+  palmsDownInRest: 0
+  convertLegacyGrips: 0

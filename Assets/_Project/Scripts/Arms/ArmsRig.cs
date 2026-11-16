@@ -115,7 +115,9 @@ namespace Pistol.Arms
             foreach (var j in joints)
             {
                 if (j.bone == null) continue;
-                j.bone.localRotation = j.restLocal * Quaternion.AngleAxis(grip.FingerCurl(j.right, j.finger), j.axis);
+                float angle = grip.FingerCurl(j.right, j.finger);
+                if (definition != null) angle += definition.FingerCurlOffset(j.right, j.finger);   // this skin's correction
+                j.bone.localRotation = j.restLocal * Quaternion.AngleAxis(angle, j.axis);
             }
         }
 

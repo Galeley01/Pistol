@@ -36,12 +36,30 @@ namespace Pistol.Arms
             public FingerBones Finger(int f) => f == 0 ? thumb : f == 1 ? index : f == 2 ? middle : f == 3 ? ring : pinky;
         }
 
+        [System.Serializable]
+        public class FingerCurlOffsets
+        {
+            [Range(-60f, 60f)] public float thumb;
+            [Range(-60f, 60f)] public float index;
+            [Range(-60f, 60f)] public float middle;
+            [Range(-60f, 60f)] public float ring;
+            [Range(-60f, 60f)] public float pinky;
+
+            public float this[int f] => f == 0 ? thumb : f == 1 ? index : f == 2 ? middle : f == 3 ? ring : pinky;
+        }
+
         [BoxGroup("Модель"), Required("Назначьте модель рук (FBX)"), Tooltip("Модель рук (FBX). Из неё кнопка собирает префаб с ригом")]
         public GameObject model;
         [BoxGroup("Модель"), ReadOnly, Tooltip("Готовый префаб рук с ригом. Создаётся кнопкой «Собрать префаб рук»")]
         public GameObject prefab;
         [BoxGroup("Модель"), Tooltip("Где корень рук относительно камеры, м")]
         public Vector3 rootLocalPosition = new Vector3(0f, -0.28f, -0.08f);
+
+        [BoxGroup("Поправка сгиба пальцев (этот скин)")]
+        [Tooltip("Добавляется к сгибу из профиля хвата, градусы на сустав. Нужна, если пальцы этой модели в файле уже согнуты (минус) или прямее обычного (плюс). Можно крутить в Play")]
+        public FingerCurlOffsets rightFingerOffsets = new FingerCurlOffsets();
+        [BoxGroup("Поправка сгиба пальцев (этот скин)")]
+        public FingerCurlOffsets leftFingerOffsets = new FingerCurlOffsets();
 
         [BoxGroup("Кости правой руки")] public ArmBones right = new ArmBones();
         [BoxGroup("Кости левой руки")] public ArmBones left = new ArmBones();
@@ -52,5 +70,7 @@ namespace Pistol.Arms
         public bool convertLegacyGrips = false;
 
         public ArmBones Side(bool rightSide) => rightSide ? right : left;
+
+        public float FingerCurlOffset(bool rightSide, int finger) => (rightSide ? rightFingerOffsets : leftFingerOffsets)[finger];
     }
 }
