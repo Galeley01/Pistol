@@ -51,7 +51,7 @@ namespace Pistol.Weapons
             else Debug.LogWarning("WeaponRecoil: ItemRig has no Right Hand Grip, recoil rotates around the weapon root.", this);
         }
 
-        public void Bind(PoseContext context) { }
+        public void Bind(ItemContext context) { }
 
         public void ApplyPose(ref PoseFrame frame)
         {

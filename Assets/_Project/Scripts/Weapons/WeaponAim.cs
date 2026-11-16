@@ -48,7 +48,7 @@ namespace Pistol.Weapons
 
         public int PoseOrder => Items.PoseOrder.Base;
 
-        public void Bind(PoseContext pose)
+        public void Bind(ItemContext pose)
         {
             cam = pose.Camera;
             movement = pose.Movement;

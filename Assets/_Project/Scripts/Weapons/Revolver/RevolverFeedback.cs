@@ -3,6 +3,7 @@ using NaughtyAttributes;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+using Pistol.Audio;
 using Pistol.Cameras;
 using Pistol.Items;
 using Pistol.Player;
@@ -11,21 +12,21 @@ namespace Pistol.Weapons.Revolver
 {
     // Shot recoil and muzzle flash. Goes on Revolver (next to RevolverCylinder).
     // Listens to the cylinder: a shot triggers weapon and camera recoil, flash, light, smoke and sound;
-    // a dry fire triggers only the sound.
+    // a dry fire triggers only the sound. Sounds are SoundEvent assets played through GameAudio.
     //
     // Recoil is a kick of the WEAPON (a separate stiff spring, WeaponRecoil): the barrel flips up
     // sharply around the wrist on the grip and settles back calmly; the arms follow through IK.
     // The camera (head) jolts very slightly and rises a little. Each shot disturbs the grip (Instability),
     // so a quick follow-up shot is less accurate on its own.
     [RequireComponent(typeof(ItemRig))]
-    public class RevolverFeedback : MonoBehaviour
+    public class RevolverFeedback : MonoBehaviour, IItemContextUser
     {
         [BoxGroup("Профиль"), Required("Назначьте профиль: отдача"), SerializeField]
         [Tooltip("Ассет с настройками. Кликните по полю, чтобы открыть его со всеми группами")]
         RecoilProfile profile;
         public RecoilProfile Profile => profile;
 
-        // TODO(stage 5-6): flash and smoke move to an FX prefab, sound to GameAudio + SoundEvent assets
+        // TODO(stage 6): flash and smoke move to an FX prefab
         [BoxGroup("Вспышка")] public bool muzzleFlash = true;
         [BoxGroup("Вспышка"), ShowIf("muzzleFlash"), Range(0.3f, 5f), Tooltip("Размер огненной вспышки")]
         public float flashSize = 3f;
@@ -49,19 +50,10 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Материалы"), Tooltip("Материал дыма (полупрозрачный)")]
         public Material smokeMaterial;
 
-        [BoxGroup("Звук"), Tooltip("Звук выстрела (необязательно)")] public AudioClip shotSound;
-        [BoxGroup("Звук"), Tooltip("Звук сухого щелчка (необязательно)")] public AudioClip dryFireSound;
-        [BoxGroup("Звук"), Range(0f, 1f)] public float volume = 1f;
-        [BoxGroup("Звук"), Range(0f, 1f), Tooltip("0 — звук «в голове» (2D), 1 — из точки в мире (3D). Для своего оружия 0.6–0.8: слышно, что справа, но не режет одно ухо")]
-        public float spatialBlend = 0.7f;
-        [BoxGroup("Звук"), Range(0.1f, 10f), Tooltip("Ближе этого расстояния звук на полной громкости, м")]
-        public float minDistance = 1f;
-        [BoxGroup("Звук"), Range(10f, 1000f), Tooltip("Дальше этого расстояния звук больше не затихает, м. Выстрел слышно далеко")]
-        public float maxDistance = 300f;
-        [BoxGroup("Звук"), Tooltip("Как звук затихает с расстоянием. Logarithmic — как в жизни")]
-        public AudioRolloffMode rolloff = AudioRolloffMode.Logarithmic;
-        [BoxGroup("Звук"), Range(0f, 0.15f), Tooltip("Случайный сдвиг высоты звука, чтобы выстрелы не звучали одинаково (0.05 = ±5%)")]
-        public float pitchVariation = 0.05f;
+        [BoxGroup("Звук"), Tooltip("Звук выстрела (необязательно). Громкость, разброс и звучание в пространстве — в самом ассете")]
+        public SoundEvent shotSound;
+        [BoxGroup("Звук"), Tooltip("Звук сухого щелчка (необязательно)")]
+        public SoundEvent dryFireSound;
 
         RevolverCylinder cylinder;
         WeaponSway sway;
@@ -70,11 +62,18 @@ namespace Pistol.Weapons.Revolver
         CameraMotion cameraFx;
         PlayerMovement movement;
         Transform muzzle;
-        AudioSource audioSource;
+        GameAudio gameAudio;
 
         ParticleSystem flashPs, flamePs, smokePs, gapPs;
         Light flashLight;
         float lightTimer;
+
+        public void Bind(ItemContext context)
+        {
+            movement = context.Movement;
+            cameraFx = context.Camera != null ? context.Camera.GetComponent<CameraMotion>() : null;
+            gameAudio = context.Audio;
+        }
 
         void Start()
         {
@@ -84,8 +83,6 @@ namespace Pistol.Weapons.Revolver
             recoil = GetComponent<WeaponRecoil>();
             if (recoil == null) Debug.LogWarning("RevolverFeedback: no WeaponRecoil, the weapon won't kick.", this);
             weaponAim = GetComponent<WeaponAim>();
-            movement = GetComponentInParent<PlayerMovement>();
-            cameraFx = GetComponentInParent<Camera>() != null ? GetComponentInParent<Camera>().GetComponent<CameraMotion>() : null;
             var rig = ItemRig.On(this);
             muzzle = rig != null ? rig.MuzzleOrRoot : transform;
 
@@ -95,11 +92,6 @@ namespace Pistol.Weapons.Revolver
                 cylinder.Model.DryFired += (i, state) => OnDryFire();
             }
             else Debug.LogWarning("RevolverFeedback: no RevolverCylinder, recoil and muzzle flash won't work.");
-
-            audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            audioSource.dopplerLevel = 0f;   // no Doppler effect (otherwise the sound "warps" when turning)
-            ApplyAudioSettings();
 
             BuildEffects();
         }
@@ -144,25 +136,15 @@ namespace Pistol.Weapons.Revolver
             if (smoke) smokePs.Emit(smokeAmount);
             if (smoke && cylinderGapPuff && gapPs != null) gapPs.Emit(Mathf.Max(2, smokeAmount / 3));
 
-            PlaySound(shotSound, volume);
+            PlaySound(shotSound);
         }
 
-        void OnDryFire() => PlaySound(dryFireSound, volume * 0.8f);
+        void OnDryFire() => PlaySound(dryFireSound);
 
-        void PlaySound(AudioClip clip, float vol)
+        // The sound comes from the muzzle and follows the weapon while it plays
+        void PlaySound(SoundEvent sound)
         {
-            if (clip == null || audioSource == null) return;
-            ApplyAudioSettings();   // so the sliders work live in Play Mode
-            audioSource.pitch = 1f + Random.Range(-pitchVariation, pitchVariation);
-            audioSource.PlayOneShot(clip, vol);
-        }
-
-        void ApplyAudioSettings()
-        {
-            audioSource.spatialBlend = spatialBlend;
-            audioSource.minDistance = minDistance;
-            audioSource.maxDistance = Mathf.Max(maxDistance, minDistance + 0.1f);
-            audioSource.rolloffMode = rolloff;
+            if (sound != null && gameAudio != null) gameAudio.Play(sound, muzzle);
         }
 
         void Update()

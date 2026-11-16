@@ -447,14 +447,8 @@ MonoBehaviour:
   cylinderGapPuff: 1
   flashMaterial: {fileID: 2100000, guid: 7b9db86482394ab43b8db2a046cc4af0, type: 2}
   smokeMaterial: {fileID: 2100000, guid: 6533366364c212e4780fee9b5bf183e0, type: 2}
-  shotSound: {fileID: 8300000, guid: 4d31380627dfbfd45b1af5a2dd34569c, type: 3}
-  dryFireSound: {fileID: 8300000, guid: a2d11139fc6b1f54ebf506996c917e9f, type: 3}
-  volume: 1
-  spatialBlend: 0.7
-  minDistance: 1
-  maxDistance: 300
-  rolloff: 0
-  pitchVariation: 0.05
+  shotSound: {fileID: 11400000, guid: 72853d802db74c78a46195333c200f0d, type: 2}
+  dryFireSound: {fileID: 11400000, guid: d02884c33151451284752a8050b83189, type: 2}
 --- !u!114 &3775177576279311600
 MonoBehaviour:
   m_ObjectHideFlags: 0

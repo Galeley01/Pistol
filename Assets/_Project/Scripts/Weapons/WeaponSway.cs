@@ -76,7 +76,7 @@ namespace Pistol.Weapons
             muzzle = rig != null ? rig.MuzzleOrRoot : transform;
         }
 
-        public void Bind(PoseContext context)
+        public void Bind(ItemContext context)
         {
             cam = context.Camera;
             movement = context.Movement;

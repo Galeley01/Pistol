@@ -1,33 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Pistol.Player;
-using Pistol.PostFx;
 
 namespace Pistol.Items
 {
-    // Everything pose layers may need from outside the item. ItemHolderWithPose fills it and hands it
-    // to each layer once (Bind), so items never search their parents or the scene for it.
-    public sealed class PoseContext
-    {
-        public Camera Camera { get; }
-        public PlayerMovement Movement { get; }
-        public CharacterController Controller { get; }
-        public PlayerContext Player { get; }
-        public CameraEffects Effects { get; }   // may be null: then items show no screen effects
-        public ItemHolderWithPose Holder { get; }
-
-        public PoseContext(Camera camera, PlayerMovement movement, CharacterController controller,
-                           PlayerContext player, CameraEffects effects, ItemHolderWithPose holder)
-        {
-            Camera = camera;
-            Effects = effects;
-            Movement = movement;
-            Controller = controller;
-            Player = player;
-            Holder = holder;
-        }
-    }
-
     // Where a layer runs in the stack: lower runs first
     public static class PoseOrder
     {
@@ -39,10 +14,9 @@ namespace Pistol.Items
 
     // A piece of the held item pose. Layers never write the item transform themselves:
     // they add their part to the frame and ItemHolderWithPose writes the result once.
-    public interface IPoseLayer
+    public interface IPoseLayer : IItemContextUser
     {
         int PoseOrder { get; }
-        void Bind(PoseContext context);
         void ApplyPose(ref PoseFrame frame);
     }
 
@@ -101,7 +75,7 @@ namespace Pistol.Items
 
         public int Count => layers.Count;
 
-        public void Collect(GameObject item, PoseContext context)
+        public void Collect(GameObject item)
         {
             layers.Clear();
             item.GetComponents(layers);
@@ -113,7 +87,6 @@ namespace Pistol.Items
                 while (j >= 0 && layers[j].PoseOrder > layer.PoseOrder) { layers[j + 1] = layers[j]; j--; }
                 layers[j + 1] = layer;
             }
-            foreach (var layer in layers) layer.Bind(context);
         }
 
         public void Apply(ref PoseFrame frame)

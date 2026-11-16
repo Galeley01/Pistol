@@ -52,7 +52,7 @@ namespace Pistol.Weapons.Revolver
 
         public int PoseOrder => Items.PoseOrder.State;
 
-        public void Bind(PoseContext pose)
+        public void Bind(ItemContext pose)
         {
             context = pose.Player;
             cam = pose.Camera;

@@ -1,5 +1,7 @@
 using UnityEngine;
+using System.Collections.Generic;
 using NaughtyAttributes;
+using Pistol.Audio;
 using Pistol.Player;
 using Pistol.PostFx;
 
@@ -28,13 +30,16 @@ namespace Pistol.Items
         [BoxGroup("Игрок"), Required("Назначьте PlayerContext игрока"), SerializeField, Tooltip("Ввод и режим управления игрока")]
         PlayerContext player;
 
+        [BoxGroup("Сервисы"), SerializeField, Tooltip("Звук игры: через него предмет проигрывает свои звуки. Пусто — предмет молчит")]
+        GameAudio gameAudio;
+
         readonly PoseStack stack = new PoseStack();
         Vector3 restPosition;
         Quaternion restRotation;
         PoseFrame last;
 
         public Transform Item => item;
-        public PoseContext Context { get; private set; }
+        public ItemContext Context { get; private set; }
 
         [ShowNativeProperty] public int PoseLayers => stack.Count;
         [ShowNativeProperty] public float Aim => last.Aim;
@@ -49,12 +54,18 @@ namespace Pistol.Items
             var controller = movement != null ? movement.GetComponent<CharacterController>() : null;
             var effects = viewCamera != null ? viewCamera.GetComponent<CameraEffects>() : null;
             if (effects == null) Debug.LogWarning("ItemHolderWithPose: no CameraEffects on the camera, aim and inspect screen effects are off.", this);
-            Context = new PoseContext(viewCamera, movement, controller, player, effects, this);
+            if (gameAudio == null) Debug.LogWarning("ItemHolderWithPose: no GameAudio assigned, the item is silent.", this);
+            Context = new ItemContext(viewCamera, movement, controller, player, effects, gameAudio, this);
 
             // Pose without any layers: where the item is placed in the scene
             restPosition = item.localPosition;
             restRotation = item.localRotation;
-            stack.Collect(item.gameObject, Context);
+            stack.Collect(item.gameObject);
+
+            // Every part of the item that needs the context (pose layers, feedback...) gets it once
+            var users = new List<IItemContextUser>();
+            item.GetComponents(users);
+            foreach (var user in users) user.Bind(Context);
         }
 
         void Update()
