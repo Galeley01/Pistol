@@ -26,8 +26,9 @@ namespace Pistol.Items
     public class ItemHolderWithPose : MonoBehaviour
     {
         [BoxGroup("Предмет"), SerializeField]
-        [Tooltip("Предмет, который в руках при старте (дочерний объект с HeldItem). Его позу пишет только этот компонент, слои позы лежат на самом предмете")]
-        Transform item;
+        [Tooltip("Что в руках при старте. Префаб (например, Revolver или Revolver_Stainless) создаётся под этим объектом; " +
+                 "объект из сцены просто берётся в руки. Позу предмета пишет только этот компонент, слои позы лежат на самом предмете")]
+        HeldItem startItem;
 
         [BoxGroup("Игрок"), Required("Назначьте камеру игрока"), SerializeField, Tooltip("Камера игрока")]
         Camera viewCamera;
@@ -70,13 +71,61 @@ namespace Pistol.Items
             if (bulletSystem == null) Debug.LogWarning("ItemHolderWithPose: no BulletSystem assigned, weapons can't shoot.", this);
             Context = new ItemContext(viewCamera, movement, controller, player, effects, gameAudio, bulletSystem, debugSettings, this);
 
-            if (item != null)
+#if UNITY_EDITOR
+            ClearPreview();   // never hold the editor preview
+#endif
+            if (startItem != null)
             {
-                var held = item.GetComponent<HeldItem>();
-                if (held != null) Equip(held);
-                else Debug.LogError("ItemHolderWithPose: the start item has no HeldItem component.", item);
+                // A prefab asset is created here; an object already in the scene is taken as it is
+                bool inScene = startItem.gameObject.scene.IsValid();
+                var held = inScene ? startItem : Instantiate(startItem, transform, false);
+                if (!inScene) held.name = startItem.name;
+                Equip(held);
             }
         }
+
+#if UNITY_EDITOR
+        // ---------- Editor preview ----------
+        // Outside Play Mode the start item prefab is shown under the holder, so the weapon is seen in the scene.
+        // The preview is never saved into the scene and is removed before Play, where the real item is created.
+        void OnValidate() => UnityEditor.EditorApplication.delayCall += RefreshPreview;
+
+        void RefreshPreview()
+        {
+            if (this == null || Application.isPlaying || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return;
+            if (UnityEditor.PrefabUtility.IsPartOfPrefabAsset(this)) return;
+            ClearPreview();
+            if (startItem == null || startItem.gameObject.scene.IsValid()) return;   // a scene object is seen anyway
+
+            var preview = Instantiate(startItem.gameObject, transform, false);
+            preview.name = startItem.name + " (preview)";
+            foreach (var t in preview.GetComponentsInChildren<Transform>(true))
+                t.gameObject.hideFlags = HideFlags.DontSave | HideFlags.NotEditable;
+        }
+
+        void ClearPreview()
+        {
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                var child = transform.GetChild(i).gameObject;
+                if ((child.hideFlags & HideFlags.DontSave) == HideFlags.DontSave) DestroyImmediate(child);
+            }
+        }
+
+        // Remove the previews before Play and bring them back after it
+        [UnityEditor.InitializeOnLoadMethod]
+        static void WatchPlayMode()
+        {
+            UnityEditor.EditorApplication.playModeStateChanged += state =>
+            {
+                foreach (var holder in FindObjectsByType<ItemHolderWithPose>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    if (state == UnityEditor.PlayModeStateChange.ExitingEditMode) holder.ClearPreview();
+                    else if (state == UnityEditor.PlayModeStateChange.EnteredEditMode) holder.RefreshPreview();
+                }
+            };
+        }
+#endif
 
         // Puts the item into the hands. Call it right after Instantiate (before the item's Start),
         // so its parts get the context before they start.
