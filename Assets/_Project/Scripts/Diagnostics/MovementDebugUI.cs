@@ -1,4 +1,5 @@
 using UnityEngine;
+using Pistol.Core;
 using NaughtyAttributes;
 using UnityEngine.InputSystem;
 using Pistol.Player;
@@ -38,6 +39,8 @@ namespace Pistol.Diagnostics
 
         void OnEnable()
         {
+            // Debug tools: off in normal (non-Development) builds
+            if (!DebugSettings.Allowed) { enabled = false; return; }
             toggleKey = new InputAction("ToggleMovementDebug", InputActionType.Button, "<Keyboard>/2");
             toggleKey.Enable();
         }

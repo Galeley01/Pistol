@@ -180,6 +180,8 @@ namespace Pistol.Diagnostics
 
         void OnEnable()
         {
+            // Debug tools: off in normal (non-Development) builds
+            if (!DebugSettings.Allowed) { enabled = false; return; }
             CreateKeys();
             systemMemory = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "System Used Memory");
             gfxMemory = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Gfx Used Memory");
@@ -203,6 +205,7 @@ namespace Pistol.Diagnostics
 
         void OnDisable()
         {
+            if (!DebugSettings.Allowed) return;   // never started (see OnEnable)
             DisposeKeys();
             if (log != null)
             {

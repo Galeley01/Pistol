@@ -1,5 +1,6 @@
 using UnityEngine;
 using NaughtyAttributes;
+using Pistol.Core;
 using Pistol.Items;
 using Pistol.Player;
 using Pistol.PostFx;
@@ -32,8 +33,6 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Эффекты экрана"), Range(-0.2f, 0.5f), Tooltip("Сдвиг фокуса дальше (+) или ближе (−) от барабана, м")]
         public float focusOffset = 0f;
 
-        [BoxGroup("Отладка")] public bool logEvents = true;
-
         [ShowNativeProperty] public bool IsInspecting => inspecting;
         [ShowNativeProperty] public float Amount => amount;
 
@@ -57,7 +56,11 @@ namespace Pistol.Weapons.Revolver
             context = pose.Player;
             cam = pose.Camera;
             cameraEffects = pose.Effects;
+            debug = pose.Debug;
         }
+
+        DebugSettings debug;
+        bool LogEvents => debug != null && debug.WeaponEvents;
 
         public void ApplyPose(ref PoseFrame frame) => frame.Inspect = amount;
 
@@ -97,7 +100,7 @@ namespace Pistol.Weapons.Revolver
             if (context == null) { Debug.LogWarning("RevolverInspect: inspect ignored, no player context (not held by ItemHolderWithPose).", this); return; }
             if (!fire.IsOpenIdle)
             {
-                if (logEvents) Debug.Log(fire.IsOpen ? "Cylinder inspect: ignored, the cylinder is still moving" : "Cylinder inspect: ignored, open the cylinder first (R)", this);
+                if (LogEvents) Debug.Log(fire.IsOpen ? "Cylinder inspect: ignored, the cylinder is still moving" : "Cylinder inspect: ignored, open the cylinder first (R)", this);
                 return;
             }
             SetInspecting(true);
@@ -114,7 +117,7 @@ namespace Pistol.Weapons.Revolver
             if (inspecting == on) return;
             inspecting = on;
             if (context != null) context.SetMode(on ? ControlMode.Inspect : ControlMode.Gameplay);
-            if (logEvents) Debug.Log(on ? "Cylinder inspect: on" : "Cylinder inspect: off");
+            if (LogEvents) Debug.Log(on ? "Cylinder inspect: on" : "Cylinder inspect: off");
             InspectChanged?.Invoke(on);
         }
 

@@ -344,7 +344,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fireCooldown: 0.35
   animationSettings: {fileID: 11400000, guid: fea417e2cdf6c9c48a9643d51d1461cc, type: 2}
-  logEvents: 1
 --- !u!114 &4475375196770294335
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -374,7 +373,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   profile: {fileID: 11400000, guid: eeccb6964ea1461b9a594a0bd2a347f2, type: 2}
   inspectPreview: 0
-  showAimPoint: 0
   aimPointSize: 4
 --- !u!114 &8511121920320663316
 MonoBehaviour:
@@ -413,7 +411,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   zeroDistance: 15
   sightHeight: 0.013
-  showTrajectory: 0
   previewDistance: 80
   lineColor: {r: 1, g: 0.25, b: 0.2, a: 0.75}
   hitColor: {r: 1, g: 0.2, b: 0.15, a: 0.95}
@@ -449,7 +446,6 @@ MonoBehaviour:
   outTime: 0.35
   effects: {fileID: 11400000, guid: 8aff47ca530a447ea5c5c1a259bfa617, type: 2}
   focusOffset: 0
-  logEvents: 1
 --- !u!114 &411669031343072513
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -475,7 +471,6 @@ MonoBehaviour:
   outlineDepth: -0.0221
   pickTolerance: 1.3
   instantActions: 1
-  logClicks: 1
 --- !u!114 &2290907684855445227
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -521,7 +516,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de4b5c3ddfbe40e78861f92fbabc541a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  logIntents: 0
 --- !u!114 &5179180998149125443
 MonoBehaviour:
   m_ObjectHideFlags: 0

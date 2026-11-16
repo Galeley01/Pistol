@@ -28,9 +28,8 @@ namespace Pistol.Weapons
 
         [BoxGroup("Отладка"), Range(0f, 1f), Tooltip("Ставит позу осмотра без Alt — удобно подбирать ползунки в Play Mode (барабан при этом можно не открывать)")]
         public float inspectPreview = 0f;
-        [BoxGroup("Отладка"), Tooltip("Маленькая точка там, куда смотрит ствол (удобно с Free-Aim)")]
-        public bool showAimPoint = false;
-        [BoxGroup("Отладка"), ShowIf("showAimPoint"), Range(2f, 12f)] public float aimPointSize = 4f;
+        [BoxGroup("Отладка"), Range(2f, 12f), Tooltip("Размер точки, куда смотрит ствол. Сама точка включается в DebugSettings (Aim Point)")]
+        public float aimPointSize = 4f;
 
         // Fallbacks when ItemRig has no Right Hand Grip / Rear Sight (weapon space)
         static readonly Vector3 DefaultWrist = new Vector3(0.015f, -0.03f, -0.07f);
@@ -43,6 +42,7 @@ namespace Pistol.Weapons
         Vector3 rearSightPoint;      // the rear sight in weapon space: rotation pivot while aiming
         PlayerMovement movement;
         CharacterController controller;
+        DebugSettings debug;
 
         public int PoseOrder => Items.PoseOrder.Hand;
 
@@ -81,6 +81,7 @@ namespace Pistol.Weapons
             cam = context.Camera;
             movement = context.Movement;
             controller = context.Controller;
+            debug = context.Debug;
         }
 
         void Start()
@@ -248,7 +249,7 @@ namespace Pistol.Weapons
 
         void OnGUI()
         {
-            if (!showAimPoint || cam == null) return;
+            if (debug == null || !debug.AimPoint || cam == null) return;
             Transform from = muzzle != null ? muzzle : transform;
             Vector3 sp = cam.WorldToScreenPoint(from.position + transform.forward * 30f);
             if (sp.z <= 0f) return;

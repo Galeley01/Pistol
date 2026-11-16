@@ -47,7 +47,6 @@ namespace Pistol.Weapons.Revolver
         public float pickTolerance = 1.3f;
         [BoxGroup("Выбор"), Tooltip("Временно: клик сразу вставляет патрон / убирает гильзу (пока нет анимации рук)")]
         public bool instantActions = true;
-        [BoxGroup("Выбор")] public bool logClicks = true;
 
         [ShowNativeProperty] public int Hovered => hovered;
 
@@ -71,7 +70,11 @@ namespace Pistol.Weapons.Revolver
         {
             cam = itemContext.Camera;
             context = itemContext.Player;
+            debug = itemContext.Debug;
         }
+
+        DebugSettings debug;
+        bool LogClicks => debug != null && debug.WeaponEvents;
 
         void Start()
         {
@@ -173,12 +176,12 @@ namespace Pistol.Weapons.Revolver
             if (state == RoundState.Empty)
             {
                 model.Insert(i, cylinder.Ammo);
-                if (logClicks) Debug.Log($"Chamber {i}: round inserted  {model.Describe()}");
+                if (LogClicks) Debug.Log($"Chamber {i}: round inserted  {model.Describe()}");
             }
             else if (state == RoundState.Spent)
             {
                 model.RemoveSpent(i);
-                if (logClicks) Debug.Log($"Chamber {i}: spent case removed  {model.Describe()}");
+                if (LogClicks) Debug.Log($"Chamber {i}: spent case removed  {model.Describe()}");
             }
         }
 

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using NaughtyAttributes;
 using Pistol.Audio;
+using Pistol.Ballistics;
+using Pistol.Core;
 using Pistol.Player;
 using Pistol.PostFx;
 
@@ -36,6 +38,10 @@ namespace Pistol.Items
 
         [BoxGroup("Сервисы"), SerializeField, Tooltip("Звук игры: через него предмет проигрывает свои звуки. Пусто — предмет молчит")]
         GameAudio gameAudio;
+        [BoxGroup("Сервисы"), SerializeField, Tooltip("Полёт пуль и попадания. Пусто — оружие не стреляет")]
+        BulletSystem bulletSystem;
+        [BoxGroup("Сервисы"), SerializeField, Tooltip("Отладочные флаги (логи, линии пуль). Пусто — без отладки")]
+        DebugSettings debugSettings;
 
         readonly PoseStack stack = new PoseStack();
         readonly List<IItemContextUser> users = new List<IItemContextUser>();
@@ -61,7 +67,8 @@ namespace Pistol.Items
             var effects = viewCamera != null ? viewCamera.GetComponent<CameraEffects>() : null;
             if (effects == null) Debug.LogWarning("ItemHolderWithPose: no CameraEffects on the camera, aim and inspect screen effects are off.", this);
             if (gameAudio == null) Debug.LogWarning("ItemHolderWithPose: no GameAudio assigned, the item is silent.", this);
-            Context = new ItemContext(viewCamera, movement, controller, player, effects, gameAudio, this);
+            if (bulletSystem == null) Debug.LogWarning("ItemHolderWithPose: no BulletSystem assigned, weapons can't shoot.", this);
+            Context = new ItemContext(viewCamera, movement, controller, player, effects, gameAudio, bulletSystem, debugSettings, this);
 
             if (item != null)
             {

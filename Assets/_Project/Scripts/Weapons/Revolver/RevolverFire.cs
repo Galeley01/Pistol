@@ -1,5 +1,6 @@
 using UnityEngine;
 using NaughtyAttributes;
+using Pistol.Core;
 using Pistol.Items;
 
 namespace Pistol.Weapons.Revolver
@@ -15,7 +16,7 @@ namespace Pistol.Weapons.Revolver
     // OnShot / OnSpinStart / OnCylinderClosed are called from the animations (Animation Events).
     [RequireComponent(typeof(Animator))]
     [RequireComponent(typeof(HeldItem))]
-    public class RevolverFire : MonoBehaviour
+    public class RevolverFire : MonoBehaviour, IItemContextUser
     {
         [BoxGroup("Стрельба"), MinValue(0.05f), Tooltip("Минимальная пауза между выстрелами, сек")]
         public float fireCooldown = 0.35f;
@@ -23,14 +24,16 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Анимации"), Expandable, Tooltip("Углы, тайминги и скорости анимаций. Раскройте, чтобы править")]
         public RevolverAnimationSettings animationSettings;
 
-        [BoxGroup("Отладка")] public bool logEvents = true;
-
         [ShowNativeProperty] public bool IsOpen => isOpen;
         // Cylinder is open and still (not opening, not spinning): it can be inspected
         public bool IsOpenIdle => isOpen && animator != null && InState(Hash.OpenIdleState);
 
         Animator animator;
         HeldItem held;
+        DebugSettings debug;
+
+        public void Bind(ItemContext context) => debug = context.Debug;
+        bool LogEvents => debug != null && debug.WeaponEvents;
         RevolverCylinder cylinder;
         RevolverShooter shooter;
         readonly System.Collections.Generic.HashSet<int> animParams = new System.Collections.Generic.HashSet<int>();
@@ -120,7 +123,7 @@ namespace Pistol.Weapons.Revolver
             {
                 // No ammo tracking: always fire
                 if (shooter != null) shooter.Fire(null);
-                if (logEvents) Debug.Log("BANG!");
+                if (LogEvents) Debug.Log("BANG!");
                 return;
             }
 
@@ -129,9 +132,9 @@ namespace Pistol.Weapons.Revolver
             if (cylinder.TryFire(out var ammo))
             {
                 if (shooter != null) shooter.Fire(ammo);
-                if (logEvents) Debug.Log($"BANG! (chamber {chamber})  {cylinder.Model.Describe()}");
+                if (LogEvents) Debug.Log($"BANG! (chamber {chamber})  {cylinder.Model.Describe()}");
             }
-            else if (logEvents)
+            else if (LogEvents)
             {
                 Debug.Log($"Click: chamber {chamber} holds {(state == RoundState.Spent ? "a spent case" : "nothing")}  {cylinder.Model.Describe()}");
             }
@@ -140,13 +143,13 @@ namespace Pistol.Weapons.Revolver
 
         public void OnSpinStart()
         {
-            if (logEvents) Debug.Log("Cylinder spun");
+            if (LogEvents) Debug.Log("Cylinder spun");
             // TODO: cylinder ratchet sound
         }
 
         public void OnCylinderClosed()
         {
-            if (logEvents) Debug.Log("Click: cylinder closed");
+            if (LogEvents) Debug.Log("Click: cylinder closed");
             // TODO: cylinder latch sound
         }
 

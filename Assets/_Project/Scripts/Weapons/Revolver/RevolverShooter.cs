@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using NaughtyAttributes;
 using Pistol.Ballistics;
+using Pistol.Core;
 using Pistol.Items;
 using Pistol.Player;
 
@@ -22,12 +23,11 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Ствол"), Range(0f, 0.04f), Tooltip("Насколько линия прицела выше оси ствола, м")]
         public float sightHeight = 0.013f;
 
-        [BoxGroup("Линия будущей пули"), Tooltip("Показывать, куда полетит пуля, если выстрелить сейчас")]
-        public bool showTrajectory = true;
-        [BoxGroup("Линия будущей пули"), ShowIf("showTrajectory"), Range(10f, 300f), Tooltip("Длина линии, м")]
+        // The line is switched on in DebugSettings (Trajectory Preview)
+        [BoxGroup("Линия будущей пули (отладка)"), Range(10f, 300f), Tooltip("Длина линии, м")]
         public float previewDistance = 80f;
-        [BoxGroup("Линия будущей пули"), ShowIf("showTrajectory")] public Color lineColor = new Color(1f, 0.25f, 0.2f, 0.75f);
-        [BoxGroup("Линия будущей пули"), ShowIf("showTrajectory")] public Color hitColor = new Color(1f, 0.2f, 0.15f, 0.95f);
+        [BoxGroup("Линия будущей пули (отладка)")] public Color lineColor = new Color(1f, 0.25f, 0.2f, 0.75f);
+        [BoxGroup("Линия будущей пули (отладка)")] public Color hitColor = new Color(1f, 0.2f, 0.15f, 0.95f);
 
         Transform ignoreRoot;
         Transform muzzle;
@@ -37,8 +37,18 @@ namespace Pistol.Weapons.Revolver
         GameObject hitMarker;
         readonly List<Vector3> points = new List<Vector3>(64);
 
+        BulletSystem bullets;
+        DebugSettings debug;
+
         // The bullet ignores the player's own colliders
-        public void Bind(ItemContext context) => ignoreRoot = context.Movement != null ? context.Movement.transform : null;
+        public void Bind(ItemContext context)
+        {
+            ignoreRoot = context.Movement != null ? context.Movement.transform : null;
+            bullets = context.Bullets;
+            debug = context.Debug;
+        }
+
+        bool ShowTrajectory => debug != null && debug.TrajectoryPreview && bullets != null;
 
         void Start()
         {
@@ -81,21 +91,23 @@ namespace Pistol.Weapons.Revolver
                 ammo = fallbackAmmo;
             }
             GetShot(ammo, out var origin, out var dir);
-            BulletSystem.Instance.Fire(origin, dir, ammo, ignoreRoot);
+            if (bullets != null) bullets.Fire(origin, dir, ammo, ignoreRoot);
+            else Debug.LogWarning("RevolverShooter: no BulletSystem, the shot goes nowhere.", this);
         }
 
         void LateUpdate()
         {
             if (line == null) return;
-            line.enabled = showTrajectory;
-            if (!showTrajectory) { hitMarker.SetActive(false); return; }
+            bool show = ShowTrajectory;
+            line.enabled = show;
+            if (!show) { hitMarker.SetActive(false); return; }
 
             var ammo = cylinder != null ? cylinder.Ammo : null;
             GetShot(ammo, out var pos, out var dir);
             float speed = ammo != null ? ammo.muzzleVelocity : 440f;
             Vector3 g = Physics.gravity * (ammo != null ? ammo.gravityScale : 1f);
             Vector3 vel = dir * speed;
-            LayerMask mask = BulletSystem.Instance.hitMask;
+            LayerMask mask = bullets.hitMask;
 
             // Same flight calculation as the real bullet, in small time steps
             points.Clear();

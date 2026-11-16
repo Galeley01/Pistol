@@ -28,7 +28,7 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Углы (если едет не туда — поменяйте знак)"), Tooltip("Поворот барабана на 1 камору, ось Z")]
         public float cylinderStep = -60f;
         [BoxGroup("Углы (если едет не туда — поменяйте знак)"), Tooltip("Откидывание барабана, ось Z")]
-        public float craneOpen = 75f;
+        public float craneOpen = 85f;
 
         [BoxGroup("Выстрел"), MinValue(0.02f), Tooltip("Сколько секунд взводится курок")]
         public float fireCockTime = 0.117f;

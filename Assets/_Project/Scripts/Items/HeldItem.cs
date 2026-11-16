@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using NaughtyAttributes;
+using Pistol.Core;
 
 namespace Pistol.Items
 {
@@ -13,11 +14,8 @@ namespace Pistol.Items
     // Goes on the item root, next to ItemRig.
     [DisallowMultipleComponent]
     [RequireComponent(typeof(ItemRig))]
-    public class HeldItem : MonoBehaviour
+    public class HeldItem : MonoBehaviour, IItemContextUser
     {
-        [BoxGroup("Отладка"), SerializeField, Tooltip("Писать в Console каждое намерение (выстрел, перезарядка...)")]
-        bool logIntents = false;
-
         // Intents from the player (ItemInput)
         public event Action UseRequested;
         public event Action ReloadRequested;
@@ -29,6 +27,9 @@ namespace Pistol.Items
 
         [ShowNativeProperty] public bool CanAim => canAim;
         [ShowNativeProperty] public bool LeftHandFree => leftHandFree;
+
+        DebugSettings debug;
+        public void Bind(ItemContext context) => debug = context.Debug;
 
         bool canAim = true;
         bool leftHandFree;
@@ -50,7 +51,7 @@ namespace Pistol.Items
 
         void Log(string intent)
         {
-            if (logIntents) Debug.Log($"{name}: {intent}", this);
+            if (debug != null && debug.ItemIntents) Debug.Log($"{name}: {intent}", this);
         }
     }
 }

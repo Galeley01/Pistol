@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using NaughtyAttributes;
+using Pistol.Core;
 
 namespace Pistol.Audio
 {
@@ -15,8 +16,8 @@ namespace Pistol.Audio
     {
         [BoxGroup("Пул"), Range(4, 64), SerializeField, Tooltip("Сколько звуков может звучать одновременно")]
         int voices = 24;
-        [BoxGroup("Отладка"), SerializeField, Tooltip("Писать в Console каждый проигранный звук")]
-        bool logPlays = false;
+        [BoxGroup("Отладка"), SerializeField, Tooltip("Отладочные флаги: лог каждого звука включается там")]
+        DebugSettings debug;
 
         sealed class Voice
         {
@@ -73,7 +74,7 @@ namespace Pistol.Audio
             sound.ApplyTo(voice.Source, volumeScale);
             voice.Source.clip = clip;
             voice.Source.Play();
-            if (logPlays) Debug.Log($"GameAudio: {sound.name} ({clip.name})", this);
+            if (debug != null && debug.SoundPlays) Debug.Log($"GameAudio: {sound.name} ({clip.name})", this);
         }
 
         // A free voice, or the one that has been playing the longest

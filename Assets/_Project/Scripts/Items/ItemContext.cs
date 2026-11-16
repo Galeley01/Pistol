@@ -1,5 +1,7 @@
 using UnityEngine;
 using Pistol.Audio;
+using Pistol.Ballistics;
+using Pistol.Core;
 using Pistol.Player;
 using Pistol.PostFx;
 
@@ -16,11 +18,16 @@ namespace Pistol.Items
         public PlayerContext Player { get; }
         public CameraEffects Effects { get; }   // may be null: then items show no screen effects
         public GameAudio Audio { get; }         // may be null: then items are silent
+        public BulletSystem Bullets { get; }    // may be null: then weapons can't shoot
+        public DebugSettings Debug { get; }     // may be null: then no debug output
         public ItemHolderWithPose Holder { get; }
 
         public ItemContext(Camera camera, PlayerMovement movement, CharacterController controller, PlayerContext player,
-                           CameraEffects effects, GameAudio audio, ItemHolderWithPose holder)
+                           CameraEffects effects, GameAudio audio, BulletSystem bullets, DebugSettings debug,
+                           ItemHolderWithPose holder)
         {
+            Bullets = bullets;
+            Debug = debug;
             Camera = camera;
             Movement = movement;
             Controller = controller;

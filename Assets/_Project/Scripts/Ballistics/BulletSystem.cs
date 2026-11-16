@@ -8,35 +8,26 @@ namespace Pistol.Ballistics
     // Bullet flight. A bullet is a projectile, not an instant ray: every frame it travels one segment
     // at its own speed and drops under gravity. Hits are checked with a ray along that segment,
     // so bullets never pass through walls. No Rigidbody or collider is needed for bullets.
-    // Created on demand on the first shot (a BulletSystem object in the scene).
+    // Bullet holes stick to what was hit: they move with a falling box and disappear with a destroyed one.
+    //
+    // Goes on its own object in the scene; held weapons get it through ItemContext.
+    [DisallowMultipleComponent]
     public class BulletSystem : MonoBehaviour
     {
-        static BulletSystem instance;
-        public static BulletSystem Instance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    instance = FindFirstObjectByType<BulletSystem>();
-                    if (instance == null) instance = new GameObject("BulletSystem").AddComponent<BulletSystem>();
-                }
-                return instance;
-            }
-        }
-
         [BoxGroup("Попадания"), Tooltip("Слои, в которые попадают пули")]
         public LayerMask hitMask = ~0;
         [BoxGroup("Попадания"), Range(10, 500), Tooltip("Сколько отметин от пуль держать одновременно (старые исчезают)")]
         public int maxHoles = 100;
         [BoxGroup("Попадания")] public Color holeColor = new Color(0.05f, 0.05f, 0.05f, 0.9f);
 
-        [BoxGroup("Отладка"), Tooltip("Рисовать путь каждой пули жёлтой линией")]
-        public bool showBulletPaths = true;
-        [BoxGroup("Отладка"), ShowIf("showBulletPaths"), Range(0.5f, 20f), Tooltip("Сколько секунд держать линию пути")]
+        [BoxGroup("Отладка"), SerializeField, Tooltip("Отладочные флаги: пути пуль и логи попаданий включаются там")]
+        DebugSettings debug;
+        [BoxGroup("Отладка"), Range(0.5f, 20f), Tooltip("Сколько секунд держать линию пути пули")]
         public float pathLifetime = 4f;
-        [BoxGroup("Отладка"), ShowIf("showBulletPaths")] public Color pathColor = new Color(1f, 0.85f, 0.2f, 0.9f);
-        [BoxGroup("Отладка")] public bool logHits = true;
+        [BoxGroup("Отладка")] public Color pathColor = new Color(1f, 0.85f, 0.2f, 0.9f);
+
+        bool ShowPaths => debug != null && debug.BulletPaths;
+        bool LogHits => debug != null && debug.BulletHits;
 
         class Bullet
         {
@@ -63,7 +54,7 @@ namespace Pistol.Ballistics
                 vel = direction.normalized * ammo.muzzleVelocity,
                 ammo = ammo,
                 ignoreRoot = ignoreRoot,
-                path = showBulletPaths ? new List<Vector3> { origin } : null
+                path = ShowPaths ? new List<Vector3> { origin } : null
             };
             bullets.Add(b);
         }
@@ -135,23 +126,32 @@ namespace Pistol.Ballistics
             var target = hit.collider.GetComponentInParent<IDamageable>();
             if (target is Object unityObj ? unityObj != null : target != null) target.TakeHit(info);
 
-            PlaceHole(hit.point, hit.normal, b.ammo.holeSize);
+            PlaceHole(hit.point, hit.normal, b.ammo.holeSize, hit.collider.transform);
 
-            if (logHits)
+            if (LogHits)
                 Debug.Log($"Hit: {hit.collider.name}, {info.distance:F1} m, speed {speed:F0} m/s");
         }
 
         // ---------- Bullet holes ----------
-        void PlaceHole(Vector3 point, Vector3 normal, float size)
+        void PlaceHole(Vector3 point, Vector3 normal, float size, Transform surface)
         {
-            GameObject go;
-            if (holes.Count >= maxHoles) go = holes.Dequeue();
-            else go = CreateDisc("BulletHole", holeColor);
-            go.transform.SetPositionAndRotation(point + normal * 0.0015f, Quaternion.LookRotation(normal));
-            go.transform.localScale = Vector3.one * size;
+            // Holes on destroyed objects are gone; take the oldest live one or make a new one
+            GameObject go = null;
+            while (go == null && holes.Count > 0 && (holes.Count >= maxHoles || holes.Peek() == null))
+                go = holes.Dequeue();
+            if (go == null) go = CreateDisc("BulletHole", holeColor);
+
+            var t = go.transform;
+            t.SetParent(surface, true);
+            t.SetPositionAndRotation(point + normal * 0.0015f, Quaternion.LookRotation(normal));
+            // Keep the hole round and the right size whatever the surface's scale
+            Vector3 s = surface != null ? surface.lossyScale : Vector3.one;
+            t.localScale = new Vector3(size / Safe(s.x), size / Safe(s.y), size / Safe(s.z));
             go.SetActive(true);
             holes.Enqueue(go);
         }
+
+        static float Safe(float v) => Mathf.Abs(v) < 1e-5f ? 1e-5f : v;
 
         // A flat disc of diameter 1, used for bullet holes and the aim marker
         public static GameObject CreateDisc(string name, Color color)

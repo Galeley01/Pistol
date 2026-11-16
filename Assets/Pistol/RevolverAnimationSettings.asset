@@ -16,7 +16,7 @@ MonoBehaviour:
   triggerPull: 25
   hammerCock: -35
   cylinderStep: -60
-  craneOpen: 75
+  craneOpen: 85
   fireCockTime: 0.117
   hammerDropTime: 0.016
   fireDuration: 0.3
