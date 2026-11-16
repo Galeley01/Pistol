@@ -89,6 +89,8 @@ namespace Pistol.Items
             }
         }
 
+        public void Clear() => layers.Clear();
+
         public void Apply(ref PoseFrame frame)
         {
             foreach (var layer in layers)

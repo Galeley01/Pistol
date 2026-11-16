@@ -1,6 +1,7 @@
 using UnityEngine;
 using NaughtyAttributes;
 using Pistol.Core;
+using Pistol.Items;
 using Pistol.Player;
 
 namespace Pistol.Weapons.Revolver
@@ -16,7 +17,7 @@ namespace Pistol.Weapons.Revolver
     // clicking an empty chamber inserts a round immediately, clicking a spent one removes the case.
     // Rings and outline are flat meshes built in code, no separate assets.
     [RequireComponent(typeof(RevolverInspect))]
-    public class RevolverChamberPicker : MonoBehaviour
+    public class RevolverChamberPicker : MonoBehaviour, IItemContextUser
     {
         [BoxGroup("Кружки над каморами"), Tooltip("Цвет над пустой каморой")]
         public Color emptyColor = new Color(1f, 1f, 1f, 0.9f);
@@ -65,12 +66,17 @@ namespace Pistol.Weapons.Revolver
         int hovered = -1;
         float builtRingR, builtRingW, builtOutR, builtOutW;
 
+        // Pointer and clicks in Inspect mode come from the player context
+        public void Bind(ItemContext itemContext)
+        {
+            cam = itemContext.Camera;
+            context = itemContext.Player;
+        }
+
         void Start()
         {
             inspect = GetComponent<RevolverInspect>();
             cylinder = GetComponent<RevolverCylinder>();
-            cam = GetComponentInParent<Camera>();
-            context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
             block = new MaterialPropertyBlock();
 
             if (cylinder == null || cylinder.CylinderTransform == null || cylinder.Model == null)

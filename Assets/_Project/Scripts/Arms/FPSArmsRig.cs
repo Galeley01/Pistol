@@ -6,7 +6,6 @@ using NaughtyAttributes;
 using UnityEditor;
 #endif
 using Pistol.Items;
-using Pistol.Weapons.Revolver;
 
 namespace Pistol.Arms
 {
@@ -68,12 +67,9 @@ namespace Pistol.Arms
         // ================= Runtime =================
         void Start()
         {
-            var revolver = weapon != null ? weapon.GetComponent<RevolverFire>() : null;
-            if (revolver != null)
-            {
-                revolver.CylinderOpening += () => SetLeftHandOnGrip(false);
-                revolver.CylinderClosing += () => SetLeftHandOnGrip(true);
-            }
+            // The item tells when its left hand lets go (e.g. the revolver cylinder is open)
+            var held = weapon != null ? weapon.GetComponent<HeldItem>() : null;
+            if (held != null) held.LeftHandFreeChanged += free => SetLeftHandOnGrip(!free);
         }
 
         // Smoothly move the left hand away (false) or back onto the grip (true)

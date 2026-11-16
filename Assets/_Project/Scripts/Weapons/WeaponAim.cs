@@ -4,7 +4,6 @@ using Pistol.Core;
 using Pistol.Items;
 using Pistol.Player;
 using Pistol.PostFx;
-using Pistol.Weapons.Revolver;
 
 namespace Pistol.Weapons
 {
@@ -33,7 +32,7 @@ namespace Pistol.Weapons
 
         Camera cam;
         PlayerContext context;
-        RevolverFire revolver;   // TODO(stage 6): ask the held item whether it can aim
+        HeldItem held;
         ItemRig rig;
         PlayerMovement movement;
         float aim, baseFov = -1f, currentAimIn;
@@ -60,7 +59,7 @@ namespace Pistol.Weapons
         {
             if (profile == null) { Debug.LogError("WeaponAim: no profile assigned.", this); enabled = false; return; }
             if (cam == null) { Debug.LogError("WeaponAim: not held by an ItemHolderWithPose, aiming is off.", this); enabled = false; return; }
-            revolver = GetComponent<RevolverFire>();
+            held = GetComponent<HeldItem>();
             rig = ItemRig.On(this);
             sway = GetComponent<WeaponSway>();
             // Hip pose: the position the weapon has in the scene/prefab, or the one from the profile
@@ -80,8 +79,8 @@ namespace Pistol.Weapons
             if (cam == null) return;
             if (baseFov < 0f) baseFov = cam.fieldOfView;   // read the FOV after CameraMotion has set it
 
-            bool cylinderOpen = revolver != null && revolver.IsOpen;
-            bool want = (forceAim || (context != null && context.AimHeld)) && !cylinderOpen;
+            bool canAim = held == null || held.CanAim;   // e.g. not with the revolver cylinder open
+            bool want = (forceAim || (context != null && context.AimHeld)) && canAim;
 
             // The more exhausted the character, the slower the weapon comes up to the face
             float fatigue = Fatigue();

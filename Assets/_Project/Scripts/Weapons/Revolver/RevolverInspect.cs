@@ -65,6 +65,12 @@ namespace Pistol.Weapons.Revolver
         {
             fire = GetComponent<RevolverFire>();
             if (context == null) Debug.LogError("RevolverInspect: not held by an ItemHolderWithPose, inspect mode is off.", this);
+            var held = GetComponent<HeldItem>();
+            if (held != null)
+            {
+                held.InspectRequested += OnInspectRequested;
+                held.InspectExitRequested += OnInspectExitRequested;
+            }
             var cyl = GetComponent<RevolverCylinder>();
             focusTarget = cyl != null && cyl.CylinderTransform != null ? cyl.CylinderTransform : transform;
         }
@@ -73,32 +79,34 @@ namespace Pistol.Weapons.Revolver
         {
             if (context == null) return;
 
-            if (!inspecting)
+            if (inspecting)
             {
-                // Alt works only in Gameplay mode (cursor captured) and only with the cylinder open and still
-                if (context.InspectPressed && fire.IsOpenIdle)
-                    SetInspecting(true);
-            }
-            else if (context.Mode != ControlMode.Inspect)
-            {
-                SetInspecting(false);                      // something else changed the control mode
-            }
-            else
-            {
-                if (!fire.IsOpen)
-                    SetInspecting(false);                  // the cylinder was closed by something else
-                else if (context.InspectReloadPressed)
-                {
-                    SetInspecting(false);
-                    fire.ToggleCylinder();                 // R: leave and close the cylinder right away
-                }
-                else if (context.InspectExitPressed)       // Alt or Esc
-                    SetInspecting(false);
+                if (context.Mode != ControlMode.Inspect) SetInspecting(false);   // something else changed the control mode
+                else if (!fire.IsOpen) SetInspecting(false);                      // the cylinder was closed by something else
             }
 
             amount = Mathf.MoveTowards(amount, inspecting ? 1f : 0f,
                                        Time.deltaTime / Mathf.Max(inspecting ? inTime : outTime, 0.01f));
             UpdateEffects(Mathf.SmoothStep(0f, 1f, amount));
+        }
+
+        // Alt in Gameplay mode: only with the cylinder open and still
+        void OnInspectRequested()
+        {
+            if (inspecting) return;
+            if (context == null) { Debug.LogWarning("RevolverInspect: inspect ignored, no player context (not held by ItemHolderWithPose).", this); return; }
+            if (!fire.IsOpenIdle)
+            {
+                if (logEvents) Debug.Log(fire.IsOpen ? "Cylinder inspect: ignored, the cylinder is still moving" : "Cylinder inspect: ignored, open the cylinder first (R)", this);
+                return;
+            }
+            SetInspecting(true);
+        }
+
+        // Alt or Esc in Inspect mode (R there also exits first, then closes the cylinder as a Reload)
+        void OnInspectExitRequested()
+        {
+            if (inspecting) SetInspecting(false);
         }
 
         void SetInspecting(bool on)

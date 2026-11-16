@@ -1,18 +1,20 @@
 using UnityEngine;
 using NaughtyAttributes;
-using Pistol.Player;
+using Pistol.Items;
 
 namespace Pistol.Weapons.Revolver
 {
     using Hash = RevolverAnimatorIds.Hash;
 
-    // Goes on the Revolver root (next to the Animator).
-    // LMB = fire (cylinder closed) or spin the cylinder (cylinder open).
+    // Goes on the Revolver root (next to the Animator and HeldItem).
+    // Intents come from HeldItem (ItemInput reads the keys):
+    // Use (LMB) = fire (cylinder closed) or spin the cylinder (cylinder open).
     // Firing: the cylinder advances one chamber (RevolverCylinder), the hammer falls (OnShot),
     // and if there is a live round the bullet leaves the muzzle (RevolverShooter), otherwise a dry click.
-    // R = open / close the cylinder.
+    // Reload (R) = open / close the cylinder. While it is open the weapon can't aim and the left hand lets go.
     // OnShot / OnSpinStart / OnCylinderClosed are called from the animations (Animation Events).
     [RequireComponent(typeof(Animator))]
+    [RequireComponent(typeof(HeldItem))]
     public class RevolverFire : MonoBehaviour
     {
         [BoxGroup("Стрельба"), MinValue(0.05f), Tooltip("Минимальная пауза между выстрелами, сек")]
@@ -27,12 +29,8 @@ namespace Pistol.Weapons.Revolver
         // Cylinder is open and still (not opening, not spinning): it can be inspected
         public bool IsOpenIdle => isOpen && animator != null && InState(Hash.OpenIdleState);
 
-        // The arms (FPSArmsRig) subscribe to move the left hand away / back
-        public event System.Action CylinderOpening;
-        public event System.Action CylinderClosing;
-
         Animator animator;
-        PlayerContext context;
+        HeldItem held;
         RevolverCylinder cylinder;
         RevolverShooter shooter;
         readonly System.Collections.Generic.HashSet<int> animParams = new System.Collections.Generic.HashSet<int>();
@@ -45,8 +43,16 @@ namespace Pistol.Weapons.Revolver
             foreach (var p in animator.parameters) animParams.Add(p.nameHash);
             cylinder = GetComponent<RevolverCylinder>();
             shooter = GetComponent<RevolverShooter>();
-            context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
-            if (context == null) Debug.LogError("RevolverFire: no PlayerContext above the revolver, input is disabled.", this);
+            held = GetComponent<HeldItem>();
+            held.UseRequested += OnUse;
+            held.ReloadRequested += ToggleCylinder;
+        }
+
+        // LMB: fire with the cylinder closed, spin it when it is open
+        void OnUse()
+        {
+            if (isOpen) Spin();
+            else Fire();
         }
 
         // Speeds come from the animation settings every frame, so they can be tuned live
@@ -66,21 +72,7 @@ namespace Pistol.Weapons.Revolver
             if (animParams.Contains(param)) animator.SetFloat(param, value);
         }
 
-        void Update()
-        {
-            ApplySpeeds();
-
-            // Gameplay actions are active only in Gameplay mode, so a click that recaptures the cursor never fires
-            if (context == null) return;
-
-            if (context.ReloadPressed) ToggleCylinder();
-
-            if (context.FirePressed)
-            {
-                if (isOpen) Spin();
-                else Fire();
-            }
-        }
+        void Update() => ApplySpeeds();
 
         // ---------- Actions ----------
         public void Fire()
@@ -100,14 +92,16 @@ namespace Pistol.Weapons.Revolver
             {
                 isOpen = true;
                 animator.SetTrigger(Hash.Open);
-                CylinderOpening?.Invoke();
+                held.SetCanAim(false);
+                held.SetLeftHandFree(true);
             }
             else if (isOpen && (InState(Hash.OpenIdleState) || InState(Hash.SpinState)))
             {
                 isOpen = false;
                 animator.ResetTrigger(Hash.Spin);
                 animator.SetTrigger(Hash.Close);
-                CylinderClosing?.Invoke();
+                held.SetCanAim(true);
+                held.SetLeftHandFree(false);
             }
         }
 

@@ -2,7 +2,7 @@ using UnityEngine;
 using NaughtyAttributes;
 using Pistol.Core;
 using Pistol.Player;
-using Pistol.Weapons;
+using Pistol.Items;
 
 namespace Pistol.Cameras
 {
@@ -14,8 +14,10 @@ namespace Pistol.Cameras
     public class CameraMotion : MonoBehaviour
     {
         // ===================== References =====================
-        [BoxGroup("Ссылки (найдутся сами)")] public CharacterController controller;
-        [BoxGroup("Ссылки (найдутся сами)")] public PlayerMovement movement;
+        [BoxGroup("Ссылки"), Required("Назначьте CharacterController игрока")] public CharacterController controller;
+        [BoxGroup("Ссылки"), Required("Назначьте PlayerMovement игрока")] public PlayerMovement movement;
+        [BoxGroup("Ссылки"), Required("Назначьте ItemHolderWithPose (предмет в руках)"), Tooltip("Откуда брать, насколько игрок целится: в прицеле голову трясёт меньше")]
+        public ItemHolderWithPose holder;
 
         [BoxGroup("Профиль"), Required("Назначьте профиль: движение камеры"), SerializeField]
         [Tooltip("Ассет с настройками. Кликните по полю, чтобы открыть его со всеми группами")]
@@ -36,7 +38,6 @@ namespace Pistol.Cameras
         bool wasGrounded = true;
         float lastAirVelocity;
         Vector3 posCurrent, rotCurrent;
-        WeaponAim weaponAim;
         Vector2 nod, nodVel;          // nod spring: x = forward/back, y = roll
         Vector3 recoilCam, recoilCamVel;   // recoil: x = up, z = roll, degrees
         float bodyRun;
@@ -45,9 +46,7 @@ namespace Pistol.Cameras
         {
             if (profile == null) { Debug.LogError("CameraMotion: no profile assigned.", this); enabled = false; return; }
             cam = GetComponent<Camera>();
-            if (controller == null) controller = GetComponentInParent<CharacterController>();
-            if (movement == null) movement = GetComponentInParent<PlayerMovement>();
-            weaponAim = GetComponentInChildren<WeaponAim>(true);
+            if (controller == null || movement == null) { Debug.LogError("CameraMotion: assign Controller and Movement.", this); enabled = false; return; }
 
             cam.fieldOfView = profile.fieldOfView;
             cam.nearClipPlane = 0.01f;
@@ -102,7 +101,7 @@ namespace Pistol.Cameras
             float sharpness = Mathf.Max(runWeight * 0.5f, tiredMix);
             float vShape = Mathf.Lerp(Mathf.Cos(bobPhase * 2f), 1f - 2f * Mathf.Abs(Mathf.Sin(bobPhase)), sharpness);
 
-            float aimCalm = Mathf.Lerp(1f, profile.aimCameraShake, weaponAim != null ? weaponAim.AimAmount : 0f);
+            float aimCalm = Mathf.Lerp(1f, profile.aimCameraShake, holder != null ? holder.Aim : 0f);
             float amp = bobWeight * Mathf.Lerp(1f, profile.crouchBobMultiplier, crouch) * Mathf.Lerp(1f, 0.6f, 1f - aimCalm);
             Vector3 bobPos = new Vector3(Mathf.Sin(bobPhase) * h, vShape * v, 0f) * amp;
             Vector3 bobRot = new Vector3(Mathf.Sin(bobPhase * 2f) * p, 0f, Mathf.Sin(bobPhase) * r) * amp;

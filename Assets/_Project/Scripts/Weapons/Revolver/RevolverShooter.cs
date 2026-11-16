@@ -15,7 +15,7 @@ namespace Pistol.Weapons.Revolver
     // the sight line (rear sight to front sight) at the zero distance.
     [DefaultExecutionOrder(1000)]   // after the camera, so the line doesn't lag the weapon by a frame
     [RequireComponent(typeof(ItemRig))]
-    public class RevolverShooter : MonoBehaviour
+    public class RevolverShooter : MonoBehaviour, IItemContextUser
     {
         [BoxGroup("Ствол"), Range(5f, 50f), Tooltip("На какой дистанции пуля попадает точно в точку прицеливания, м")]
         public float zeroDistance = 15f;
@@ -37,14 +37,16 @@ namespace Pistol.Weapons.Revolver
         GameObject hitMarker;
         readonly List<Vector3> points = new List<Vector3>(64);
 
+        // The bullet ignores the player's own colliders
+        public void Bind(ItemContext context) => ignoreRoot = context.Movement != null ? context.Movement.transform : null;
+
         void Start()
         {
             var rig = ItemRig.On(this);
             muzzle = rig != null ? rig.MuzzleOrRoot : transform;
             if (rig != null && rig.Muzzle == null) Debug.LogError("RevolverShooter: ItemRig has no Muzzle, shooting from the weapon root.", this);
             cylinder = GetComponent<RevolverCylinder>();
-            var player = GetComponentInParent<PlayerMovement>();
-            ignoreRoot = player != null ? player.transform : transform.root;
+            if (ignoreRoot == null) ignoreRoot = transform.root;
 
             var go = new GameObject("TrajectoryPreview");
             line = go.AddComponent<LineRenderer>();

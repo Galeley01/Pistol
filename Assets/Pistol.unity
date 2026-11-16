@@ -1347,8 +1347,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   profile: {fileID: 11400000, guid: e9c12398021c427ba2d11b1d281d156d, type: 2}
-  controller: {fileID: 0}
-  movement: {fileID: 0}
+  controller: {fileID: 1942477182}
+  movement: {fileID: 1942477186}
+  holder: {fileID: 1957225286}
 --- !u!4 &1892785950 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -5603230859222213449, guid: acf2fc5ed3b6d2c469da3dfb84e32a37, type: 3}
@@ -1900,6 +1901,7 @@ GameObject:
   m_Component:
   - component: {fileID: 553639559}
   - component: {fileID: 1957225286}
+  - component: {fileID: 1160791866}
   m_Layer: 0
   m_Name: ItemHolderWithPose
   m_TagString: Untagged
@@ -1999,6 +2001,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   voices: 24
   logPlays: 0
+--- !u!114 &1160791866
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 973209708}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4b7a599a19c4b3fb08c07dd18a377dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
