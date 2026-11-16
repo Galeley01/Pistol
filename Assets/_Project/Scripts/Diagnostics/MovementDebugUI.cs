@@ -1,8 +1,6 @@
 using UnityEngine;
 using NaughtyAttributes;
-#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-#endif
 using Pistol.Player;
 
 namespace Pistol.Diagnostics
@@ -26,6 +24,7 @@ namespace Pistol.Diagnostics
         void Toggle() => show = !show;
 
         bool show;
+        InputAction toggleKey;   // debug tool: its own key, independent of the player's controls
         Texture2D tex;
         GUIStyle label, title;
 
@@ -37,16 +36,22 @@ namespace Pistol.Diagnostics
             tex = Texture2D.whiteTexture;
         }
 
-        void Update()
+        void OnEnable()
         {
-            if (ReadToggle()) show = !show;
+            toggleKey = new InputAction("ToggleMovementDebug", InputActionType.Button, "<Keyboard>/2");
+            toggleKey.Enable();
         }
 
-#if ENABLE_INPUT_SYSTEM
-        static bool ReadToggle() => Keyboard.current != null && Keyboard.current.digit2Key.wasPressedThisFrame;
-#else
-        static bool ReadToggle() => Input.GetKeyDown(KeyCode.Alpha2);
-#endif
+        void OnDisable()
+        {
+            toggleKey?.Dispose();
+            toggleKey = null;
+        }
+
+        void Update()
+        {
+            if (toggleKey.WasPressedThisFrame()) show = !show;
+        }
 
         void OnGUI()
         {

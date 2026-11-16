@@ -126,7 +126,7 @@ namespace Pistol.Weapons.Revolver
         // ---------- Shot ----------
         void OnFired()
         {
-            float fatigue = movement != null ? Mathf.Clamp01(Mathf.Max(movement.Breathless, movement.IsExhausted ? 0.8f : 0f)) : 0f;
+            float fatigue = movement != null ? movement.Fatigue : 0f;
             float m = Mathf.Lerp(1f, tiredMultiplier, fatigue);
 
             // Weapon recoil: barrel up (-X), random side and roll; weapon back and slightly up

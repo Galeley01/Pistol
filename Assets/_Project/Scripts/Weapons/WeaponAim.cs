@@ -1,9 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering.PostProcessing;
 using NaughtyAttributes;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 using Pistol.Core;
 using Pistol.Player;
 using Pistol.PostFx;
@@ -87,6 +84,7 @@ namespace Pistol.Weapons
         [ShowNativeProperty] public float CurrentAimInTime => currentAimIn;
 
         Camera cam;
+        PlayerContext context;
         RevolverFire revolver;
         PlayerMovement movement;
         float aim, baseFov = -1f, currentAimIn;
@@ -100,6 +98,7 @@ namespace Pistol.Weapons
             cam = GetComponentInParent<Camera>();
             revolver = GetComponent<RevolverFire>();
             movement = GetComponentInParent<PlayerMovement>();
+            context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
             sway = GetComponent<WeaponSway>();
             if (useScenePosition) hipPosition = transform.localPosition;   // take the scene position as is
             else transform.localPosition = hipPosition;
@@ -110,9 +109,8 @@ namespace Pistol.Weapons
             if (cam == null) return;
             if (baseFov < 0f) baseFov = cam.fieldOfView;   // read the FOV after CameraMotion has set it
 
-            bool locked = Cursor.lockState == CursorLockMode.Locked;
             bool cylinderOpen = revolver != null && revolver.IsOpen;
-            bool want = (forceAim || (locked && ReadAim())) && !cylinderOpen;
+            bool want = (forceAim || (context != null && context.AimHeld)) && !cylinderOpen;
 
             // The more exhausted the character, the slower the weapon comes up to the face
             float fatigue = Fatigue();
@@ -142,13 +140,7 @@ namespace Pistol.Weapons
         }
 
         // 0 = rested, 1 = exhausted (panting after a sprint)
-        float Fatigue()
-        {
-            if (movement == null) return 0f;
-            float f = movement.Breathless;
-            if (movement.IsExhausted) f = Mathf.Max(f, 0.8f);
-            return Mathf.Clamp01(f);
-        }
+        float Fatigue() => movement != null ? movement.Fatigue : 0f;
 
         void UpdateBlur(float t)
         {
@@ -259,11 +251,5 @@ namespace Pistol.Weapons
             Transform m = fire != null && fire.muzzle != null ? fire.muzzle : transform.Find("Muzzle");
             return m != null ? m.position + transform.up * 0.012f : transform.position + transform.forward * 0.25f;
         }
-
-#if ENABLE_INPUT_SYSTEM
-        bool ReadAim() => Mouse.current != null && Mouse.current.rightButton.isPressed;
-#else
-        bool ReadAim() => Input.GetMouseButton(1);
-#endif
     }
 }

@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System.Text;
 using UnityEngine;
 using Unity.Profiling;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering.PostProcessing;
-#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-#endif
 using Pistol.Player;
 using Pistol.Weapons;
 using Pistol.Weapons.Revolver;
@@ -178,6 +177,7 @@ namespace Pistol.Diagnostics
 
         void OnEnable()
         {
+            CreateKeys();
             systemMemory = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "System Used Memory");
             gfxMemory = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Gfx Used Memory");
             mainThreadRec = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Main Thread", 1);
@@ -200,6 +200,7 @@ namespace Pistol.Diagnostics
 
         void OnDisable()
         {
+            DisposeKeys();
             if (log != null)
             {
                 try { log.WriteLine(); log.WriteLine(BuildReport("SESSION SUMMARY (written on exit)")); log.Close(); }
@@ -297,40 +298,48 @@ namespace Pistol.Diagnostics
         }
 
         // =====================================================================
-        // Keys
+        // Keys. A debug tool, so it has its own actions instead of the player's controls.
+        InputAction toggleKey, shiftKey, altKey, fireKey;
+        InputAction[] fKeys;      // F5..F10
+        InputAction[] webKeys;    // browser: Alt + 5..9, 0 duplicate F5..F10
+
+        static InputAction CreateKey(string path)
+        {
+            var a = new InputAction(path, InputActionType.Button, path);
+            a.Enable();
+            return a;
+        }
+
+        void CreateKeys()
+        {
+            toggleKey = CreateKey("<Keyboard>/3");
+            shiftKey = CreateKey("<Keyboard>/shift");
+            altKey = CreateKey("<Keyboard>/alt");
+            fireKey = CreateKey("<Mouse>/leftButton");
+            fKeys = new[] { "f5", "f6", "f7", "f8", "f9", "f10" }.Select(k => CreateKey("<Keyboard>/" + k)).ToArray();
+            webKeys = new[] { "5", "6", "7", "8", "9", "0" }.Select(k => CreateKey("<Keyboard>/" + k)).ToArray();
+        }
+
+        void DisposeKeys()
+        {
+            if (toggleKey == null) return;
+            foreach (var a in new[] { toggleKey, shiftKey, altKey, fireKey }.Concat(fKeys).Concat(webKeys)) a.Dispose();
+            toggleKey = null;
+        }
+
         void HandleKeys()
         {
-#if ENABLE_INPUT_SYSTEM
-            var kb = Keyboard.current;
-            if (kb == null) return;
-            bool toggle = kb.digit3Key.wasPressedThisFrame, f5 = kb.f5Key.wasPressedThisFrame,
-                 f6 = kb.f6Key.wasPressedThisFrame, f7 = kb.f7Key.wasPressedThisFrame,
-                 f8 = kb.f8Key.wasPressedThisFrame, f9 = kb.f9Key.wasPressedThisFrame,
-                 f10 = kb.f10Key.wasPressedThisFrame;
-            bool shift = kb.shiftKey.isPressed;
-            if (IsWeb && kb.altKey.isPressed)   // the browser may take the F-keys for itself
+            bool toggle = toggleKey.WasPressedThisFrame();
+            var pressed = new bool[fKeys.Length];
+            for (int k = 0; k < fKeys.Length; k++) pressed[k] = fKeys[k].WasPressedThisFrame();
+            bool shift = shiftKey.IsPressed();
+            if (IsWeb && altKey.IsPressed())   // the browser may take the F-keys for itself
             {
                 toggle = false;                 // Alt+3 is not the panel toggle
-                f5 |= kb.digit5Key.wasPressedThisFrame;
-                f6 |= kb.digit6Key.wasPressedThisFrame; f7 |= kb.digit7Key.wasPressedThisFrame;
-                f8 |= kb.digit8Key.wasPressedThisFrame; f9 |= kb.digit9Key.wasPressedThisFrame;
-                f10 |= kb.digit0Key.wasPressedThisFrame;
+                for (int k = 0; k < webKeys.Length; k++) pressed[k] |= webKeys[k].WasPressedThisFrame();
             }
-#else
-            bool toggle = Input.GetKeyDown(KeyCode.Alpha3), f5 = Input.GetKeyDown(KeyCode.F5),
-                 f6 = Input.GetKeyDown(KeyCode.F6), f7 = Input.GetKeyDown(KeyCode.F7),
-                 f8 = Input.GetKeyDown(KeyCode.F8), f9 = Input.GetKeyDown(KeyCode.F9),
-                 f10 = Input.GetKeyDown(KeyCode.F10);
-            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-            if (IsWeb && (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)))
-            {
-                toggle = false;
-                f5 |= Input.GetKeyDown(KeyCode.Alpha5);
-                f6 |= Input.GetKeyDown(KeyCode.Alpha6); f7 |= Input.GetKeyDown(KeyCode.Alpha7);
-                f8 |= Input.GetKeyDown(KeyCode.Alpha8); f9 |= Input.GetKeyDown(KeyCode.Alpha9);
-                f10 |= Input.GetKeyDown(KeyCode.Alpha0);
-            }
-#endif
+            bool f5 = pressed[0], f6 = pressed[1], f7 = pressed[2], f8 = pressed[3], f9 = pressed[4], f10 = pressed[5];
+
             if (toggle) visible = !visible;
             if (f5 && IsWeb)
             {
@@ -349,15 +358,6 @@ namespace Pistol.Diagnostics
             if (f8) ToggleAimBlur();
             if (f9) NextResolution(shift ? -1 : 1);
             if (f10) SaveReport();
-        }
-
-        static bool ReadFire()
-        {
-#if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-#else
-            return Input.GetMouseButtonDown(0);
-#endif
         }
 
         void OnSettingsChanged(string what)
@@ -556,7 +556,7 @@ namespace Pistol.Diagnostics
             }
             if (weaponAim != null) Track(ref wasAiming, weaponAim.AimAmount > 0.01f, "aiming", "stopped aiming");
             if (revolver != null) Track(ref wasOpen, revolver.IsOpen, "opened cylinder", "closed cylinder");
-            if (ReadFire() && Cursor.lockState == CursorLockMode.Locked) AddEvent("shot (LMB)");
+            if (fireKey.WasPressedThisFrame() && Cursor.lockState == CursorLockMode.Locked) AddEvent("shot (LMB)");
             Track(ref wasFocused, Application.isFocused, "window focused", "window lost focus");
         }
 

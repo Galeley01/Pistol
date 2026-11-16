@@ -1,8 +1,5 @@
 using UnityEngine;
 using NaughtyAttributes;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 using Pistol.Core;
 using Pistol.Player;
 using Pistol.Weapons.Revolver;
@@ -236,8 +233,7 @@ namespace Pistol.Weapons
 
             // ---------- Where the weapon should point (Free-Aim) and how the view turned ----------
             Vector2 freeAim = movement != null ? movement.FreeAimOffset : Vector2.zero;
-            Vector2 camDelta = movement != null ? movement.AppliedLookDelta
-                             : (Cursor.lockState == CursorLockMode.Locked ? ReadLook() : Vector2.zero);
+            Vector2 camDelta = movement != null ? movement.AppliedLookDelta : Vector2.zero;
             Vector2 aimDelta = camDelta + (freeAim - lastFreeAim);   // total world rotation of the "target" this frame
             lastFreeAim = freeAim;
 
@@ -331,7 +327,7 @@ namespace Pistol.Weapons
             Vector3 aimRot = new Vector3(-freeAim.y, freeAim.x, 0f) * (1f - ip);   // Free-Aim is exact; centered while inspecting
             // ---------- 8. Aiming: rotate around the rear sight, front sight wanders ----------
             // Fatigue: 0 = rested, 1 = exhausted
-            float fatigue = movement != null ? Mathf.Clamp01(Mathf.Max(breathless, movement.IsExhausted ? 0.8f : 0f)) : 0f;
+            float fatigue = movement != null ? movement.Fatigue : 0f;
 
             // Breathing: a slow figure eight, faster and wider when tired
             aimBreathPhase += dt * Mathf.Lerp(1.6f, 5.5f, fatigue);
@@ -406,11 +402,5 @@ namespace Pistol.Weapons
             GUI.DrawTexture(r, Texture2D.whiteTexture);
             GUI.color = old;
         }
-
-#if ENABLE_INPUT_SYSTEM
-        Vector2 ReadLook() => Mouse.current != null ? Mouse.current.delta.ReadValue() * 0.1f : Vector2.zero;
-#else
-        Vector2 ReadLook() => new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * 2f;
-#endif
     }
 }

@@ -1855,8 +1855,8 @@ MonoBehaviour:
   m_BeforeTransparentBundles: []
   m_BeforeStackBundles: []
   m_AfterStackBundles:
-  - assemblyQualifiedName: EdgeBlur, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
+  - assemblyQualifiedName: Pistol.PostFx.EdgeBlur, Pistol.Runtime, Version=0.0.0.0,
+      Culture=neutral, PublicKeyToken=null
 --- !u!114 &1862555705
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2035,6 +2035,7 @@ GameObject:
   - component: {fileID: 1942477182}
   - component: {fileID: 1942477186}
   - component: {fileID: 1942477187}
+  - component: {fileID: 1942477188}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -2149,6 +2150,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraTransform: {fileID: 1544992738}
+  context: {fileID: 0}
   walkSpeed: 3
   runSpeed: 6
   acceleration: 10
@@ -2187,10 +2189,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a26db510ee34fc84bb401861cc0d9674, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  show: 1
+  showOnStart: 0
   movement: {fileID: 0}
   position: {x: 10, y: 10}
   scale: 0.86
+--- !u!114 &1942477188
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942477181}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84f4b1c43f2b04c4e936d4f2166cb014, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  controls: {fileID: -944628639613478452, guid: 2d67cb46f92a4b09a000828e72a04c52, type: 3}
+  movement: {fileID: 1942477186}
+  viewCamera: {fileID: 1862555702}
 --- !u!4 &1947982611 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8388399846922288389, guid: acf2fc5ed3b6d2c469da3dfb84e32a37, type: 3}

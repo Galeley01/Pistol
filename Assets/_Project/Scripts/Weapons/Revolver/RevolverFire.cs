@@ -1,8 +1,6 @@
 using UnityEngine;
 using NaughtyAttributes;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
+using Pistol.Player;
 
 namespace Pistol.Weapons.Revolver
 {
@@ -40,6 +38,7 @@ namespace Pistol.Weapons.Revolver
         public event System.Action CylinderClosing;
 
         Animator animator;
+        PlayerContext context;
         RevolverCylinder cylinder;
         RevolverShooter shooter;
         readonly System.Collections.Generic.HashSet<string> animParams = new System.Collections.Generic.HashSet<string>();
@@ -53,6 +52,8 @@ namespace Pistol.Weapons.Revolver
             foreach (var p in animator.parameters) animParams.Add(p.name);
             cylinder = GetComponent<RevolverCylinder>();
             shooter = GetComponent<RevolverShooter>();
+            context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
+            if (context == null) Debug.LogError("RevolverFire: no PlayerContext above the revolver, input is disabled.", this);
         }
 
         void ApplySpeeds()
@@ -70,12 +71,12 @@ namespace Pistol.Weapons.Revolver
         {
             ApplySpeeds();
 
-            // While the cursor is not captured (Esc pressed), a click only recaptures it
-            if (Cursor.lockState != CursorLockMode.Locked) return;
+            // Gameplay actions are active only in Gameplay mode, so a click that recaptures the cursor never fires
+            if (context == null) return;
 
-            if (ReadToggleCylinder()) ToggleCylinder();
+            if (context.ReloadPressed) ToggleCylinder();
 
-            if (ReadFire())
+            if (context.FirePressed)
             {
                 if (isOpen) Spin();
                 else Fire();
@@ -179,14 +180,5 @@ namespace Pistol.Weapons.Revolver
             animationSettings.OverwriteButton();
 #endif
         }
-
-        // ---------- Input ----------
-#if ENABLE_INPUT_SYSTEM
-        bool ReadFire()           => Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-        bool ReadToggleCylinder() => Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame;
-#else
-        bool ReadFire()           => Input.GetMouseButtonDown(0);
-        bool ReadToggleCylinder() => Input.GetKeyDown(KeyCode.R);
-#endif
     }
 }

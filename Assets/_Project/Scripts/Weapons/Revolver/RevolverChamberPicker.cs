@@ -1,8 +1,6 @@
 using UnityEngine;
 using NaughtyAttributes;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
+using Pistol.Player;
 
 namespace Pistol.Weapons.Revolver
 {
@@ -56,6 +54,7 @@ namespace Pistol.Weapons.Revolver
 
         RevolverInspect inspect;
         RevolverCylinder cylinder;
+        PlayerContext context;
         Camera cam;
         Material material;
         Mesh ringMesh, outlineMesh;
@@ -70,7 +69,7 @@ namespace Pistol.Weapons.Revolver
             inspect = GetComponent<RevolverInspect>();
             cylinder = GetComponent<RevolverCylinder>();
             cam = GetComponentInParent<Camera>();
-            if (cam == null) cam = Camera.main;
+            context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
             block = new MaterialPropertyBlock();
 
             if (cylinder == null || cylinder.cylinder == null || cylinder.Model == null)
@@ -129,7 +128,7 @@ namespace Pistol.Weapons.Revolver
             SetColor(outline, oc);
             outline.transform.localPosition = new Vector3(0f, 0f, outlineDepth);
 
-            if (hovered >= 0 && ReadClick()) Click(hovered);
+            if (hovered >= 0 && context != null && context.SelectPressed) Click(hovered);
         }
 
         // ---------- Hover ----------
@@ -137,7 +136,7 @@ namespace Pistol.Weapons.Revolver
         int FindHovered()
         {
             if (cam == null) return -1;
-            Vector2 mouse = ReadMouse();
+            Vector2 mouse = context != null ? context.PointerPosition : Vector2.zero;
             int best = -1;
             float bestDist = float.MaxValue;
             for (int i = 0; i < CylinderModel.Count; i++)
@@ -268,14 +267,5 @@ namespace Pistol.Weapons.Revolver
             if (ringMesh != null) Destroy(ringMesh);
             if (outlineMesh != null) Destroy(outlineMesh);
         }
-
-        // ---------- Input ----------
-#if ENABLE_INPUT_SYSTEM
-        Vector2 ReadMouse() => Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
-        bool ReadClick()    => Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-#else
-        Vector2 ReadMouse() => Input.mousePosition;
-        bool ReadClick()    => Input.GetMouseButtonDown(0);
-#endif
     }
 }

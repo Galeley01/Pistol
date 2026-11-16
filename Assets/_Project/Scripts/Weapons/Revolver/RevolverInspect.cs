@@ -1,9 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering.PostProcessing;
 using NaughtyAttributes;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 using Pistol.Player;
 
 namespace Pistol.Weapons.Revolver
@@ -53,7 +50,7 @@ namespace Pistol.Weapons.Revolver
 
         RevolverFire fire;
         WeaponSway sway;
-        PlayerMovement movement;
+        PlayerContext context;
         Camera cam;
         bool inspecting;
         float amount;
@@ -68,7 +65,7 @@ namespace Pistol.Weapons.Revolver
         {
             fire = GetComponent<RevolverFire>();
             sway = GetComponent<WeaponSway>();
-            movement = GetComponentInParent<PlayerMovement>();
+            context = GetComponentInParent<PlayerContext>();   // TODO(stage 6): passed in on equip
             cam = GetComponentInParent<Camera>();
             var cyl = GetComponent<RevolverCylinder>();
             focusTarget = cyl != null && cyl.cylinder != null ? cyl.cylinder : transform.Find("Crane/Cylinder");
@@ -77,22 +74,28 @@ namespace Pistol.Weapons.Revolver
 
         void Update()
         {
+            if (context == null) return;
+
             if (!inspecting)
             {
-                // Can only enter when the cylinder is open and still and the game has focus (cursor captured)
-                if (ReadToggle() && fire.IsOpenIdle && Cursor.lockState == CursorLockMode.Locked)
+                // Alt works only in Gameplay mode (cursor captured) and only with the cylinder open and still
+                if (context.InspectPressed && fire.IsOpenIdle)
                     SetInspecting(true);
+            }
+            else if (context.Mode != ControlMode.Inspect)
+            {
+                SetInspecting(false);                      // something else changed the control mode
             }
             else
             {
                 if (!fire.IsOpen)
                     SetInspecting(false);                  // the cylinder was closed by something else
-                else if (ReadClose())
+                else if (context.InspectReloadPressed)
                 {
                     SetInspecting(false);
                     fire.ToggleCylinder();                 // R: leave and close the cylinder right away
                 }
-                else if (ReadToggle() || ReadEscape())
+                else if (context.InspectExitPressed)       // Alt or Esc
                     SetInspecting(false);
             }
 
@@ -106,12 +109,7 @@ namespace Pistol.Weapons.Revolver
         {
             if (inspecting == on) return;
             inspecting = on;
-            if (movement != null) movement.SetInspectMode(on);
-            else
-            {
-                Cursor.lockState = on ? CursorLockMode.None : CursorLockMode.Locked;
-                Cursor.visible = on;
-            }
+            if (context != null) context.SetMode(on ? ControlMode.Inspect : ControlMode.Gameplay);
             if (logEvents) Debug.Log(on ? "Cylinder inspect: on" : "Cylinder inspect: off");
             InspectChanged?.Invoke(on);
         }
@@ -194,20 +192,9 @@ namespace Pistol.Weapons.Revolver
         [Button("Тест: войти / выйти из осмотра")]
         void TestToggle()
         {
-            if (!Application.isPlaying) return;
+            if (!Application.isPlaying || context == null) return;
             if (!inspecting && !fire.IsOpenIdle) { Debug.Log("Open the cylinder first (R)"); return; }
             SetInspecting(!inspecting);
         }
-
-        // ---------- Input ----------
-#if ENABLE_INPUT_SYSTEM
-        bool ReadToggle() => Keyboard.current != null && Keyboard.current.leftAltKey.wasPressedThisFrame;
-        bool ReadClose()  => Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame;
-        bool ReadEscape() => Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
-#else
-        bool ReadToggle() => Input.GetKeyDown(KeyCode.LeftAlt);
-        bool ReadClose()  => Input.GetKeyDown(KeyCode.R);
-        bool ReadEscape() => Input.GetKeyDown(KeyCode.Escape);
-#endif
     }
 }

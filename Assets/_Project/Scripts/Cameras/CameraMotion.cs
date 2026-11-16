@@ -1,8 +1,5 @@
 using UnityEngine;
 using NaughtyAttributes;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 using Pistol.Core;
 using Pistol.Player;
 using Pistol.Weapons;
@@ -250,8 +247,7 @@ namespace Pistol.Cameras
 
             // ---------- Mouse turn inertia ----------
             // Actual camera rotation (Free-Aim aware): while the weapon moves inside the deadzone, the camera doesn't sway
-            Vector2 look = movement != null ? movement.AppliedLookDelta
-                         : (Cursor.lockState == CursorLockMode.Locked ? ReadLook() : Vector2.zero);
+            Vector2 look = movement != null ? movement.AppliedLookDelta : Vector2.zero;
             Vector3 swayTarget = new Vector3(
                 Mathf.Clamp(look.y * swayAmount, -swayMaxAngle, swayMaxAngle),
                 Mathf.Clamp(-look.x * swayAmount * 0.5f, -swayMaxAngle, swayMaxAngle),
@@ -284,9 +280,7 @@ namespace Pistol.Cameras
             // ---------- Q / E leaning (smaller while crouched) ----------
             float leanMul = Mathf.Lerp(1f, crouchLeanMultiplier, crouch);
             float maxLean = leanOffset * leanMul;
-            float leanInput = movement != null
-                ? movement.LeanInput
-                : (ReadLeanRight() ? 1f : 0f) - (ReadLeanLeft() ? 1f : 0f);
+            float leanInput = movement != null ? movement.LeanInput : 0f;
             UpdateLeanLimits(maxLean);
             lean = Damp(lean, leanInput, leanSpeed, dt);
             float limit = lean > 0f ? leanLimitRight : leanLimitLeft;
@@ -380,16 +374,5 @@ namespace Pistol.Cameras
 
         static float Damp(float current, float target, float speed, float dt)
             => Mathf.Lerp(current, target, 1f - Mathf.Exp(-speed * dt));
-
-        // ---------- Input ----------
-#if ENABLE_INPUT_SYSTEM
-        Vector2 ReadLook()     => Mouse.current != null ? Mouse.current.delta.ReadValue() * 0.1f : Vector2.zero;
-        bool ReadLeanLeft()    => Keyboard.current != null && Keyboard.current.qKey.isPressed;
-        bool ReadLeanRight()   => Keyboard.current != null && Keyboard.current.eKey.isPressed;
-#else
-        Vector2 ReadLook()     => new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * 2f;
-        bool ReadLeanLeft()    => Input.GetKey(KeyCode.Q);
-        bool ReadLeanRight()   => Input.GetKey(KeyCode.E);
-#endif
     }
 }

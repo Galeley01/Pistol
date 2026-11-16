@@ -1,22 +1,22 @@
 using UnityEngine;
 using NaughtyAttributes;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 namespace Pistol.Player
 {
-    // First-person character controller.
-    // WASD = move, mouse = look, Shift = run, Space = jump, C = crouch/stand,
-    // Esc = release the cursor (left click captures it again).
+    // First-person character controller. Input comes from PlayerContext (WASD move, mouse look,
+    // Shift run, Space jump, C crouch/stand, Q/E lean); movement and look work only in Gameplay mode.
     // Fatigue: running longer than sprintTimeBeforeTired seconds drops the run speed to tiredRunSpeed;
     // after stopping, recovery takes recoveryDuration seconds (running stays slow the whole time).
     [RequireComponent(typeof(CharacterController))]
+    [RequireComponent(typeof(PlayerContext))]
     public class PlayerMovement : MonoBehaviour
     {
         [BoxGroup("Ссылки"), Required("Назначьте CameraRoot (родитель Main Camera)")]
         [Tooltip("Сюда — CameraRoot (родитель Main Camera), а не сама камера")]
         public Transform cameraTransform;
+
+        [BoxGroup("Ссылки"), Tooltip("Находится сам на этом объекте")]
+        [SerializeField] PlayerContext context;
 
         [BoxGroup("Движение"), MinValue(0)] public float walkSpeed = 3f;
         [BoxGroup("Движение"), MinValue(0)] public float runSpeed = 6f;
@@ -80,8 +80,8 @@ namespace Pistol.Player
         public Vector2 AppliedLookDelta { get; private set; }  // how much the camera turned this frame: x = right, y = up (degrees)
         public Vector3 LocalAcceleration { get; private set; }  // body acceleration in its own space (x = sideways, z = forward), m/s^2
         public float PreFatigue { get; private set; }     // 0..1, build-up before exhaustion
-        // Cylinder inspect mode (RevolverInspect): camera fixed, cursor free, no movement
-        public bool InspectMode { get; private set; }
+        // 0 = rested, 1 = exhausted: one formula for everything that reacts to fatigue (aim, sway, recoil)
+        public float Fatigue => Mathf.Clamp01(Mathf.Max(Breathless, IsExhausted ? 0.8f : 0f));
 
         // ---- For the debug UI ----
         public float SprintTimer => sprintTimer;          // seconds spent sprinting
@@ -99,6 +99,18 @@ namespace Pistol.Player
         float standHeight, standCameraY;
         Vector3 standCenter;
 
+        void Reset() => context = GetComponent<PlayerContext>();
+
+        void Awake()
+        {
+            if (context == null) context = GetComponent<PlayerContext>();
+            if (context == null)
+            {
+                Debug.LogError("PlayerMovement: PlayerContext is missing on the player.", this);
+                enabled = false;
+            }
+        }
+
         void Start()
         {
             controller = GetComponent<CharacterController>();
@@ -112,24 +124,14 @@ namespace Pistol.Player
             standCenter = controller.center;
             standCameraY = cameraTransform.localPosition.y;
             currentRunSpeed = runSpeed;
-            LockCursor(true);
         }
 
         void Update()
         {
-            if (!InspectMode) HandleCursor();
             AppliedLookDelta = Vector2.zero;
-            if (Cursor.lockState == CursorLockMode.Locked && !InspectMode)
-                Look();
+            if (context.Mode == ControlMode.Gameplay) Look();
             HandleCrouch();
             Move();
-        }
-
-        // Enable / disable inspect mode. On exit the cursor is captured again
-        public void SetInspectMode(bool on)
-        {
-            InspectMode = on;
-            LockCursor(!on);
         }
 
         // ---------- Mouse look ----------
@@ -139,7 +141,7 @@ namespace Pistol.Player
 
         void Look()
         {
-            Vector2 look = ReadLook() * mouseSensitivity;
+            Vector2 look = context.LookDelta * mouseSensitivity;
             Vector2 toCamera;
 
             if (!freeAim)
@@ -203,7 +205,7 @@ namespace Pistol.Player
         // ---------- Crouch (toggle on C) ----------
         void HandleCrouch()
         {
-            if (!InspectMode && ReadCrouch())
+            if (context.CrouchPressed)
             {
                 if (!IsCrouching) IsCrouching = true;
                 else if (CanStandUp()) IsCrouching = false;   // can't stand up under a low ceiling
@@ -236,12 +238,12 @@ namespace Pistol.Player
         {
             JumpedThisFrame = false;
 
-            // In inspect mode movement keys do nothing; the character slows to a stop
-            LeanInput = InspectMode ? 0f : (ReadLeanRight() ? 1f : 0f) - (ReadLeanLeft() ? 1f : 0f);
+            // Outside Gameplay mode the actions read as zero, so the character slows to a stop
+            LeanInput = context.Lean;
 
-            Vector2 input = InspectMode ? Vector2.zero : ReadMove();
+            Vector2 input = context.Move;
             bool moving = input.sqrMagnitude > 0.01f;
-            bool wantsRun = !InspectMode && ReadRun() && moving && !IsLeaning;   // no running while leaning
+            bool wantsRun = context.SprintHeld && moving && !IsLeaning;   // no running while leaning
             IsRunning = wantsRun && !IsCrouching;                // stamina is spent only here
 
             UpdateStamina();
@@ -269,7 +271,7 @@ namespace Pistol.Player
             if (controller.isGrounded && verticalVelocity < 0f)
                 verticalVelocity = -2f;
 
-            if (controller.isGrounded && !InspectMode && ReadJump())
+            if (controller.isGrounded && context.JumpPressed)
             {
                 if (IsCrouching)
                 {
@@ -338,50 +340,7 @@ namespace Pistol.Player
             Breathless = Damp(Breathless, target, 3f);
         }
 
-        // ---------- Cursor ----------
-        void HandleCursor()
-        {
-            if (ReadEscape()) LockCursor(false);
-            else if (ReadClick() && Cursor.lockState != CursorLockMode.Locked) LockCursor(true);
-        }
-
-        void LockCursor(bool locked)
-        {
-            Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
-            Cursor.visible = !locked;
-        }
-
         static float Damp(float current, float target, float speed)
             => Mathf.Lerp(current, target, 1f - Mathf.Exp(-speed * Time.deltaTime));
-
-        // ---------- Input (new and old input systems) ----------
-#if ENABLE_INPUT_SYSTEM
-        Vector2 ReadMove()
-        {
-            var k = Keyboard.current;
-            if (k == null) return Vector2.zero;
-            float x = (k.dKey.isPressed ? 1 : 0) - (k.aKey.isPressed ? 1 : 0);
-            float y = (k.wKey.isPressed ? 1 : 0) - (k.sKey.isPressed ? 1 : 0);
-            return new Vector2(x, y);
-        }
-        Vector2 ReadLook()  => Mouse.current != null ? Mouse.current.delta.ReadValue() * 0.1f : Vector2.zero;
-        bool ReadJump()     => Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
-        bool ReadRun()      => Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
-        bool ReadCrouch()   => Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame;
-        bool ReadLeanLeft() => Keyboard.current != null && Keyboard.current.qKey.isPressed;
-        bool ReadLeanRight()=> Keyboard.current != null && Keyboard.current.eKey.isPressed;
-        bool ReadEscape()   => Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
-        bool ReadClick()    => Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-#else
-        Vector2 ReadMove()  => new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-        Vector2 ReadLook()  => new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * 2f;
-        bool ReadJump()     => Input.GetKeyDown(KeyCode.Space);
-        bool ReadRun()      => Input.GetKey(KeyCode.LeftShift);
-        bool ReadCrouch()   => Input.GetKeyDown(KeyCode.C);
-        bool ReadLeanLeft() => Input.GetKey(KeyCode.Q);
-        bool ReadLeanRight()=> Input.GetKey(KeyCode.E);
-        bool ReadEscape()   => Input.GetKeyDown(KeyCode.Escape);
-        bool ReadClick()    => Input.GetMouseButtonDown(0);
-#endif
     }
 }
