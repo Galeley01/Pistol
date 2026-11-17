@@ -37,7 +37,7 @@ MonoBehaviour:
     craneCloses: 0
     leftPalmOnCylinder: 0
     leftHandToGrip: 1
-  palmContact: {x: -0.017, y: 0.005, z: 0.015}
+  palmContact: {x: -0.04, y: 0.005, z: 0.015}
   contactAlongFingers: 0.08
   palmFacing: {x: 1, y: 0, z: 0}
   fingersPointing: {x: -0.15, y: 0.03, z: 1}

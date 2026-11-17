@@ -23,6 +23,11 @@ namespace Pistol.Weapons.Revolver
         public List<Option> options = new List<Option>();
         [Range(0, 5), Tooltip("Сколько раз подряд может выпасть один и тот же способ. 0 — без ограничения")]
         public int maxSameInRow = 2;
+        [Tooltip("Способ закрытия, когда R нажата в режиме осмотра (Alt): всегда он, без случайного выбора. Пусто — случайный, как обычно")]
+        public CylinderCloseMotion fromInspect;
+        [Range(0f, 1f), Tooltip("Закрытие из осмотра начинается, когда оружие вернулось из позы осмотра настолько: " +
+                                "0 — полностью вернулось, 1 — сразу, ещё в позе осмотра")]
+        public float fromInspectStartAt = 0.1f;
         [Tooltip("Звук закрытия барабана (необязательно). Громкость умножается на силу щелчка способа")]
         public SoundEvent latchSound;
         [Range(0f, 2f), Tooltip("Где в звуке сам щелчок, сек от начала файла. Звук запускается заранее, чтобы щелчок совпал с защёлкиванием; " +

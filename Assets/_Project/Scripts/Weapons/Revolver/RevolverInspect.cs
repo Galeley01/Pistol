@@ -16,7 +16,7 @@ namespace Pistol.Weapons.Revolver
     //   - the screen edges get darker and the eyes focus on the cylinder (distant objects blur slightly):
     //     a request to CameraEffects with the inspect ScreenEffectsProfile.
     // Alt again or Esc leaves inspect mode (the cylinder stays open).
-    // R during inspect leaves it and closes the cylinder.
+    // R during inspect leaves it and closes the cylinder (RevolverClose then uses its "from inspect" motion).
     //
     // Chamber picking lives in RevolverChamberPicker; loading and unloading by hand will build on this mode.
     [RequireComponent(typeof(RevolverFire))]
@@ -35,6 +35,9 @@ namespace Pistol.Weapons.Revolver
 
         [ShowNativeProperty] public bool IsInspecting => inspecting;
         [ShowNativeProperty] public float Amount => amount;
+        // Inspect mode was left in this very frame (Alt/Esc/R); R in inspect closes the cylinder right after it
+        public bool LeftThisFrame => leftFrame == Time.frameCount;
+        int leftFrame = -1;
 
         // Raised on entering (true) and leaving (false) inspect mode; used by RevolverChamberPicker
         public event System.Action<bool> InspectChanged;
@@ -128,6 +131,7 @@ namespace Pistol.Weapons.Revolver
         {
             if (inspecting == on) return;
             inspecting = on;
+            if (!on) leftFrame = Time.frameCount;
             if (context != null) context.SetMode(on ? ControlMode.Inspect : ControlMode.Gameplay);
             if (LogEvents) Debug.Log(on ? "Cylinder inspect: on" : "Cylinder inspect: off");
             InspectChanged?.Invoke(on);

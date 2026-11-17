@@ -15,6 +15,8 @@ namespace Pistol.Weapons.Revolver
     // the phase marked for it (RevolverFire speeds the close clip up so the latch lands at the end of that
     // phase), the left palm can follow the cylinder and the left hand goes back to the grip.
     // At the latch: sound, a small weapon kick and a camera jolt. Shooting stays blocked until the latch.
+    // R in inspect mode (Alt): inspect is left first, and once the weapon is back from the inspect pose
+    // the profile's "from inspect" motion plays instead of a random one.
     [DefaultExecutionOrder(-10)]   // before ItemGrip, so the left palm target is fresh in the same frame
     [RequireComponent(typeof(RevolverFire))]
     public class RevolverClose : MonoBehaviour, IPoseLayer
@@ -24,6 +26,7 @@ namespace Pistol.Weapons.Revolver
         CylinderCloseProfile profile;
 
         [ShowNativeProperty] public bool IsPlaying => motion != null;
+        [ShowNativeProperty] public bool WaitingForInspectExit => waitingInspect;
         [ShowNativeProperty] public string Current => motion != null ? motion.name : (lastMotion != null ? "(было) " + lastMotion.name : "—");
 
         public int PoseOrder => Items.PoseOrder.Hand;
@@ -32,6 +35,8 @@ namespace Pistol.Weapons.Revolver
         RevolverCylinder cylinder;
         HeldItem held;
         ItemGrip grip;
+        RevolverInspect inspect;
+        bool waitingInspect;          // R in inspect: the motion waits until the weapon is out of the inspect pose
         CameraMotion cameraFx;
         GameAudio gameAudio;
         DebugSettings debug;
@@ -46,6 +51,7 @@ namespace Pistol.Weapons.Revolver
         float soundIn = -1f;          // seconds until the close sound starts (-1 = not waiting)
         bool soundPlanned;            // this close plays its sound timed to the latch
         int lastPick = -1, pickRun;
+        float slowedFrom = -1f;       // time scale before the debug slow motion (-1 = not slowed)
         readonly System.Collections.Generic.List<float> weights = new System.Collections.Generic.List<float>();
 
         const float MaxLatchWait = 0.5f;   // how long a crane phase may wait for a late latch
@@ -79,6 +85,7 @@ namespace Pistol.Weapons.Revolver
             cylinder = GetComponent<RevolverCylinder>();
             held = GetComponent<HeldItem>();
             grip = GetComponent<ItemGrip>();
+            inspect = GetComponent<RevolverInspect>();
             fire.CylinderLatched += OnLatched;
             if (profile == null) Debug.LogWarning("RevolverClose: no profile assigned, the cylinder closes with the plain clip.", this);
         }
@@ -86,16 +93,27 @@ namespace Pistol.Weapons.Revolver
         // Called by RevolverFire when the cylinder starts closing. False = nothing to play, close the plain way.
         public bool Begin()
         {
-            var picked = Pick();
+            bool fromInspect = inspect != null && inspect.LeftThisFrame && profile != null && profile.fromInspect != null;
+            var picked = fromInspect ? profile.fromInspect : Pick();   // the inspect close doesn't count in the random run
             if (picked == null || picked.phases.Count == 0) return false;
             motion = lastMotion = picked;
             phase = 0;
             phaseTime = holdTime = 0f;
             craneStarted = latched = false;
-            if (debug != null && debug.WeaponEvents) Debug.Log("Cylinder close: " + picked.name, this);
-            PlanSound();
-            EnterPhase();
+            if (debug != null && debug.WeaponEvents) Debug.Log("Cylinder close: " + picked.name + (fromInspect ? " (from inspect)" : ""), this);
+            waitingInspect = fromInspect;
+            if (!waitingInspect || InspectPoseLeft()) StartMotion();
             return true;
+        }
+
+        bool InspectPoseLeft() => inspect == null || inspect.Amount <= profile.fromInspectStartAt;
+
+        void StartMotion()
+        {
+            waitingInspect = false;
+            PlanSound();
+            StartSlowMotion();
+            EnterPhase();
         }
 
         // The click inside the sound must land on the latch: start the sound that much earlier,
@@ -145,6 +163,7 @@ namespace Pistol.Weapons.Revolver
         void EnterPhase()
         {
             var p = motion.phases[phase];
+            if (debug != null && debug.ClosePauseAtPhase == phase) PauseEditor($"phase {phase} \"{p.name}\"");
             if (p.leftHandToGrip) held.SetLeftHandFree(false);
             if (p.craneCloses && !craneStarted)
             {
@@ -168,6 +187,11 @@ namespace Pistol.Weapons.Revolver
             }
 
             if (motion == null) return;
+            if (waitingInspect)
+            {
+                if (!InspectPoseLeft()) return;
+                StartMotion();
+            }
 
             var p = motion.phases[phase];
             phaseTime += Time.deltaTime;
@@ -211,6 +235,8 @@ namespace Pistol.Weapons.Revolver
 
         void Finish()
         {
+            StopSlowMotion();
+            waitingInspect = false;
             motion = null;
             rotation = offset = Vector3.zero;
             palm = 0f;
@@ -222,6 +248,7 @@ namespace Pistol.Weapons.Revolver
         void OnLatched()
         {
             latched = true;
+            if (motion != null && debug != null && debug.ClosePauseAtLatch) PauseEditor("latch");
             // A close without a timed sound (plain clip) plays just the click, from its place in the file
             if (!soundPlanned && profile != null) PlaySound(profile.latchSoundClickTime);
             soundPlanned = false;
@@ -230,6 +257,31 @@ namespace Pistol.Weapons.Revolver
             float s = m.latchStrength;
             if (cameraFx != null && m.latchCameraShake > 0f) cameraFx.AddShake(m.latchCameraShake * s);
             kickTime = 0f;
+        }
+
+        // ---------- Debug: slow motion and editor pauses (DebugSettings, editor and Development builds only) ----------
+        void StartSlowMotion()
+        {
+            float slow = debug != null ? debug.CloseSlowMotion : 1f;
+            if (slow >= 1f || slowedFrom >= 0f) return;
+            slowedFrom = Time.timeScale;
+            Time.timeScale = slowedFrom * slow;
+            if (debug.WeaponEvents) Debug.Log($"Cylinder close: slow motion x{slow:0.##}", this);
+        }
+
+        void StopSlowMotion()
+        {
+            if (slowedFrom < 0f) return;
+            Time.timeScale = slowedFrom;
+            slowedFrom = -1f;
+        }
+
+        void OnDisable() => StopSlowMotion();
+
+        void PauseEditor(string where)
+        {
+            Debug.Log("Cylinder close: editor paused at " + where + " (Step — next frame, Pause — continue)", this);
+            Debug.Break();
         }
 
         public void ApplyPose(ref PoseFrame frame)

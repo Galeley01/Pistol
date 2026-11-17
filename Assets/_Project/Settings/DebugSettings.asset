@@ -19,3 +19,6 @@ MonoBehaviour:
   bulletPaths: 0
   trajectoryPreview: 0
   aimPoint: 0
+  closeSlowMotion: 1
+  closePauseAtPhase: -1
+  closePauseAtLatch: 0
