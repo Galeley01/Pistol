@@ -1,4 +1,0 @@
-repository "Pistol/Pistol@7971507454859@cloud"
-  path "/"
-    br "/main"
-    co "/main"

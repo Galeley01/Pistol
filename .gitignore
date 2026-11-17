@@ -79,3 +79,6 @@ crashlytics-build.properties
 
 # Local WebGL build (build output does not belong in the repository)
 /Игорь/
+
+# Plastic SCM / Unity Version Control workspace data (local, machine specific)
+/.plastic/
