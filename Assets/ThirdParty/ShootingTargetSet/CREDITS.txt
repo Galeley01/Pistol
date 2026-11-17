@@ -1,0 +1,4 @@
+"Shooting Target Set" by HippoStance
+https://sketchfab.com/3d-models/shooting-target-set-ba8282fc05e044a187f556ef14c3ee26
+Licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+Changes: only the target stands kept; gong plate with chains and the paper target card split into separate objects (card has a second UV channel for a hole mask); metallic and roughness maps packed into MetallicSmoothness textures for Unity.
