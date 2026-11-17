@@ -30,7 +30,8 @@ namespace Pistol.EditorTools
     // and saves everything as a prefab variant of the model.
     public static class ArmsPrefabBuilder
     {
-        const string Folder = "Assets/_Project/Prefabs/Arms";
+        // Used only when the definition is not saved as an asset yet; normally the prefab goes next to it
+        const string FallbackFolder = "Assets/_Project/Arms";
         static readonly string[] FingerNames = { "thumb", "index", "middle", "ring", "pinky" };
 
         public static void Build(ArmsDefinition def)
@@ -163,8 +164,11 @@ namespace Pistol.EditorTools
                 armsRig.SetBuiltRig(def, arms[0], arms[1], joints);
 
                 // ---------- Save ----------
-                EnsureFolder(Folder);
-                string path = $"{Folder}/{def.name}.prefab";
+                // The arms prefab lives next to its definition: one folder per arms skin
+                string defPath = AssetDatabase.GetAssetPath(def);
+                string folder = string.IsNullOrEmpty(defPath) ? FallbackFolder : System.IO.Path.GetDirectoryName(defPath).Replace('\\', '/');
+                EnsureFolder(folder);
+                string path = $"{folder}/{def.name}.prefab";
                 var saved = PrefabUtility.SaveAsPrefabAsset(instance, path);
                 if (saved == null) { Debug.LogError($"{def.name}: failed to save {path}.", def); return; }
 

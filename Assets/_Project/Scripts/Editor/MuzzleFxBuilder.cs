@@ -12,8 +12,8 @@ namespace Pistol.EditorTools
     // Running it again rebuilds the FX prefab from these defaults.
     public static class MuzzleFxBuilder
     {
-        const string RevolverPrefab = "Assets/_Project/Prefabs/Revolver.prefab";
-        const string FxFolder = "Assets/_Project/Prefabs/FX";
+        const string RevolverPrefab = "Assets/_Project/Weapons/Revolver/Revolver.prefab";
+        const string FxFolder = "Assets/_Project/Weapons/Revolver";
         const string FxPath = FxFolder + "/MuzzleFx_Revolver.prefab";
         const string FlashMaterialGuid = "7b9db86482394ab43b8db2a046cc4af0";   // M_MuzzleFlash
         const string SmokeMaterialGuid = "6533366364c212e4780fee9b5bf183e0";   // M_MuzzleSmoke
@@ -150,7 +150,7 @@ namespace Pistol.EditorTools
                 fx.lightIntensity = LightIntensity;
                 fx.lightDuration = LightDuration;
 
-                if (!AssetDatabase.IsValidFolder(FxFolder)) AssetDatabase.CreateFolder("Assets/_Project/Prefabs", "FX");
+                if (!AssetDatabase.IsValidFolder(FxFolder)) AssetDatabase.CreateFolder("Assets/_Project/Weapons", "Revolver");
                 return PrefabUtility.SaveAsPrefabAsset(root, FxPath);
             }
             finally

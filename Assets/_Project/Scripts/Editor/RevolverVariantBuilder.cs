@@ -11,9 +11,9 @@ namespace Pistol.EditorTools
     // Menu: Pistol > Build Revolver Stainless. Running it again rebuilds the variant with the same materials.
     public static class RevolverVariantBuilder
     {
-        const string BasePrefab = "Assets/_Project/Prefabs/Revolver.prefab";
-        const string VariantPath = "Assets/_Project/Prefabs/Revolver_Stainless.prefab";
-        const string Materials = "Assets/_Project/Materials/Weapons/";
+        const string BasePrefab = "Assets/_Project/Weapons/Revolver/Revolver.prefab";
+        const string VariantPath = "Assets/_Project/Weapons/Revolver/Revolver_Stainless.prefab";
+        const string Materials = "Assets/_Project/Weapons/Revolver/Materials/";
 
         // Which material goes on which part of the model
         static readonly Dictionary<string, string> PartMaterials = new Dictionary<string, string>

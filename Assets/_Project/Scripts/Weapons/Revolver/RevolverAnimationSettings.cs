@@ -10,7 +10,7 @@ namespace Pistol.Weapons.Revolver
 {
     using Ids = RevolverAnimatorIds;
 
-    // Revolver animation settings. Stored in an asset (Assets/Pistol/RevolverAnimationSettings.asset)
+    // Revolver animation settings. Stored in an asset (Assets/_Project/Weapons/Revolver/Animations/RevolverAnimationSettings.asset)
     // and shown right in the revolver's Inspector (RevolverFire > Animation Settings).
     //
     // "Create missing" creates only the .anim/Animator assets that don't exist yet. Existing ones are NOT touched.
@@ -19,7 +19,7 @@ namespace Pistol.Weapons.Revolver
     public class RevolverAnimationSettings : ScriptableObject
     {
         [BoxGroup("Папка"), Tooltip("Куда сохранять .anim и Animator")]
-        public string folder = "Assets/Pistol/Animations";
+        public string folder = "Assets/_Project/Weapons/Revolver/Animations";
 
         [BoxGroup("Углы (если едет не туда — поменяйте знак)"), Tooltip("Спуск назад, ось X")]
         public float triggerPull = 25f;
@@ -76,7 +76,7 @@ namespace Pistol.Weapons.Revolver
         }
 
 #if UNITY_EDITOR
-        const string DefaultAssetPath = "Assets/Pistol/RevolverAnimationSettings.asset";
+        const string DefaultAssetPath = "Assets/_Project/Weapons/Revolver/Animations/RevolverAnimationSettings.asset";
 
         [MenuItem("Tools/Revolver/Создать недостающие анимации")]
         static void MenuCreateMissing() => GetOrCreateDefault().Generate(false, null);
@@ -86,7 +86,7 @@ namespace Pistol.Weapons.Revolver
             var guids = AssetDatabase.FindAssets("t:RevolverAnimationSettings");
             if (guids.Length > 0)
                 return AssetDatabase.LoadAssetAtPath<RevolverAnimationSettings>(AssetDatabase.GUIDToAssetPath(guids[0]));
-            EnsureFolder("Assets/Pistol");
+            EnsureFolder("Assets/_Project/Weapons/Revolver/Animations");
             var s = CreateInstance<RevolverAnimationSettings>();
             AssetDatabase.CreateAsset(s, DefaultAssetPath);
             AssetDatabase.SaveAssets();
