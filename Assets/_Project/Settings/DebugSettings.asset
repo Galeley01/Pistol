@@ -16,6 +16,6 @@ MonoBehaviour:
   itemIntents: 0
   soundPlays: 0
   bulletHits: 1
-  bulletPaths: 1
+  bulletPaths: 0
   trajectoryPreview: 0
   aimPoint: 0

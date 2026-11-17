@@ -18,12 +18,18 @@ MonoBehaviour:
   sideAngle: 0.6
   rollAngle: 1
   recoilBack: 0.018
-  recoilUp: 0.002
+  recoilUp: 0.006
   gripDisturb: 0.35
   tiredMultiplier: 1.35
   recoilRiseTime: 0.035
-  recoilReturnTime: 0.22
-  recoilReturnDamping: 0.85
+  recoilReturnTime: 0.12
+  nodDepth: 0.25
+  settleTime: 0.3
+  settleSideAngle: 0.5
+  armLag: 0.03
+  runStrain: 0.5
+  strainNodMultiplier: 1.5
+  strainSettleMultiplier: 1.6
   cameraFlip: 0.5
   cameraRollAngle: 0.3
   cameraJolt: 0.06

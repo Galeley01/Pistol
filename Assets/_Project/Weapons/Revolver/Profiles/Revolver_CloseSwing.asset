@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f1c7a9e5b2d4e8a9c6f0b1d2e3a4c5f, type: 3}
+  m_Name: Revolver_CloseSwing
+  m_EditorClassIdentifier:
+  phases:
+  - name: "Замах"
+    duration: 0.15
+    rotation: {x: -4, y: 0, z: 25}
+    offset: {x: -0.04, y: 0, z: 0}
+    ease: 0
+    craneCloses: 0
+    leftPalmOnCylinder: 0
+    leftHandToGrip: 0
+  - name: "Рывок"
+    duration: 0.07
+    rotation: {x: 0, y: 0, z: -12}
+    offset: {x: 0.01, y: 0, z: 0}
+    ease: 1
+    craneCloses: 1
+    leftPalmOnCylinder: 0
+    leftHandToGrip: 0
+  - name: "Успокоение"
+    duration: 0.2
+    rotation: {x: 0, y: 0, z: 0}
+    offset: {x: 0, y: 0, z: 0}
+    ease: 0
+    craneCloses: 0
+    leftPalmOnCylinder: 0
+    leftHandToGrip: 1
+  palmOffset: {x: -0.035, y: -0.01, z: -0.06}
+  palmRotation: {x: 0, y: 0, z: 0}
+  palmFingerCurl: 5
+  latchStrength: 1
+  latchKick: {x: 1, y: 0, z: -2}
+  latchKickTime: 0.08
+  latchCameraShake: 0.05

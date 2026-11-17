@@ -50,6 +50,9 @@ namespace Pistol.Weapons.Revolver
         [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float closeSpeed = 1f;
         [BoxGroup("Скорость анимаций"), Range(0.25f, 3f)] public float spinSpeed = 1f;
 
+        // Where in the close clip the crane latches (share of closeDuration): the OnCylinderClosed event
+        public const float CloseLatchFraction = 0.57f;
+
         // Paths to parts inside Revolver
         public const string TRIGGER = "Trigger", HAMMER = "Hammer", CRANE = "Crane", CYLINDER = "Crane/Cylinder";
 
@@ -144,10 +147,10 @@ namespace Pistol.Weapons.Revolver
             var close = Clip("Revolver_Close", overwrite, made, c =>
             {
                 float d = closeDuration;
-                Rot(c, CRANE, 'z', d, new Key(0, craneOpen), new Key(d * 0.57f, -3f * Mathf.Sign(craneOpen), true),
+                Rot(c, CRANE, 'z', d, new Key(0, craneOpen), new Key(d * CloseLatchFraction, -3f * Mathf.Sign(craneOpen), true),
                                       new Key(d * 0.77f, 1f * Mathf.Sign(craneOpen)), new Key(d, 0));
                 Rot(c, CYLINDER, 'z', d, K(0, 0)); Rot(c, TRIGGER, 'x', d, K(0, 0)); Rot(c, HAMMER, 'x', d, K(0, 0));
-                Event(c, d * 0.57f, nameof(RevolverFire.OnCylinderClosed));
+                Event(c, d * CloseLatchFraction, nameof(RevolverFire.OnCylinderClosed));
             });
 
             var ctrl = GetOrCreateController(idle, fire, open, openIdle, spin, close, made);

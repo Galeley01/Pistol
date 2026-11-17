@@ -7,6 +7,8 @@ namespace Pistol.Items
     // How the hands hold this item: places the ItemRig grip points (wrists, elbow hints) from the HandGripProfile
     // and gives the arms the finger curls. When the item frees the left hand (HeldItem.LeftHandFree, e.g. the
     // revolver cylinder is open), the left hand moves away along an arc and relaxes its fingers.
+    // The item may also lead the left hand to its own target for a moment (SetLeftHandOverride), e.g. the palm
+    // that pushes the cylinder shut.
     // The grip belongs to the item, so any arms skin holds it the same way.
     //
     // Goes on the item root, next to ItemRig and HeldItem.
@@ -41,6 +43,23 @@ namespace Pistol.Items
 
         float LeftT => Mathf.SmoothStep(0f, 1f, leftBlend);
 
+        // Temporary target for the left hand from the item itself (e.g. the palm pushing the revolver cylinder shut)
+        float overrideWeight;
+        Vector3 overridePosition, overrideRotation;   // item-root space; rotation relative to the left grip
+        float overrideCurl;
+
+        // weight 0..1 blends the left hand from its usual pose to this target. position: item-root space, m;
+        // rotationOffset: degrees on top of the left grip rotation; fingerCurl: degrees per joint
+        public void SetLeftHandOverride(float weight, Vector3 position, Vector3 rotationOffset, float fingerCurl)
+        {
+            overrideWeight = Mathf.Clamp01(weight);
+            overridePosition = position;
+            overrideRotation = rotationOffset;
+            overrideCurl = fingerCurl;
+        }
+
+        public void ClearLeftHandOverride() => overrideWeight = 0f;
+
         void Awake()
         {
             rig = GetComponent<ItemRig>();
@@ -68,7 +87,8 @@ namespace Pistol.Items
             {
                 0 => pose.thumb, 1 => pose.index, 2 => pose.middle, 3 => pose.ring, _ => pose.pinky
             };
-            return right ? angle : Mathf.Lerp(profile.leftAwayFingerCurl, angle, LeftT);
+            if (right) return angle;
+            return Mathf.Lerp(Mathf.Lerp(profile.leftAwayFingerCurl, angle, LeftT), overrideCurl, overrideWeight);
         }
 
         void ApplyProfileToPoints()
@@ -86,6 +106,16 @@ namespace Pistol.Items
             rig.LeftHandGrip.localPosition = Vector3.Lerp(p.leftAwayPosition, p.left.wristPosition, t) + arc;
             rig.LeftHandGrip.localRotation = Quaternion.Slerp(awayRot, gripRot, t);
             if (rig.LeftElbowHint) rig.LeftElbowHint.localPosition = Vector3.Lerp(p.leftAwayElbowHint, p.left.elbowHint, t);
+
+            // The item's own target on top (palm on the cylinder): converted from item-root space to the grip point's parent
+            if (overrideWeight > 0f)
+            {
+                var parent = rig.LeftHandGrip.parent;
+                Vector3 target = parent != null ? parent.InverseTransformPoint(transform.TransformPoint(overridePosition)) : overridePosition;
+                Quaternion targetRot = gripRot * Quaternion.Euler(overrideRotation);
+                rig.LeftHandGrip.localPosition = Vector3.Lerp(rig.LeftHandGrip.localPosition, target, overrideWeight);
+                rig.LeftHandGrip.localRotation = Quaternion.Slerp(rig.LeftHandGrip.localRotation, targetRot, overrideWeight);
+            }
         }
 
         static void SetLocal(Transform t, Vector3 pos, Vector3 euler)

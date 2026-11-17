@@ -12,8 +12,8 @@ namespace Pistol.Weapons.Revolver
     // a dry fire triggers only the sound. Flash and smoke are a MuzzleFx prefab nested under the muzzle,
     // sounds are SoundEvent assets played through GameAudio.
     //
-    // Recoil is a kick of the WEAPON (a separate stiff spring, WeaponRecoil): the barrel flips up
-    // sharply around the wrist on the grip and settles back calmly; the arms follow through IK.
+    // Recoil is a kick of the WEAPON (WeaponRecoil): the barrel flips up sharply around the wrist on the grip,
+    // nods once below the start and levels slowly, the arm lagging a little behind; the arms follow through IK.
     // The camera (head) jolts very slightly and rises a little. Each shot disturbs the grip (Instability),
     // so a quick follow-up shot is less accurate on its own.
     [RequireComponent(typeof(ItemRig))]
@@ -81,6 +81,8 @@ namespace Pistol.Weapons.Revolver
         {
             float fatigue = movement != null ? movement.Fatigue : 0f;
             float m = Mathf.Lerp(1f, profile.tiredMultiplier, fatigue);
+            // Tired or running: the gun is caught worse, it nods deeper and levels slower
+            float strain = Mathf.Max(fatigue, movement != null && movement.IsRunning ? profile.runStrain : 0f);
 
             // Weapon recoil: barrel up (-X), random side and roll; weapon back and slightly up
             if (recoil != null)
@@ -92,7 +94,7 @@ namespace Pistol.Weapons.Revolver
                                       Random.Range(-profile.sideAngle, profile.sideAngle),
                                       Random.Range(-profile.rollAngle, profile.rollAngle)) * m;
                 var pos = new Vector3(0f, profile.recoilUp, -profile.recoilBack) * m;
-                recoil.AddRecoil(rot, pos);
+                recoil.AddRecoil(rot, pos, strain);
                 if (sway != null) sway.AddInstability(profile.gripDisturb * m);
             }
 

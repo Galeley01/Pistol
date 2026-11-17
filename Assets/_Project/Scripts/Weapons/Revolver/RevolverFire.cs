@@ -13,6 +13,8 @@ namespace Pistol.Weapons.Revolver
     // Firing: the cylinder advances one chamber (RevolverCylinder), the hammer falls (OnShot),
     // and if there is a live round the bullet leaves the muzzle (RevolverShooter), otherwise a dry click.
     // Reload (R) = open / close the cylinder. While it is open the weapon can't aim and the left hand lets go.
+    // Closing: with RevolverClose on the revolver a close motion plays (swing, palm push...) and snaps the crane
+    // shut in its own phase; shooting and aiming come back only at the latch.
     // OnShot / OnSpinStart / OnCylinderClosed are called from the animations (Animation Events).
     [RequireComponent(typeof(Animator))]
     [RequireComponent(typeof(HeldItem))]
@@ -25,6 +27,10 @@ namespace Pistol.Weapons.Revolver
         public RevolverAnimationSettings animationSettings;
 
         [ShowNativeProperty] public bool IsOpen => isOpen;
+        // Closing was asked for but the crane hasn't latched yet: no shooting, no aiming
+        [ShowNativeProperty] public bool IsClosing => closing;
+        // The crane latched shut (Animation Event in the close clip)
+        public event System.Action CylinderLatched;
         // Cylinder is open and still (not opening, not spinning): it can be inspected
         public bool IsOpenIdle => isOpen && animator != null && InState(Hash.OpenIdleState);
 
@@ -38,8 +44,11 @@ namespace Pistol.Weapons.Revolver
         RevolverCylinder cylinder;
         RevolverShooter shooter;
         readonly System.Collections.Generic.HashSet<int> animParams = new System.Collections.Generic.HashSet<int>();
-        bool isOpen;
+        RevolverClose closer;
+        bool isOpen, closing;
         float nextShotTime;
+        float closeSpeedOverride;    // > 0 while a close motion plays the close clip faster
+        float latchClipTime;         // when the latch event comes in the close clip, sec at speed 1
 
         void Start()
         {
@@ -50,6 +59,8 @@ namespace Pistol.Weapons.Revolver
             foreach (var p in animator.parameters) animParams.Add(p.nameHash);
             cylinder = GetComponent<RevolverCylinder>();
             shooter = GetComponent<RevolverShooter>();
+            closer = GetComponent<RevolverClose>();
+            latchClipTime = FindLatchTime();
             held = GetComponent<HeldItem>();
             held.UseRequested += OnUse;
             held.ReloadRequested += ToggleCylinder;
@@ -70,7 +81,7 @@ namespace Pistol.Weapons.Revolver
             var s = animationSettings;
             SetSpeed(Hash.FireSpeed, FireSpeed);
             SetSpeed(Hash.OpenSpeed, s != null ? s.openSpeed : 1f);
-            SetSpeed(Hash.CloseSpeed, s != null ? s.closeSpeed : 1f);
+            SetSpeed(Hash.CloseSpeed, closeSpeedOverride > 0f ? closeSpeedOverride : (s != null ? s.closeSpeed : 1f));
             SetSpeed(Hash.SpinSpeed, s != null ? s.spinSpeed : 1f);
         }
 
@@ -79,12 +90,17 @@ namespace Pistol.Weapons.Revolver
             if (animParams.Contains(param)) animator.SetFloat(param, value);
         }
 
-        void Update() => ApplySpeeds();
+        void Update()
+        {
+            ApplySpeeds();
+            // Safety net: a close clip without the latch event still ends the closing once back in Idle
+            if (closing && InState(Hash.IdleState)) { closing = false; held.SetCanAim(true); }
+        }
 
         // ---------- Actions ----------
         public void Fire()
         {
-            if (isOpen || Time.time < nextShotTime || !InState(Hash.IdleState)) return;
+            if (isOpen || closing || Time.time < nextShotTime || !InState(Hash.IdleState)) return;
             nextShotTime = Time.time + fireCooldown;
             animator.SetTrigger(Hash.Fire);
 
@@ -95,9 +111,10 @@ namespace Pistol.Weapons.Revolver
 
         public void ToggleCylinder()
         {
-            if (!isOpen && InState(Hash.IdleState))
+            if (!isOpen && !closing && InState(Hash.IdleState))
             {
                 isOpen = true;
+                closeSpeedOverride = 0f;
                 animator.SetTrigger(Hash.Open);
                 held.SetCanAim(false);
                 held.SetLeftHandFree(true);
@@ -105,11 +122,34 @@ namespace Pistol.Weapons.Revolver
             else if (isOpen && (InState(Hash.OpenIdleState) || InState(Hash.SpinState)))
             {
                 isOpen = false;
+                closing = true;
                 animator.ResetTrigger(Hash.Spin);
-                animator.SetTrigger(Hash.Close);
-                held.SetCanAim(true);
+                // A close motion snaps the crane shut itself, in its own phase (SnapCraneShut)
+                if (closer != null && closer.isActiveAndEnabled && closer.Begin()) return;
+                SnapCraneShut(0f);
                 held.SetLeftHandFree(false);
             }
+        }
+
+        // Starts the close clip. latchIn > 0: play it faster so the latch comes in latchIn seconds;
+        // 0: at the speed from the animation settings
+        public void SnapCraneShut(float latchIn)
+        {
+            if (isOpen) return;
+            closeSpeedOverride = latchIn > 0f && latchClipTime > 0f ? latchClipTime / latchIn : 0f;
+            ApplySpeeds();
+            animator.SetTrigger(Hash.Close);
+        }
+
+        // The latch time is read from the close clip itself, so a hand-edited clip still lines up
+        float FindLatchTime()
+        {
+            var ctrl = animator.runtimeAnimatorController;
+            if (ctrl != null)
+                foreach (var clip in ctrl.animationClips)
+                    foreach (var e in clip.events)
+                        if (e.functionName == nameof(OnCylinderClosed)) return e.time;
+            return animationSettings != null ? animationSettings.closeDuration * RevolverAnimationSettings.CloseLatchFraction : 0f;
         }
 
         public void Spin()
@@ -154,7 +194,9 @@ namespace Pistol.Weapons.Revolver
         public void OnCylinderClosed()
         {
             if (LogEvents) Debug.Log("Click: cylinder closed");
-            // TODO: cylinder latch sound
+            closing = false;
+            held.SetCanAim(true);
+            CylinderLatched?.Invoke();   // sound and kick: RevolverClose
         }
 
         // ---------- Inspector test buttons (Play Mode) ----------
