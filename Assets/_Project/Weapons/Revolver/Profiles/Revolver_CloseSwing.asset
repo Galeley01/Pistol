@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   phases:
   - name: "Замах"
-    duration: 0.15
+    duration: 0.19
     rotation: {x: -4, y: 0, z: 25}
     offset: {x: -0.04, y: 0, z: 0}
     ease: 0
@@ -37,9 +37,11 @@ MonoBehaviour:
     craneCloses: 0
     leftPalmOnCylinder: 0
     leftHandToGrip: 1
-  palmOffset: {x: -0.035, y: -0.01, z: -0.06}
-  palmRotation: {x: 0, y: 0, z: 0}
-  palmFingerCurl: 5
+  palmContact: {x: -0.02, y: 0.005, z: 0}
+  contactAlongFingers: -0.035
+  palmFacing: {x: 1, y: 0, z: 0}
+  fingersPointing: {x: -0.08, y: 0.03, z: 1}
+  palmFingerCurl: 8
   latchStrength: 1
   latchKick: {x: 1, y: 0, z: -2}
   latchKickTime: 0.08

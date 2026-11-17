@@ -23,7 +23,10 @@ namespace Pistol.Weapons.Revolver
         public List<Option> options = new List<Option>();
         [Range(0, 5), Tooltip("Сколько раз подряд может выпасть один и тот же способ. 0 — без ограничения")]
         public int maxSameInRow = 2;
-        [Tooltip("Звук защёлкивания барабана (необязательно). Громкость умножается на силу щелчка способа")]
+        [Tooltip("Звук закрытия барабана (необязательно). Громкость умножается на силу щелчка способа")]
         public SoundEvent latchSound;
+        [Range(0f, 2f), Tooltip("Где в звуке сам щелчок, сек от начала файла. Звук запускается заранее, чтобы щелчок совпал с защёлкиванием; " +
+                                "если движение короче, начало звука пропускается")]
+        public float latchSoundClickTime = 0.3f;
     }
 }

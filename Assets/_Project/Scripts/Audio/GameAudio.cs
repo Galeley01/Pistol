@@ -52,16 +52,17 @@ namespace Pistol.Audio
         }
 
         // Plays the event at a point in the world
-        public void Play(SoundEvent sound, Vector3 position, float volumeScale = 1f) => PlayVoice(sound, position, null, volumeScale);
+        public void Play(SoundEvent sound, Vector3 position, float volumeScale = 1f) => PlayVoice(sound, position, null, volumeScale, 0f);
 
-        // Plays the event and keeps it on the object while it sounds (a weapon in the hands)
-        public void Play(SoundEvent sound, Transform follow, float volumeScale = 1f)
+        // Plays the event and keeps it on the object while it sounds (a weapon in the hands).
+        // startAt > 0 skips the start of the clip, sec (to line a moment inside the clip up with an event)
+        public void Play(SoundEvent sound, Transform follow, float volumeScale = 1f, float startAt = 0f)
         {
             if (follow == null) return;
-            PlayVoice(sound, follow.position, follow, volumeScale);
+            PlayVoice(sound, follow.position, follow, volumeScale, startAt);
         }
 
-        void PlayVoice(SoundEvent sound, Vector3 position, Transform follow, float volumeScale)
+        void PlayVoice(SoundEvent sound, Vector3 position, Transform follow, float volumeScale, float startAt)
         {
             if (sound == null) return;
             var clip = sound.PickClip();
@@ -73,6 +74,7 @@ namespace Pistol.Audio
             voice.Source.transform.position = position;
             sound.ApplyTo(voice.Source, volumeScale);
             voice.Source.clip = clip;
+            voice.Source.time = startAt > 0f ? Mathf.Min(startAt, Mathf.Max(clip.length - 0.01f, 0f)) : 0f;
             voice.Source.Play();
             if (debug != null && debug.SoundPlays) Debug.Log($"GameAudio: {sound.name} ({clip.name})", this);
         }

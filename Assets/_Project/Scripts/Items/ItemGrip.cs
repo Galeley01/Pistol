@@ -45,16 +45,19 @@ namespace Pistol.Items
 
         // Temporary target for the left hand from the item itself (e.g. the palm pushing the revolver cylinder shut)
         float overrideWeight;
-        Vector3 overridePosition, overrideRotation;   // item-root space; rotation relative to the left grip
+        Vector3 overridePalmPoint;          // item-root space
+        Quaternion overrideRotation = Quaternion.identity;   // anatomical hand rotation, item-root space
         float overrideCurl;
 
-        // weight 0..1 blends the left hand from its usual pose to this target. position: item-root space, m;
-        // rotationOffset: degrees on top of the left grip rotation; fingerCurl: degrees per joint
-        public void SetLeftHandOverride(float weight, Vector3 position, Vector3 rotationOffset, float fingerCurl)
+        // weight 0..1 blends the left hand from its usual pose to this target.
+        // palmPoint: where the palm centre (HandGripProfile.leftPalmCenter) touches, item-root space, m;
+        // handRotation: anatomical hand rotation in item-root space (Z to the fingers, Y out of the palm);
+        // fingerCurl: degrees per joint
+        public void SetLeftHandOverride(float weight, Vector3 palmPoint, Quaternion handRotation, float fingerCurl)
         {
             overrideWeight = Mathf.Clamp01(weight);
-            overridePosition = position;
-            overrideRotation = rotationOffset;
+            overridePalmPoint = palmPoint;
+            overrideRotation = handRotation;
             overrideCurl = fingerCurl;
         }
 
@@ -107,12 +110,14 @@ namespace Pistol.Items
             rig.LeftHandGrip.localRotation = Quaternion.Slerp(awayRot, gripRot, t);
             if (rig.LeftElbowHint) rig.LeftElbowHint.localPosition = Vector3.Lerp(p.leftAwayElbowHint, p.left.elbowHint, t);
 
-            // The item's own target on top (palm on the cylinder): converted from item-root space to the grip point's parent
+            // The item's own target on top (palm on the cylinder): the palm centre goes to the point and the wrist
+            // is placed back from it; converted from item-root space to the grip point's parent
             if (overrideWeight > 0f)
             {
                 var parent = rig.LeftHandGrip.parent;
-                Vector3 target = parent != null ? parent.InverseTransformPoint(transform.TransformPoint(overridePosition)) : overridePosition;
-                Quaternion targetRot = gripRot * Quaternion.Euler(overrideRotation);
+                Vector3 wrist = overridePalmPoint - overrideRotation * p.leftPalmCenter;
+                Vector3 target = parent != null ? parent.InverseTransformPoint(transform.TransformPoint(wrist)) : wrist;
+                Quaternion targetRot = parent != null ? Quaternion.Inverse(parent.rotation) * transform.rotation * overrideRotation : overrideRotation;
                 rig.LeftHandGrip.localPosition = Vector3.Lerp(rig.LeftHandGrip.localPosition, target, overrideWeight);
                 rig.LeftHandGrip.localRotation = Quaternion.Slerp(rig.LeftHandGrip.localRotation, targetRot, overrideWeight);
             }

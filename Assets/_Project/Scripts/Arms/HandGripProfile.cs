@@ -68,5 +68,11 @@ namespace Pistol.Arms
 
         [BoxGroup("Левая рука — убрана (барабан открыт)"), Range(0f, 0.2f), Tooltip("Насколько рука уходит дугой наружу, а не по прямой")]
         public float leftHandArc = 0.06f;
+
+        // ---------- Left palm contact (e.g. pushing the cylinder shut) ----------
+        [BoxGroup("Левая ладонь — касание"), Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.15f)]
+        [Tooltip("Где центр ладони относительно запястья, м, в осях кисти (Z — к пальцам, Y — куда смотрит ладонь). " +
+                 "Этой точкой ладонь касается предмета, а запястье ставится от неё")]
+        public Vector3 leftPalmCenter = new Vector3(0f, 0.02f, 0.045f);
     }
 }

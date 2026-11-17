@@ -37,3 +37,4 @@ MonoBehaviour:
   leftAwayFingerCurl: 15
   leftHandMoveTime: 0.45
   leftHandArc: 0.06
+  leftPalmCenter: {x: 0, y: 0.02, z: 0.045}

@@ -43,6 +43,8 @@ namespace Pistol.Weapons.Revolver
         Vector3 rotation, offset;     // current weapon pose from the phases
         float palm;                   // current left palm weight
         float kickTime = -1f;
+        float soundIn = -1f;          // seconds until the close sound starts (-1 = not waiting)
+        bool soundPlanned;            // this close plays its sound timed to the latch
         int lastPick = -1, pickRun;
         readonly System.Collections.Generic.List<float> weights = new System.Collections.Generic.List<float>();
 
@@ -64,6 +66,8 @@ namespace Pistol.Weapons.Revolver
                 Finish();
             }
             kickTime = -1f;
+            soundIn = -1f;
+            soundPlanned = false;
             cameraFx = null;
             gameAudio = null;
             debug = null;
@@ -89,8 +93,41 @@ namespace Pistol.Weapons.Revolver
             phaseTime = holdTime = 0f;
             craneStarted = latched = false;
             if (debug != null && debug.WeaponEvents) Debug.Log("Cylinder close: " + picked.name, this);
+            PlanSound();
             EnterPhase();
             return true;
+        }
+
+        // The click inside the sound must land on the latch: start the sound that much earlier,
+        // or right away with its start skipped when the motion is shorter than the lead-in
+        void PlanSound()
+        {
+            soundIn = -1f;
+            soundPlanned = false;
+            if (profile == null || profile.latchSound == null) return;
+            float toLatch = 0f;
+            bool hasCrane = false;
+            foreach (var p in motion.phases)
+            {
+                toLatch += p.duration;
+                if (p.craneCloses) { hasCrane = true; break; }
+            }
+            if (!hasCrane) return;   // no crane phase: the latch comes from the plain clip, OnLatched plays the click
+            soundPlanned = true;
+            float delay = toLatch - profile.latchSoundClickTime;
+            if (delay > 0f) soundIn = delay;
+            else PlaySound(-delay);
+        }
+
+        void PlaySound(float startAt)
+        {
+            if (profile == null || profile.latchSound == null) return;
+            if (gameAudio == null) { Debug.LogWarning("RevolverClose: no GameAudio in the item context, the close sound is silent.", this); return; }
+            if (!profile.latchSound.HasClips) { Debug.LogWarning($"RevolverClose: {profile.latchSound.name} has no audio clip.", profile.latchSound); return; }
+            float strength = motion != null ? motion.latchStrength : 1f;
+            if (debug != null && debug.WeaponEvents) Debug.Log($"Cylinder close sound: {profile.latchSound.name}, from {startAt:0.000}s, volume x{strength:0.##}", this);
+            Transform at = cylinder != null && cylinder.CylinderTransform != null ? cylinder.CylinderTransform : transform;
+            gameAudio.Play(profile.latchSound, at, strength, startAt);
         }
 
         CylinderCloseMotion Pick()
@@ -118,6 +155,12 @@ namespace Pistol.Weapons.Revolver
 
         void Update()
         {
+            if (soundIn >= 0f)
+            {
+                soundIn -= Time.deltaTime;
+                if (soundIn <= 0f) { PlaySound(-soundIn); soundIn = -1f; }
+            }
+
             if (kickTime >= 0f)
             {
                 kickTime += Time.deltaTime;
@@ -160,7 +203,10 @@ namespace Pistol.Weapons.Revolver
             Vector3 center = cylinder != null && cylinder.CylinderTransform != null
                 ? transform.InverseTransformPoint(cylinder.CylinderTransform.position)
                 : Vector3.zero;
-            grip.SetLeftHandOverride(palm, center + motion.palmOffset, motion.palmRotation, motion.palmFingerCurl);
+            // The chosen part of the palm touches the cylinder: shift the palm centre forward/back along the fingers
+            Quaternion hand = motion.PalmRotation();
+            Vector3 palmCentre = center + motion.palmContact - hand * new Vector3(0f, 0f, motion.contactAlongFingers);
+            grip.SetLeftHandOverride(palm, palmCentre, hand, motion.palmFingerCurl);
         }
 
         void Finish()
@@ -176,11 +222,12 @@ namespace Pistol.Weapons.Revolver
         void OnLatched()
         {
             latched = true;
-            var m = motion != null ? motion : lastMotion;
-            if (m == null) return;
+            // A close without a timed sound (plain clip) plays just the click, from its place in the file
+            if (!soundPlanned && profile != null) PlaySound(profile.latchSoundClickTime);
+            soundPlanned = false;
+            var m = motion;
+            if (m == null) return;   // plain close: no kick or jolt
             float s = m.latchStrength;
-            if (profile != null && profile.latchSound != null && gameAudio != null)
-                gameAudio.Play(profile.latchSound, cylinder != null && cylinder.CylinderTransform != null ? cylinder.CylinderTransform : transform, s);
             if (cameraFx != null && m.latchCameraShake > 0f) cameraFx.AddShake(m.latchCameraShake * s);
             kickTime = 0f;
         }
