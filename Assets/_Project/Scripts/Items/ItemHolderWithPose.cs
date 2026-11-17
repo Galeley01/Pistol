@@ -151,15 +151,44 @@ namespace Pistol.Items
             ItemChanged?.Invoke(newItem);
         }
 
-        // Lets the item go: it stays where it is, the caller decides whether to hide or destroy it
+        // Lets the item go: every part gives back what it changed outside the item (Unbind) and the item returns
+        // to its rest pose. It stays a child of the holder; the caller decides whether to hide, drop or destroy it.
         public void Unequip()
         {
             if (current == null) return;
+            var item = current;
             current = null;
-            stack.Clear();
+
+            // Reverse order: the parts bound last let go first
+            for (int i = users.Count - 1; i >= 0; i--) users[i].Unbind();
             users.Clear();
+            stack.Clear();
             last = default;
+
+            // Without this the next Equip would take the last swayed pose as the rest pose
+            if (item != null) item.transform.SetLocalPositionAndRotation(restPosition, restRotation);
             ItemChanged?.Invoke(null);
+        }
+
+        // ---------- Test buttons (Play Mode) ----------
+        HeldItem putAway;
+
+        [Button("Тест: убрать предмет из рук")]
+        void TestPutAway()
+        {
+            if (!Application.isPlaying || current == null) return;
+            putAway = current;
+            Unequip();
+            putAway.gameObject.SetActive(false);
+        }
+
+        [Button("Тест: взять предмет обратно")]
+        void TestTakeBack()
+        {
+            if (!Application.isPlaying || putAway == null || current != null) return;
+            putAway.gameObject.SetActive(true);
+            Equip(putAway);
+            putAway = null;
         }
 
         void Update()

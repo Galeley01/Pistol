@@ -55,10 +55,24 @@ namespace Pistol.Weapons
             cameraEffects = pose.Effects;
         }
 
+        // Out of the hands: the camera zoom, the Free-Aim deadzone and the screen effects go back to normal
+        public void Unbind()
+        {
+            if (cam != null && baseFov >= 0f && profile != null && profile.changeFov) cam.fieldOfView = baseFov;
+            if (movement != null) movement.SetFreeAimScale(1f);
+            ReleaseEffects();
+
+            aim = aimT = aimArc = 0f;
+            baseFov = -1f;   // read again from the next camera
+            cam = null;
+            movement = null;
+            context = null;
+            cameraEffects = null;
+        }
+
         void Start()
         {
             if (profile == null) { Debug.LogError("WeaponAim: no profile assigned.", this); enabled = false; return; }
-            if (cam == null) { Debug.LogError("WeaponAim: not held by an ItemHolderWithPose, aiming is off.", this); enabled = false; return; }
             held = GetComponent<HeldItem>();
             rig = ItemRig.On(this);
             sway = GetComponent<WeaponSway>();
@@ -121,7 +135,14 @@ namespace Pistol.Weapons
             effectsRequest.Set(t, CurrentFocusDistance(), profile.tiredTunnel * Fatigue());
         }
 
-        void OnDestroy() => effectsRequest?.Release();
+        void ReleaseEffects()
+        {
+            effectsRequest?.Release();
+            effectsRequest = null;
+        }
+
+        // Destroyed while still in the hands: give everything back as well
+        void OnDestroy() => Unbind();
 
         // ---------- Buttons (write into the profile asset, with Undo) ----------
         bool UsesScenePosition => profile != null && profile.useScenePosition;

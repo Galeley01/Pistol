@@ -33,6 +33,7 @@ namespace Pistol.Weapons.Revolver
         DebugSettings debug;
 
         public void Bind(ItemContext context) => debug = context.Debug;
+        public void Unbind() => debug = null;
         bool LogEvents => debug != null && debug.WeaponEvents;
         RevolverCylinder cylinder;
         RevolverShooter shooter;
@@ -43,6 +44,9 @@ namespace Pistol.Weapons.Revolver
         void Start()
         {
             animator = GetComponent<Animator>();
+            // A put away revolver keeps its mechanics as they were (an open cylinder stays open),
+            // otherwise the Animator would restart from Idle and disagree with IsOpen
+            animator.keepAnimatorStateOnDisable = true;
             foreach (var p in animator.parameters) animParams.Add(p.nameHash);
             cylinder = GetComponent<RevolverCylinder>();
             shooter = GetComponent<RevolverShooter>();

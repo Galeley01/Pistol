@@ -65,9 +65,7 @@ namespace Pistol.Ballistics
             for (int i = bullets.Count - 1; i >= 0; i--)
             {
                 var b = bullets[i];
-                Vector3 g = Physics.gravity * b.ammo.gravityScale;
-                Vector3 newVel = b.vel + g * dt;
-                Vector3 newPos = b.pos + (b.vel + newVel) * 0.5f * dt;
+                BulletMath.Step(b.pos, b.vel, BulletMath.Gravity(b.ammo), dt, out Vector3 newPos, out Vector3 newVel);
                 Vector3 seg = newPos - b.pos;
 
                 if (Raycast(b.pos, seg, seg.magnitude, hitMask, b.ignoreRoot, out RaycastHit hit))

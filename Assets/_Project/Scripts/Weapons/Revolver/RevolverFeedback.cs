@@ -49,6 +49,13 @@ namespace Pistol.Weapons.Revolver
             gameAudio = context.Audio;
         }
 
+        public void Unbind()
+        {
+            movement = null;
+            cameraFx = null;
+            gameAudio = null;
+        }
+
         void Start()
         {
             if (profile == null) { Debug.LogError("RevolverFeedback: no profile assigned.", this); enabled = false; return; }

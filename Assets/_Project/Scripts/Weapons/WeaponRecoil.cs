@@ -53,6 +53,9 @@ namespace Pistol.Weapons
 
         public void Bind(ItemContext context) { }
 
+        // Out of the hands: an unfinished kick must not continue when the weapon is taken again
+        public void Unbind() => recoilRot = recoilRotVel = recoilPos = recoilPosVel = Vector3.zero;
+
         public void ApplyPose(ref PoseFrame frame)
         {
             float dt = frame.DeltaTime;

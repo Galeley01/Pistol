@@ -43,7 +43,7 @@ namespace Pistol.Weapons.Revolver
         // The bullet ignores the player's own colliders
         public void Bind(ItemContext context)
         {
-            ignoreRoot = context.Movement != null ? context.Movement.transform : null;
+            ignoreRoot = context.Movement != null ? context.Movement.transform : transform.root;
             bullets = context.Bullets;
             debug = context.Debug;
         }
@@ -56,8 +56,12 @@ namespace Pistol.Weapons.Revolver
             muzzle = rig != null ? rig.MuzzleOrRoot : transform;
             if (rig != null && rig.Muzzle == null) Debug.LogError("RevolverShooter: ItemRig has no Muzzle, shooting from the weapon root.", this);
             cylinder = GetComponent<RevolverCylinder>();
-            if (ignoreRoot == null) ignoreRoot = transform.root;
+        }
 
+        // The debug line and its hit marker live in the scene root (world space), so they are made only
+        // when the line is first switched on and are removed together with the weapon
+        void CreatePreview()
+        {
             var go = new GameObject("TrajectoryPreview");
             line = go.AddComponent<LineRenderer>();
             line.sharedMaterial = BulletSystem.GetMaterial();
@@ -97,15 +101,19 @@ namespace Pistol.Weapons.Revolver
 
         void LateUpdate()
         {
-            if (line == null) return;
             bool show = ShowTrajectory;
+            if (line == null)
+            {
+                if (!show) return;
+                CreatePreview();
+            }
             line.enabled = show;
             if (!show) { hitMarker.SetActive(false); return; }
 
             var ammo = cylinder != null ? cylinder.Ammo : null;
             GetShot(ammo, out var pos, out var dir);
             float speed = ammo != null ? ammo.muzzleVelocity : 440f;
-            Vector3 g = Physics.gravity * (ammo != null ? ammo.gravityScale : 1f);
+            Vector3 g = BulletMath.Gravity(ammo);
             Vector3 vel = dir * speed;
             LayerMask mask = bullets.hitMask;
 
@@ -118,8 +126,7 @@ namespace Pistol.Weapons.Revolver
             float dt = Mathf.Max(0.005f, previewDistance / speed / 60f);   // ~60 points along the whole line
             while (travelled < previewDistance && points.Count < 64)
             {
-                Vector3 newVel = vel + g * dt;
-                Vector3 newPos = pos + (vel + newVel) * 0.5f * dt;
+                BulletMath.Step(pos, vel, g, dt, out Vector3 newPos, out Vector3 newVel);
                 Vector3 seg = newPos - pos;
                 if (BulletSystem.Raycast(pos, seg, seg.magnitude, mask, ignoreRoot, out hit))
                 {
@@ -156,10 +163,27 @@ namespace Pistol.Weapons.Revolver
             Debug.Log($"Sight height above the bore: {sightHeight * 1000f:F1} mm");
         }
 
-        void OnDisable()
+        // Out of the hands: no bullets and no preview line
+        public void Unbind()
+        {
+            bullets = null;
+            debug = null;
+            ignoreRoot = null;
+            HidePreview();
+        }
+
+        void HidePreview()
         {
             if (line != null) line.enabled = false;
             if (hitMarker != null) hitMarker.SetActive(false);
+        }
+
+        void OnDisable() => HidePreview();
+
+        void OnDestroy()
+        {
+            if (line != null) Destroy(line.gameObject);
+            if (hitMarker != null) Destroy(hitMarker);
         }
     }
 }

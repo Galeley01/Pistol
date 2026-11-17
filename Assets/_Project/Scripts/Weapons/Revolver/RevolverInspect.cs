@@ -59,6 +59,18 @@ namespace Pistol.Weapons.Revolver
             debug = pose.Debug;
         }
 
+        // Out of the hands: leave inspect mode (controls back to Gameplay) and remove the screen effects at once
+        public void Unbind()
+        {
+            if (inspecting) SetInspecting(false);
+            amount = 0f;
+            ReleaseEffects();
+            context = null;
+            cam = null;
+            cameraEffects = null;
+            debug = null;
+        }
+
         DebugSettings debug;
         bool LogEvents => debug != null && debug.WeaponEvents;
 
@@ -138,7 +150,13 @@ namespace Pistol.Weapons.Revolver
             if (inspecting) SetInspecting(false);
         }
 
-        void OnDestroy() => effectsRequest?.Release();
+        void ReleaseEffects()
+        {
+            effectsRequest?.Release();
+            effectsRequest = null;
+        }
+
+        void OnDestroy() => ReleaseEffects();
 
         // ---------- Test buttons (Play Mode) ----------
         [Button("Тест: войти / выйти из осмотра")]

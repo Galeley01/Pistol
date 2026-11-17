@@ -84,6 +84,24 @@ namespace Pistol.Weapons
             debug = context.Debug;
         }
 
+        // Out of the hands: forget the player and all motion, so the next time the weapon starts calm
+        public void Unbind()
+        {
+            cam = null;
+            movement = null;
+            controller = null;
+            debug = null;
+
+            lag = lagVel = posSpring = posVel = Vector3.zero;
+            lastFreeAim = Vector2.zero;
+            worldYawRate = 0f;
+            bobPhase = runWeight = runPose = sprintStoppedTime = 0f;
+            lastStep = 0;
+            wasGrounded = true;
+            lastAirVelocity = 0f;
+            instability = 0f;
+        }
+
         void Start()
         {
             if (rig == null) return;

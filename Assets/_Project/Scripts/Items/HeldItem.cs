@@ -30,6 +30,7 @@ namespace Pistol.Items
 
         DebugSettings debug;
         public void Bind(ItemContext context) => debug = context.Debug;
+        public void Unbind() => debug = null;
 
         bool canAim = true;
         bool leftHandFree;

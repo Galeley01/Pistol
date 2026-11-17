@@ -40,8 +40,13 @@ namespace Pistol.Items
 
     // A component of a held item that needs the context. ItemHolderWithPose calls Bind once, in Awake,
     // before any Start: use the context from Start on.
+    //
+    // Unbind is called when the item leaves the hands (Unequip). The part must give back everything it changed
+    // outside the item (camera FOV, Free-Aim, screen effects, control mode), drop the context and reset its
+    // motion, so the item can lie in the world or be taken again (a new Bind) as if it was never held.
     public interface IItemContextUser
     {
         void Bind(ItemContext context);
+        void Unbind() { }
     }
 }

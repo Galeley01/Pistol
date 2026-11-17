@@ -73,6 +73,15 @@ namespace Pistol.Weapons.Revolver
             debug = itemContext.Debug;
         }
 
+        public void Unbind()
+        {
+            SetVisible(false);
+            hovered = -1;
+            cam = null;
+            context = null;
+            debug = null;
+        }
+
         DebugSettings debug;
         bool LogClicks => debug != null && debug.WeaponEvents;
 
