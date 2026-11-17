@@ -8,7 +8,7 @@ namespace Pistol.Ballistics
     // Bullet flight. A bullet is a projectile, not an instant ray: every frame it travels one segment
     // at its own speed and drops under gravity. Hits are checked with a ray along that segment,
     // so bullets never pass through walls. No Rigidbody or collider is needed for bullets.
-    // Bullet holes stick to what was hit: they move with a falling box and disappear with a destroyed one.
+    // Bullet holes follow what was hit: they move with a falling box and disappear with a destroyed one.
     //
     // Goes on its own object in the scene; held weapons get it through ItemContext.
     [DisallowMultipleComponent]
@@ -39,7 +39,17 @@ namespace Pistol.Ballistics
         }
 
         readonly List<Bullet> bullets = new List<Bullet>();
-        readonly Queue<GameObject> holes = new Queue<GameObject>();
+        class Hole
+        {
+            public Transform transform;
+            public Transform surface;          // what was hit
+            public bool follows;               // false for static geometry: it never moves
+            public Vector3 localPosition;      // pose relative to the surface, scale ignored
+            public Quaternion localRotation;
+        }
+
+        readonly Queue<Hole> holes = new Queue<Hole>();
+        Transform holeRoot;
         static readonly RaycastHit[] hitBuffer = new RaycastHit[16];
 
         static Material sharedMaterial;
@@ -131,25 +141,60 @@ namespace Pistol.Ballistics
         }
 
         // ---------- Bullet holes ----------
+        // A hole is never a child of what it hit: under a stretched object (a wall is a scaled cube) a rotated
+        // child gets squashed into a line. Holes live in their own unscaled container and follow the surface
+        // by its position and rotation only, so they are always round and of the right size.
         void PlaceHole(Vector3 point, Vector3 normal, float size, Transform surface)
         {
-            // Holes on destroyed objects are gone; take the oldest live one or make a new one
-            GameObject go = null;
-            while (go == null && holes.Count > 0 && (holes.Count >= maxHoles || holes.Peek() == null))
-                go = holes.Dequeue();
-            if (go == null) go = CreateDisc("BulletHole", holeColor);
+            if (holeRoot == null) holeRoot = new GameObject("BulletHoles").transform;
 
-            var t = go.transform;
-            t.SetParent(surface, true);
-            t.SetPositionAndRotation(point + normal * 0.0015f, Quaternion.LookRotation(normal));
-            // Keep the hole round and the right size whatever the surface's scale
-            Vector3 s = surface != null ? surface.lossyScale : Vector3.one;
-            t.localScale = new Vector3(size / Safe(s.x), size / Safe(s.y), size / Safe(s.z));
-            go.SetActive(true);
-            holes.Enqueue(go);
+            // Reuse the oldest hole once the limit is reached
+            Hole hole = holes.Count >= maxHoles ? holes.Dequeue() : null;
+            if (hole == null || hole.transform == null)
+            {
+                hole = new Hole { transform = CreateDisc("BulletHole", holeColor).transform };
+                hole.transform.SetParent(holeRoot, false);
+            }
+
+            Vector3 position = point + normal * 0.0015f;
+            Quaternion rotation = Quaternion.LookRotation(normal);
+            hole.transform.SetPositionAndRotation(position, rotation);
+            hole.transform.localScale = Vector3.one * size;
+            hole.transform.gameObject.SetActive(true);
+
+            // Where the hole sits relative to the surface, without the surface's scale
+            hole.surface = surface;
+            hole.follows = surface != null && !surface.gameObject.isStatic;
+            if (hole.follows)
+            {
+                Quaternion inverse = Quaternion.Inverse(surface.rotation);
+                hole.localPosition = inverse * (position - surface.position);
+                hole.localRotation = inverse * rotation;
+            }
+            holes.Enqueue(hole);
         }
 
-        static float Safe(float v) => Mathf.Abs(v) < 1e-5f ? 1e-5f : v;
+        // After physics and animation moved the surfaces: holes follow them; a hole on a destroyed object disappears
+        void LateUpdate()
+        {
+            foreach (var hole in holes)
+            {
+                if (!hole.follows || hole.transform == null) continue;
+                if (hole.surface == null)
+                {
+                    hole.follows = false;
+                    hole.transform.gameObject.SetActive(false);
+                    continue;
+                }
+                hole.transform.SetPositionAndRotation(hole.surface.position + hole.surface.rotation * hole.localPosition,
+                                                      hole.surface.rotation * hole.localRotation);
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (holeRoot != null) Destroy(holeRoot.gameObject);
+        }
 
         // A flat disc of diameter 1, used for bullet holes and the aim marker
         public static GameObject CreateDisc(string name, Color color)
