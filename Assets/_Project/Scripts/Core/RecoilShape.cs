@@ -28,7 +28,7 @@ namespace Pistol.Core
         public float WithNod(float t)
         {
             if (t <= 0f) return 0f;
-            if (t < Rise) { float u = 1f - t / Rise; return 1f - u * u; }
+            if (t < Rise) return RiseAt(t);
             t -= Rise;
             if (t < Fall) return Mathf.LerpUnclamped(1f, -Nod, Smooth(t / Fall));
             t -= Fall;
@@ -41,7 +41,7 @@ namespace Pistol.Core
         public float WithoutNod(float t)
         {
             if (t <= 0f) return 0f;
-            if (t < Rise) { float u = 1f - t / Rise; return 1f - u * u; }
+            if (t < Rise) return RiseAt(t);
             float back = Fall + 0.5f * Settle;
             t -= Rise;
             return t < back ? 1f - Smooth(t / back) : 0f;
@@ -56,6 +56,9 @@ namespace Pistol.Core
             return s * s;
         }
 
-        static float Smooth(float u) => u * u * (3f - 2f * u);
+        // Sharp ease-out up to 1: the kick, shared by both motions
+        float RiseAt(float t) { float u = 1f - t / Rise; return 1f - u * u; }
+
+        static float Smooth(float u) => Mathf.SmoothStep(0f, 1f, u);
     }
 }

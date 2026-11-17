@@ -49,6 +49,7 @@ namespace Pistol.Weapons.Revolver
         float nextShotTime;
         float closeSpeedOverride;    // > 0 while a close motion plays the close clip faster
         float latchClipTime;         // when the latch event comes in the close clip, sec at speed 1
+        AnimationClip closeClip;     // the clip with the latch event
 
         void Start()
         {
@@ -64,6 +65,7 @@ namespace Pistol.Weapons.Revolver
             held = GetComponent<HeldItem>();
             held.UseRequested += OnUse;
             held.ReloadRequested += ToggleCylinder;
+            held.InspectReloadRequested += CloseFromInspect;
         }
 
         // LMB: fire with the cylinder closed, spin it when it is open
@@ -109,10 +111,17 @@ namespace Pistol.Weapons.Revolver
             if (cylinder != null) cylinder.AdvanceForShot(cock);
         }
 
-        public void ToggleCylinder()
+        public void ToggleCylinder() => ToggleCylinder(false);
+
+        // R in inspect mode: inspect has just been left, the cylinder closes the "from inspect" way
+        void CloseFromInspect() => ToggleCylinder(true);
+
+        void ToggleCylinder(bool fromInspect)
         {
             if (!isOpen && !closing && InState(Hash.IdleState))
             {
+                // Reopened while a close motion still plays its tail: it must not take the left hand back
+                if (closer != null) closer.CylinderReopened();
                 isOpen = true;
                 closeSpeedOverride = 0f;
                 animator.SetTrigger(Hash.Open);
@@ -125,7 +134,7 @@ namespace Pistol.Weapons.Revolver
                 closing = true;
                 animator.ResetTrigger(Hash.Spin);
                 // A close motion snaps the crane shut itself, in its own phase (SnapCraneShut)
-                if (closer != null && closer.isActiveAndEnabled && closer.Begin()) return;
+                if (closer != null && closer.isActiveAndEnabled && closer.Begin(fromInspect)) return;
                 SnapCraneShut(0f);
                 held.SetLeftHandFree(false);
             }
@@ -148,8 +157,21 @@ namespace Pistol.Weapons.Revolver
             if (ctrl != null)
                 foreach (var clip in ctrl.animationClips)
                     foreach (var e in clip.events)
-                        if (e.functionName == nameof(OnCylinderClosed)) return e.time;
+                        if (e.functionName == nameof(OnCylinderClosed)) { closeClip = clip; return e.time; }
             return animationSettings != null ? animationSettings.closeDuration * RevolverAnimationSettings.CloseLatchFraction : 0f;
+        }
+
+        // The Animator moves the crane later in the frame than Update, so whoever reads the cylinder position
+        // in Update (the left palm following it) would be a frame behind, and the sped-up crane moves tens of
+        // degrees per frame. This puts the crane where the close clip will have it this frame; the Animator then
+        // writes the same pose. Only while the close clip plays.
+        public void PoseCraneForThisFrame()
+        {
+            if (closeClip == null || animator == null || animator.IsInTransition(0)) return;
+            var state = animator.GetCurrentAnimatorStateInfo(0);
+            if (state.shortNameHash != Hash.CloseState) return;
+            float clipTime = state.normalizedTime * closeClip.length + Time.deltaTime * state.speed * state.speedMultiplier;
+            closeClip.SampleAnimation(gameObject, Mathf.Min(clipTime, closeClip.length));
         }
 
         public void Spin()

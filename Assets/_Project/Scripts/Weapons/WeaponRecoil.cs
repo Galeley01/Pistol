@@ -115,9 +115,10 @@ namespace Pistol.Weapons
 
                 // Arm: the same motion a moment later, up on the rise and lower on the nod
                 float armAge = age - armLag;
+                float armSettle = s.Shape.WithoutNod(armAge);
                 pos.y += s.Position.y * s.Shape.WithNod(armAge);
-                pos.x += s.Position.x * s.Shape.WithoutNod(armAge);
-                pos.z += s.Position.z * s.Shape.WithoutNod(armAge);
+                pos.x += s.Position.x * armSettle;
+                pos.z += s.Position.z * armSettle;
             }
 
             frame.RecoilEuler += rot;

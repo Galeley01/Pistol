@@ -44,6 +44,7 @@ namespace Pistol.Weapons.Revolver
             public static readonly int IdleState = Animator.StringToHash(RevolverAnimatorIds.IdleState);
             public static readonly int OpenIdleState = Animator.StringToHash(RevolverAnimatorIds.OpenIdleState);
             public static readonly int SpinState = Animator.StringToHash(RevolverAnimatorIds.SpinState);
+            public static readonly int CloseState = Animator.StringToHash(RevolverAnimatorIds.CloseState);
         }
     }
 }

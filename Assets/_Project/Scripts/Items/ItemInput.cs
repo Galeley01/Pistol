@@ -5,7 +5,7 @@ namespace Pistol.Items
 {
     // Turns the player's input into intents for the item in the hands:
     //   Gameplay mode: Fire -> Use, Reload -> Reload, Inspect (Alt) -> Inspect.
-    //   Inspect mode:  Exit (Alt / Esc) -> ExitInspect, Reload -> ExitInspect + Reload.
+    //   Inspect mode:  Exit (Alt / Esc) -> ExitInspect, Reload -> ExitInspect + ReloadFromInspect.
     // Only the active action map gives presses, so a click that recaptures the cursor never fires.
     //
     // Goes next to ItemHolderWithPose.
@@ -31,7 +31,7 @@ namespace Pistol.Items
                     if (player.InspectPressed) item.Inspect();
                     break;
                 case ControlMode.Inspect:
-                    if (player.InspectReloadPressed) { item.ExitInspect(); item.Reload(); }
+                    if (player.InspectReloadPressed) { item.ExitInspect(); item.ReloadFromInspect(); }
                     else if (player.InspectExitPressed) item.ExitInspect();
                     break;
             }

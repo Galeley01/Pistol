@@ -86,7 +86,7 @@ namespace Pistol.Weapons.Revolver
                 Ease.FastStart => 1f - (1f - t) * (1f - t),
                 Ease.FastEnd => t * t,
                 Ease.Linear => t,
-                _ => t * t * (3f - 2f * t),
+                _ => Mathf.SmoothStep(0f, 1f, t),
             };
         }
     }

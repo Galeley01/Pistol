@@ -45,6 +45,7 @@ namespace Pistol.Weapons.Revolver
         int phase;
         float phaseTime, holdTime;
         bool craneStarted, latched;
+        bool reopened;                // the cylinder was opened again while the tail of this motion still plays
         Vector3 rotation, offset;     // current weapon pose from the phases
         float palm;                   // current left palm weight
         float kickTime = -1f;
@@ -66,11 +67,7 @@ namespace Pistol.Weapons.Revolver
         // Out of the hands mid-close: finish at once, so the revolver isn't left half closed
         public void Unbind()
         {
-            if (motion != null)
-            {
-                if (!craneStarted && fire != null) fire.SnapCraneShut(0f);
-                Finish();
-            }
+            if (motion != null) Finish();   // closes the crane at once if its phase hasn't come yet
             kickTime = -1f;
             soundIn = -1f;
             soundPlanned = false;
@@ -91,15 +88,16 @@ namespace Pistol.Weapons.Revolver
         }
 
         // Called by RevolverFire when the cylinder starts closing. False = nothing to play, close the plain way.
-        public bool Begin()
+        // fromInspect: R was pressed in inspect mode, play the profile's "from inspect" motion
+        public bool Begin(bool fromInspect)
         {
-            bool fromInspect = inspect != null && inspect.LeftThisFrame && profile != null && profile.fromInspect != null;
+            fromInspect = fromInspect && profile != null && profile.fromInspect != null;
             var picked = fromInspect ? profile.fromInspect : Pick();   // the inspect close doesn't count in the random run
             if (picked == null || picked.phases.Count == 0) return false;
             motion = lastMotion = picked;
             phase = 0;
             phaseTime = holdTime = 0f;
-            craneStarted = latched = false;
+            craneStarted = latched = reopened = false;
             if (debug != null && debug.WeaponEvents) Debug.Log("Cylinder close: " + picked.name + (fromInspect ? " (from inspect)" : ""), this);
             waitingInspect = fromInspect;
             if (!waitingInspect || InspectPoseLeft()) StartMotion();
@@ -164,6 +162,7 @@ namespace Pistol.Weapons.Revolver
         {
             var p = motion.phases[phase];
             if (debug != null && debug.ClosePauseAtPhase == phase) PauseEditor($"phase {phase} \"{p.name}\"");
+            if (reopened) return;   // only the weapon pose plays out; the hand and the crane belong to the open cylinder now
             if (p.leftHandToGrip) held.SetLeftHandFree(false);
             if (p.craneCloses && !craneStarted)
             {
@@ -223,7 +222,8 @@ namespace Pistol.Weapons.Revolver
         void SendPalm()
         {
             if (grip == null) return;
-            if (palm <= 0f || motion == null) { grip.ClearLeftHandOverride(); return; }
+            if (palm <= 0f || motion == null || reopened) { grip.ClearLeftHandOverride(); return; }
+            fire.PoseCraneForThisFrame();   // the cylinder where it will be this frame, not where it was last frame
             Vector3 center = cylinder != null && cylinder.CylinderTransform != null
                 ? transform.InverseTransformPoint(cylinder.CylinderTransform.position)
                 : Vector3.zero;
@@ -235,13 +235,26 @@ namespace Pistol.Weapons.Revolver
 
         void Finish()
         {
+            // A motion without a crane phase (or cut short) still has to shut the crane, or the revolver stays stuck closing
+            if (!craneStarted && !reopened && fire != null) { craneStarted = true; fire.SnapCraneShut(0f); }
             StopSlowMotion();
             waitingInspect = false;
             motion = null;
             rotation = offset = Vector3.zero;
             palm = 0f;
             if (grip != null) grip.ClearLeftHandOverride();
-            if (held != null) held.SetLeftHandFree(false);   // in case no phase sent the left hand back
+            if (held != null && !reopened) held.SetLeftHandFree(false);   // in case no phase sent the left hand back
+            reopened = false;
+        }
+
+        // RevolverFire opens the cylinder again: a motion still playing its tail lets go of the hand and the palm
+        public void CylinderReopened()
+        {
+            if (motion == null) return;
+            reopened = true;
+            soundIn = -1f;
+            palm = 0f;
+            if (grip != null) grip.ClearLeftHandOverride();
         }
 
         // The crane latched (Animation Event in the close clip, raised by RevolverFire)

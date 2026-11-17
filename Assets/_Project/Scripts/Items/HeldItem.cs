@@ -19,6 +19,9 @@ namespace Pistol.Items
         // Intents from the player (ItemInput)
         public event Action UseRequested;
         public event Action ReloadRequested;
+        // R in inspect mode: the item may reload in its own way (the revolver closes with a swing).
+        // An item that doesn't listen gets a plain Reload instead.
+        public event Action InspectReloadRequested;
         public event Action InspectRequested;
         public event Action InspectExitRequested;
 
@@ -37,6 +40,12 @@ namespace Pistol.Items
 
         public void Use() { Log("use"); UseRequested?.Invoke(); }
         public void Reload() { Log("reload"); ReloadRequested?.Invoke(); }
+        public void ReloadFromInspect()
+        {
+            Log("reload from inspect");
+            if (InspectReloadRequested != null) InspectReloadRequested.Invoke();
+            else ReloadRequested?.Invoke();
+        }
         public void Inspect() { Log("inspect"); InspectRequested?.Invoke(); }
         public void ExitInspect() { Log("exit inspect"); InspectExitRequested?.Invoke(); }
 
