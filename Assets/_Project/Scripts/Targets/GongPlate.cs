@@ -4,9 +4,11 @@ using Pistol.Ballistics;
 
 namespace Pistol.Targets
 {
-    // The gong plate hanging on chains: a real swing on a hinge (Rigidbody + HingeJoint, made at start, so the
-    // prefab needs no physics setup). A hit pushes it at the hit point, it swings and settles by itself.
-    // The hinge is the part's pivot (the hang point on the hooks). Reset stops it hanging straight.
+    // The gong plate hanging on two chains: a real swing (Rigidbody + ConfigurableJoint, made at start, so the
+    // prefab needs no physics setup). It swings freely forward and back; it can also twist around the vertical
+    // and sway a little sideways, and the chains bring it back. So a hit in the middle swings it straight,
+    // a hit near the edge also twists it. The joint is at the part's pivot (the hang point on the hooks).
+    // Reset stops it hanging straight.
     //
     // Goes on the plate (GongTarget_Plate, next to its collider).
     public class GongPlate : ShootingTarget
@@ -19,6 +21,15 @@ namespace Pistol.Targets
         float push = 25f;
         [BoxGroup("Качание"), SerializeField, Range(0f, 5f), Tooltip("Затухание качания: больше — быстрее успокаивается")]
         float damping = 0.25f;
+
+        [BoxGroup("Цепи"), SerializeField, Range(0f, 80f), Tooltip("На сколько градусов плита может развернуться вокруг вертикали (удар в край)")]
+        float twistLimit = 40f;
+        [BoxGroup("Цепи"), SerializeField, Range(0f, 30f), Tooltip("На сколько градусов плита может качнуться вбок")]
+        float sideLimit = 8f;
+        [BoxGroup("Цепи"), SerializeField, Range(0f, 10f), Tooltip("Как сильно цепи возвращают разворот и боковое качание")]
+        float chainReturn = 1.2f;
+        [BoxGroup("Цепи"), SerializeField, Range(0f, 2f), Tooltip("Затухание разворота")]
+        float twistDamping = 0.15f;
 
         Rigidbody body;
         Vector3 restPosition;
@@ -35,11 +46,32 @@ namespace Pistol.Targets
             body.angularDamping = damping;
             body.interpolation = RigidbodyInterpolation.Interpolate;
 
-            var hinge = GetComponent<HingeJoint>();
-            if (hinge == null) hinge = gameObject.AddComponent<HingeJoint>();
-            hinge.anchor = Vector3.zero;          // the part's pivot = the hang point
-            hinge.axis = axis.normalized;
-            hinge.autoConfigureConnectedAnchor = true;   // hangs on the world where it is now
+            var joint = GetComponent<ConfigurableJoint>();
+            if (joint == null) joint = gameObject.AddComponent<ConfigurableJoint>();
+            joint.anchor = Vector3.zero;                 // the part's pivot = the hang point
+            joint.axis = axis.normalized;                // joint X: the swing axis
+            joint.secondaryAxis = Vector3.up;            // joint Y: the vertical (twist)
+            joint.autoConfigureConnectedAnchor = true;   // hangs on the world where it is now
+            joint.xMotion = joint.yMotion = joint.zMotion = ConfigurableJointMotion.Locked;
+            joint.angularXMotion = ConfigurableJointMotion.Free;
+            joint.angularYMotion = twistLimit > 0f ? ConfigurableJointMotion.Limited : ConfigurableJointMotion.Locked;
+            joint.angularZMotion = sideLimit > 0f ? ConfigurableJointMotion.Limited : ConfigurableJointMotion.Locked;
+            joint.angularYLimit = new SoftJointLimit { limit = twistLimit };
+            joint.angularZLimit = new SoftJointLimit { limit = sideLimit };
+
+            // The chains turn a twisted plate back: a spring on twist and sideways sway, scaled to the plate's size
+            var col0 = GetComponent<Collider>();
+            float width = col0 != null ? col0.bounds.size.magnitude : 1f;
+            float inertia = mass * width * width / 12f;
+            float spring = inertia * 17f * chainReturn;   // ~1.5 s back and forth at chainReturn 1
+            joint.rotationDriveMode = RotationDriveMode.XYAndZ;
+            joint.angularYZDrive = new JointDrive
+            {
+                positionSpring = spring,
+                positionDamper = 2f * Mathf.Sqrt(spring * inertia) * twistDamping,
+                maximumForce = float.MaxValue
+            };
+            joint.targetRotation = Quaternion.identity;
 
             // The plate must not catch on its own frame
             var mine = GetComponent<Collider>();
