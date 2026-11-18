@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28c6c15dcf2e4976940bc8af5dc14dce, type: 3}
+  m_Name: Acoustics_Outdoor
+  m_EditorClassIdentifier: 
+  reverb: 20
+  tail: {fileID: 11400000, guid: 70fc9a6d16fc24d438d5ddef8ab8993b, type: 2}
+  tailVolume: 0.6
+  tailDelay: 0.04
+  echo: {fileID: 11400000, guid: 4579d71dfe8db4c52bd723b2a7d1884d, type: 2}
+  rays: 12
+  maxEchoes: 2
+  minDistance: 12
+  maxDistance: 120
+  minSurfaceSize: 2
+  echoVolume: 0.18
+  echoPitch: 0.8
+  terrainEcho: 1
+  terrainDistance: 260
+  terrainVolume: 0.15

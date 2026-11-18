@@ -18,6 +18,9 @@ MonoBehaviour:
   volumeVariation: 0
   pitchVariation: 0.05
   output: {fileID: -8782065544116352652, guid: 8258bc5ef14b049daa82173ecb21c269, type: 2}
+  startTime: 0
+  endTime: 0.9
+  endFade: 0.25
   priority: 128
   spatialBlend: 0.7
   spread: 0

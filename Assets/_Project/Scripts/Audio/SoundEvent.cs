@@ -20,6 +20,12 @@ namespace Pistol.Audio
         public float pitchVariation = 0.05f;
         [BoxGroup("Звук"), Tooltip("Группа микшера (Weapons, Footsteps...). Пусто — звук идёт мимо микшера")]
         public AudioMixerGroup output;
+        [BoxGroup("Звук"), Min(0f), Tooltip("Пропустить начало клипа, сек: если в файле перед звуком тишина")]
+        public float startTime = 0f;
+        [BoxGroup("Звук"), Min(0f), Tooltip("Обрезать клип на этой секунде (с затуханием ниже). 0 — играть до конца")]
+        public float endTime = 0f;
+        [BoxGroup("Звук"), Range(0f, 2f), Tooltip("За сколько секунд до обрезки звук плавно затихает")]
+        public float endFade = 0.2f;
         [BoxGroup("Звук"), Range(0, 256), Tooltip("Важность, если одновременно звучит слишком много: 0 — самый важный, 256 — наименее")]
         public int priority = 128;
 

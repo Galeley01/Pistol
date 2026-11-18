@@ -40,7 +40,7 @@ namespace Pistol.PostFx
         [BoxGroup("Камера"), SerializeField, Range(-100f, 100f), Tooltip("Новое искажение линзы (в старом профиле 35)")]
         float newLensDistortion = 12f;
 
-        [SerializeField, Tooltip("Клавиша: всё новое ↔ всё как было (небо, туман, запечённый свет, постобработка, камера)")]
+        [SerializeField, Tooltip("Клавиша: всё новое ↔ всё как было (небо, туман, запечённый свет, постобработка, камера, звук окружения)")]
         string key = "<Keyboard>/4";
         [SerializeField, Tooltip("Показывать в углу экрана, что сейчас включено")]
         bool showLabel = true;
@@ -54,7 +54,9 @@ namespace Pistol.PostFx
         float oldFieldOfView = -1f;
         PostProcessVolume lensVolume;
         LensDistortion lens;
-        bool allOld;   // key 4: everything as before
+        bool localAllOld;   // key 4 without debug settings
+        bool allOld => debug != null ? debug.AllOld : localAllOld;
+        void SetAllOld(bool on) { if (debug != null) debug.SetAllOld(on); else localAllOld = on; }
         readonly System.Collections.Generic.List<(Renderer renderer, int index)> lightmapped =
             new System.Collections.Generic.List<(Renderer, int)>();
 
@@ -63,6 +65,7 @@ namespace Pistol.PostFx
         void Awake()
         {
             volume = GetComponent<PostProcessVolume>();
+            if (debug != null) debug.SetAllOld(false);   // the asset outlives Play sessions: start with the new look
             if (sun != null) newSunRotation = sun.transform.rotation;
             newFog = RenderSettings.fog;   // the scene is saved with the new sky and its fog
             if (DebugSettings.Allowed && (debug == null || newSky == null || oldSky == null || sun == null || cameraMotion == null))
@@ -85,7 +88,7 @@ namespace Pistol.PostFx
 
         void Update()
         {
-            if (toggle != null && toggle.WasPressedThisFrame()) allOld = !allOld;
+            if (toggle != null && toggle.WasPressedThisFrame()) SetAllOld(!allOld);
 
             // Without the debug settings the parts of the new look are simply all on
             bool post = !allOld && (debug == null || debug.NewPostFx);
@@ -128,7 +131,7 @@ namespace Pistol.PostFx
         }
 
         [Button("Тест: всё новое / всё как было")]
-        void TestToggleAll() { if (Application.isPlaying) allOld = !allOld; }
+        void TestToggleAll() { if (Application.isPlaying) SetAllOld(!allOld); }
 
         // No baked light for a moment: static renderers drop their lightmap and take the sky's light like before
         // the bake (a close look, not the exact scene without a bake: that is DebugSettings > Baked Light, outside Play)
@@ -168,7 +171,7 @@ namespace Pistol.PostFx
             style ??= new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperRight };
             string text = allOld
                 ? "Look: OLD  (4 = new)"
-                : $"Look: NEW (4 = old)   Post: {(debug == null || debug.NewPostFx ? "on" : "off")}   Sky: {(debug == null || debug.NewSky ? "on" : "off")}   Camera: {(debug == null || debug.NewCamera ? "on" : "off")}   Baked: {(LightmapSettings.lightmaps.Length > 0 ? "on" : "off")}";
+                : $"Look: NEW (4 = old)   Post: {(debug == null || debug.NewPostFx ? "on" : "off")}   Sky: {(debug == null || debug.NewSky ? "on" : "off")}   Camera: {(debug == null || debug.NewCamera ? "on" : "off")}   Sound: {(debug == null || debug.NewAcoustics ? (debug != null && debug.ForceIndoor ? "indoor" : "on") : "off")}   Baked: {(LightmapSettings.lightmaps.Length > 0 ? "on" : "off")}";
             var rect = new Rect(Screen.width - 900, 12, 888, 26);
             GUI.color = Color.black;
             GUI.Label(new Rect(rect.x + 1, rect.y + 1, rect.width, rect.height), text, style);

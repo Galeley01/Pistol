@@ -22,8 +22,10 @@ namespace Pistol.Audio
         sealed class Voice
         {
             public AudioSource Source;
+            public AudioLowPassFilter LowPass;
             public Transform Follow;
             public float StartTime;
+            public float End = -1f, Fade, Volume;   // cut at End (clip seconds) after fading out for Fade
         }
 
         readonly List<Voice> pool = new List<Voice>();
@@ -47,7 +49,9 @@ namespace Pistol.Audio
                 go.transform.SetParent(transform, false);
                 var source = go.AddComponent<AudioSource>();
                 source.playOnAwake = false;
-                pool.Add(new Voice { Source = source });
+                var lowPass = go.AddComponent<AudioLowPassFilter>();
+                lowPass.cutoffFrequency = FullRange;
+                pool.Add(new Voice { Source = source, LowPass = lowPass });
             }
         }
 
@@ -58,6 +62,26 @@ namespace Pistol.Audio
         public void Play(SoundEvent sound, Vector3 position, float volumeScale, float pitchScale, float delay)
             => PlayVoice(sound, position, null, volumeScale, 0f, pitchScale, delay);
 
+        // The same, muffled: only frequencies below lowPass (Hz) are heard (an echo, a sound from far away).
+        // Not in WebGL (no audio filters there): the sound plays unmuffled.
+        public void PlayMuffled(SoundEvent sound, Vector3 position, float volumeScale, float pitchScale, float delay, float lowPass)
+            => PlayVoice(sound, position, null, volumeScale, 0f, pitchScale, delay, true, lowPass);
+
+        const float FullRange = 22000f;
+
+        // A gunshot: the shot itself on the muzzle, and the place answers it (RangeAcoustics: tail, echoes, reverb).
+        // Without acoustics (or with them switched off for comparison) the shot plays in full, as recorded.
+        [SerializeField, Tooltip("Звук окружения выстрела (хвост, эхо, реверберация). Пусто — выстрел звучит как записан")]
+        RangeAcoustics acoustics;
+
+        public void PlayShot(SoundEvent sound, Transform muzzle, float volumeScale = 1f)
+        {
+            if (muzzle == null) return;
+            bool placed = acoustics != null && acoustics.Active;
+            PlayVoice(sound, muzzle.position, muzzle, volumeScale, 0f, 1f, 0f, useEnd: placed);
+            if (placed) acoustics.OnShot(muzzle.position, muzzle.forward, volumeScale);
+        }
+
         // Plays the event and keeps it on the object while it sounds (a weapon in the hands).
         // startAt > 0 skips the start of the clip, sec (to line a moment inside the clip up with an event)
         public void Play(SoundEvent sound, Transform follow, float volumeScale = 1f, float startAt = 0f)
@@ -67,7 +91,7 @@ namespace Pistol.Audio
         }
 
         void PlayVoice(SoundEvent sound, Vector3 position, Transform follow, float volumeScale, float startAt,
-                       float pitchScale = 1f, float delay = 0f)
+                       float pitchScale = 1f, float delay = 0f, bool useEnd = true, float lowPass = FullRange)
         {
             if (sound == null) return;
             var clip = sound.PickClip();
@@ -79,7 +103,12 @@ namespace Pistol.Audio
             voice.Source.transform.position = position;
             sound.ApplyTo(voice.Source, volumeScale, pitchScale);
             voice.Source.clip = clip;
+            startAt += sound.startTime;   // silence at the start of the file is skipped
             voice.Source.time = startAt > 0f ? Mathf.Min(startAt, Mathf.Max(clip.length - 0.01f, 0f)) : 0f;
+            voice.End = useEnd && sound.endTime > 0f ? sound.endTime : -1f;
+            voice.Fade = Mathf.Max(sound.endFade, 0.001f);
+            voice.Volume = voice.Source.volume;
+            if (voice.LowPass != null) voice.LowPass.cutoffFrequency = Mathf.Clamp(lowPass, 10f, FullRange);
             if (delay > 0f) voice.Source.PlayDelayed(delay);
             else voice.Source.Play();
             if (debug != null && debug.SoundPlays) Debug.Log($"GameAudio: {sound.name} ({clip.name})", this);
@@ -102,6 +131,13 @@ namespace Pistol.Audio
         {
             foreach (var v in pool)
             {
+                // A clip cut short: fade out and stop at its end time
+                if (v.End > 0f && v.Source.isPlaying)
+                {
+                    float t = v.Source.time;
+                    if (t >= v.End) { v.Source.Stop(); v.End = -1f; }
+                    else if (t > v.End - v.Fade) v.Source.volume = v.Volume * (v.End - t) / v.Fade;
+                }
                 if (v.Follow == null) continue;
                 if (!v.Source.isPlaying) { v.Follow = null; continue; }
                 v.Source.transform.position = v.Follow.position;

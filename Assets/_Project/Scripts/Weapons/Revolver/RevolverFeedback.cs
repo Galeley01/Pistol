@@ -109,7 +109,7 @@ namespace Pistol.Weapons.Revolver
 
             if (muzzleFx != null) muzzleFx.Play();
 
-            PlaySound(shotSound);
+            if (shotSound != null && gameAudio != null) gameAudio.PlayShot(shotSound, muzzle);   // the place answers it
         }
 
         void OnDryFire() => PlaySound(dryFireSound);

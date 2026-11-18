@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45117b4c4e4b4b5eb1292a94e4159d9d, type: 3}
+  m_Name: Shot_Echo
+  m_EditorClassIdentifier: 
+  clips:
+  - {fileID: 8300000, guid: 3c7c5fb7c6fb4ba0ba4b2d53f525b7ad, type: 3}
+  volume: 0.8
+  volumeVariation: 0
+  pitchVariation: 0.05
+  output: {fileID: -8782065544116352652, guid: 8258bc5ef14b049daa82173ecb21c269, type: 2}
+  startTime: 0
+  endTime: 0
+  endFade: 0.2
+  priority: 128
+  spatialBlend: 0.85
+  spread: 90
+  minDistance: 400
+  maxDistance: 1000
+  rolloff: 0
+  dopplerLevel: 0

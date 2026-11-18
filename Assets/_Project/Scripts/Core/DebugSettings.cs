@@ -44,6 +44,10 @@ namespace Pistol.Core
         public bool newSky = true;
         [BoxGroup("Сравнение вида"), Tooltip("Новая камера: поле зрения 70° и слабое искажение линзы. Выкл — как было (90° и сильное искажение)")]
         public bool newCamera = true;
+        [BoxGroup("Сравнение вида"), Tooltip("Новый звук окружения: хвост выстрела, эхо от стен и холмов, реверберация. Выкл — выстрел как записан")]
+        public bool newAcoustics = true;
+        [BoxGroup("Сравнение вида"), Tooltip("Проверка: звучать как в закрытом тире, где бы ни стоял (иначе — по зонам, по умолчанию улица)")]
+        public bool forceIndoor = false;
         [BoxGroup("Сравнение вида"), EnableIf("NotPlaying")]
         [Tooltip("Запечённый свет (карты освещения). Переключается только вне Play: вкл — запекается заново (несколько минут), " +
                  "выкл — запечённое убирается, неподвижное освещено только общим светом неба. Потом сохраните сцену")]
@@ -83,6 +87,13 @@ namespace Pistol.Core
         public bool NewPostFx => !Allowed || newPostFx;
         public bool NewSky => !Allowed || newSky;
         public bool NewCamera => !Allowed || newCamera;
+        public bool NewAcoustics => !Allowed || (newAcoustics && !AllOld);
+        public bool ForceIndoor => Allowed && forceIndoor;
+
+        // Key 4 (LookSwitcher): everything as before this work, for the moment (not saved)
+        [System.NonSerialized] bool allOld;
+        public bool AllOld => Allowed && allOld;
+        public void SetAllOld(bool on) => allOld = on;
         public void SetNewPostFx(bool on) => newPostFx = on;
 
         public float CloseSlowMotion => Allowed ? Mathf.Clamp(closeSlowMotion, 0.02f, 1f) : 1f;
