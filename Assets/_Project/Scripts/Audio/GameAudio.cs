@@ -54,6 +54,10 @@ namespace Pistol.Audio
         // Plays the event at a point in the world
         public void Play(SoundEvent sound, Vector3 position, float volumeScale = 1f) => PlayVoice(sound, position, null, volumeScale, 0f);
 
+        // At a point, with the pitch multiplied and a delay before it starts, sec (sound travelling from far away)
+        public void Play(SoundEvent sound, Vector3 position, float volumeScale, float pitchScale, float delay)
+            => PlayVoice(sound, position, null, volumeScale, 0f, pitchScale, delay);
+
         // Plays the event and keeps it on the object while it sounds (a weapon in the hands).
         // startAt > 0 skips the start of the clip, sec (to line a moment inside the clip up with an event)
         public void Play(SoundEvent sound, Transform follow, float volumeScale = 1f, float startAt = 0f)
@@ -62,7 +66,8 @@ namespace Pistol.Audio
             PlayVoice(sound, follow.position, follow, volumeScale, startAt);
         }
 
-        void PlayVoice(SoundEvent sound, Vector3 position, Transform follow, float volumeScale, float startAt)
+        void PlayVoice(SoundEvent sound, Vector3 position, Transform follow, float volumeScale, float startAt,
+                       float pitchScale = 1f, float delay = 0f)
         {
             if (sound == null) return;
             var clip = sound.PickClip();
@@ -72,10 +77,11 @@ namespace Pistol.Audio
             voice.Follow = follow;
             voice.StartTime = Time.unscaledTime;
             voice.Source.transform.position = position;
-            sound.ApplyTo(voice.Source, volumeScale);
+            sound.ApplyTo(voice.Source, volumeScale, pitchScale);
             voice.Source.clip = clip;
             voice.Source.time = startAt > 0f ? Mathf.Min(startAt, Mathf.Max(clip.length - 0.01f, 0f)) : 0f;
-            voice.Source.Play();
+            if (delay > 0f) voice.Source.PlayDelayed(delay);
+            else voice.Source.Play();
             if (debug != null && debug.SoundPlays) Debug.Log($"GameAudio: {sound.name} ({clip.name})", this);
         }
 

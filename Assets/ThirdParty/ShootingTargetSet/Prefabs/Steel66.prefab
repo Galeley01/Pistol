@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8464430034211850929}
+  - component: {fileID: 6301710632223379565}
   m_Layer: 0
   m_Name: Steel66
   m_TagString: Untagged
@@ -32,6 +33,19 @@ Transform:
   - {fileID: 8332594396795736947}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6301710632223379565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 126976205774892410}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d27029be997d4a998c452738df97f7a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
 --- !u!1 &2189607114132830938
 GameObject:
   m_ObjectHideFlags: 0

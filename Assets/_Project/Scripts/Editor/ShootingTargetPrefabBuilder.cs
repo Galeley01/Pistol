@@ -54,12 +54,12 @@ namespace Pistol.EditorTools
             G("DuelTree", "DuelTree_Stand", Join("DuelTree_Stand", Seq("DuelTree_Target_", 6)), Seq("DuelTree_Target_", 6)),
             G("HostageSteel", "HostageSteel", Join("HostageSteel", "HostageSteel_Target"), Join("HostageSteel_Target")),
             G("PlateRack", "PlateRack_Stand", Join("PlateRack_Stand", "PlateRack_ResetArm", Seq("PlateRack_Plate_", 6)),
-                Join("PlateRack_ResetArm", Seq("PlateRack_Plate_", 6))),
+                Seq("PlateRack_Plate_", 6)),   // the reset arm's box would cover the plates: it gets a MeshCollider
             G("SpinningPlateRack", "SpinningPlateRack_Stand",
                 Join("SpinningPlateRack_Stand", "SpinningPlateRack_Rack", Seq("SpinningPlateRack_Plate_", 8)),
                 Seq("SpinningPlateRack_Plate_", 8)),
             G("TexasStar", "TexasStar_Stand", Join("TexasStar_Stand", "TexasStar_Arm", Seq("TexasStar_Plate_", 5)),
-                Join("TexasStar_Arm", Seq("TexasStar_Plate_", 5))),
+                Seq("TexasStar_Plate_", 5)),   // the arm's box would cover the plates: it gets a MeshCollider
             G("GongTarget", "GongTarget_Frame", Join("GongTarget_Frame", "GongTarget_Plate"), Join("GongTarget_Plate")),
             G("PaperTarget", "PaperTarget_Stand", Join("PaperTarget_Stand", "PaperTarget_Card")),
             G("Steel10Inch", "Steel10Inch", Join("Steel10Inch")),

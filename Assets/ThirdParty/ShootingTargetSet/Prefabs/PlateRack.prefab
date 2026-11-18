@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4703652299789623}
   - component: {fileID: 8341046773059263145}
   - component: {fileID: 7973373676829392275}
+  - component: {fileID: 1031152945292776075}
   m_Layer: 0
   m_Name: PlateRack_Plate_02
   m_TagString: Untagged
@@ -108,6 +109,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20319998, y: 0.25754887, z: 0.04657994}
   m_Center: {x: -0.00000059604645, y: 0.105361596, z: 0.0065926593}
+--- !u!114 &1031152945292776075
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1970575047909453114}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 0
+  axis: {x: 1, y: 0, z: 0}
+  angle: 85
+  direction: 2
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &3073462177445070846
 GameObject:
   m_ObjectHideFlags: 0
@@ -120,6 +142,7 @@ GameObject:
   - component: {fileID: 4702277461348412942}
   - component: {fileID: 3240519674942574590}
   - component: {fileID: 9174108568475039192}
+  - component: {fileID: 4817755380101188136}
   m_Layer: 0
   m_Name: PlateRack_Plate_01
   m_TagString: Untagged
@@ -216,6 +239,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.2032, y: 0.25754887, z: 0.046579942}
   m_Center: {x: -0.00000023841858, y: 0.105361566, z: 0.00659265}
+--- !u!114 &4817755380101188136
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3073462177445070846}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 0
+  axis: {x: 1, y: 0, z: 0}
+  angle: 85
+  direction: 2
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &4443684254750359175
 GameObject:
   m_ObjectHideFlags: 0
@@ -228,6 +272,7 @@ GameObject:
   - component: {fileID: 2427537524088621619}
   - component: {fileID: 4242305964650486343}
   - component: {fileID: 8094196457589602976}
+  - component: {fileID: 6300515226589578296}
   m_Layer: 0
   m_Name: PlateRack_Plate_03
   m_TagString: Untagged
@@ -324,6 +369,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20319997, y: 0.25754887, z: 0.04657994}
   m_Center: {x: -0.00000047683716, y: 0.105361566, z: 0.006592652}
+--- !u!114 &6300515226589578296
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4443684254750359175}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 0
+  axis: {x: 1, y: 0, z: 0}
+  angle: 85
+  direction: 2
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &6004673953833732714
 GameObject:
   m_ObjectHideFlags: 0
@@ -336,6 +402,7 @@ GameObject:
   - component: {fileID: 8889406519045394106}
   - component: {fileID: 3226480235697709326}
   - component: {fileID: 1476989164712056378}
+  - component: {fileID: 8922976381638492165}
   m_Layer: 0
   m_Name: PlateRack_Plate_04
   m_TagString: Untagged
@@ -432,6 +499,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20320003, y: 0.25754887, z: 0.046579935}
   m_Center: {x: 0.0000006854534, y: 0.10536167, z: 0.0065926844}
+--- !u!114 &8922976381638492165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6004673953833732714}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 0
+  axis: {x: 1, y: 0, z: 0}
+  angle: 85
+  direction: 2
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &7062693774065635990
 GameObject:
   m_ObjectHideFlags: 0
@@ -444,6 +532,7 @@ GameObject:
   - component: {fileID: 3588979120602986227}
   - component: {fileID: 5117698448234526855}
   - component: {fileID: 9184642591898739957}
+  - component: {fileID: 4307479777501024796}
   m_Layer: 0
   m_Name: PlateRack_Plate_06
   m_TagString: Untagged
@@ -540,6 +629,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20320009, y: 0.25754887, z: 0.046579942}
   m_Center: {x: 0.0000006854534, y: 0.10536159, z: 0.0065926528}
+--- !u!114 &4307479777501024796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7062693774065635990}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 0
+  axis: {x: 1, y: 0, z: 0}
+  angle: 85
+  direction: 2
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &7809964188061641702
 GameObject:
   m_ObjectHideFlags: 0
@@ -551,7 +661,7 @@ GameObject:
   - component: {fileID: 232969645761579077}
   - component: {fileID: 7711079394887821255}
   - component: {fileID: 1846420184459771254}
-  - component: {fileID: 8190184218785223050}
+  - component: {fileID: 4541428260501459871}
   m_Layer: 0
   m_Name: PlateRack_ResetArm
   m_TagString: Untagged
@@ -627,8 +737,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &8190184218785223050
-BoxCollider:
+--- !u!64 &4541428260501459871
+MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -645,9 +755,10 @@ BoxCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 2.3629818, y: 0.40434292, z: 0.3048174}
-  m_Center: {x: 0.0023950934, y: 0.18220685, z: -0.13244401}
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 5481310863296684928, guid: 99dd392bf3224484b1fdedb95e6e9c25, type: 3}
 --- !u!1 &8437204311838436729
 GameObject:
   m_ObjectHideFlags: 0
@@ -808,6 +919,7 @@ GameObject:
   - component: {fileID: 6979517598010290820}
   - component: {fileID: 8632259738501127889}
   - component: {fileID: 2002722865320030650}
+  - component: {fileID: 1615970653586058318}
   m_Layer: 0
   m_Name: PlateRack_Plate_05
   m_TagString: Untagged
@@ -904,3 +1016,24 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.2032001, y: 0.25754887, z: 0.04657994}
   m_Center: {x: 0.0000009536743, y: 0.10536161, z: 0.006592652}
+--- !u!114 &1615970653586058318
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8721831312680319392}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 0
+  axis: {x: 1, y: 0, z: 0}
+  angle: 85
+  direction: 2
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14

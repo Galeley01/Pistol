@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: daa808a5b454482e84f6dee1e7451ba1, type: 3}
+  m_Name: Steel_Impact
+  m_EditorClassIdentifier: 
+  direct: {fileID: 11400000, guid: 4f73ffaff5cd4c0390dc1a7e72efdeea, type: 2}
+  glancing: {fileID: 11400000, guid: 8b2abc0a231747439e1ed54cc860b22a, type: 2}
+  glancingFrom: 45
+  glancingFull: 75
+  grazingVolume: 0.45
+  grazingPitch: 1.25
+  speedInfluence: 0.5
+  referenceSpeed: 440
+  delayBySpeedOfSound: 1
+  speedOfSound: 343

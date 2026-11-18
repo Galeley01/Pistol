@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6129760833791307771}
   - component: {fileID: 3163290187836249209}
   - component: {fileID: 2374324845896428620}
+  - component: {fileID: 6996578520117015534}
   m_Layer: 0
   m_Name: SpinningPlateRack_Plate_01
   m_TagString: Untagged
@@ -108,6 +109,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.2032001, y: 0.28166777, z: 0.009525051}
   m_Center: {x: 1.8920414e-23, y: 0.029207364, z: -0.000000005355105}
+--- !u!114 &6996578520117015534
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200548726715098026}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 2
+  axis: {x: 1, y: 0, z: 0}
+  angle: 180
+  direction: 0
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &317652569942646076
 GameObject:
   m_ObjectHideFlags: 0
@@ -120,6 +142,7 @@ GameObject:
   - component: {fileID: 7298322356756642347}
   - component: {fileID: 7475959329394758954}
   - component: {fileID: 3814762820816728581}
+  - component: {fileID: 3817156857883068057}
   m_Layer: 0
   m_Name: SpinningPlateRack_Plate_02
   m_TagString: Untagged
@@ -216,6 +239,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.2032001, y: 0.28166777, z: 0.009525194}
   m_Center: {x: -0.00000012293458, y: -0.02920742, z: 0.000000029336661}
+--- !u!114 &3817156857883068057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 317652569942646076}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 2
+  axis: {x: 1, y: 0, z: 0}
+  angle: 180
+  direction: 0
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &999762575803977208
 GameObject:
   m_ObjectHideFlags: 0
@@ -269,6 +313,7 @@ GameObject:
   - component: {fileID: 5101214339813786697}
   - component: {fileID: 160120725319280709}
   - component: {fileID: 1637901115252271216}
+  - component: {fileID: 6200095744771279788}
   m_Layer: 0
   m_Name: SpinningPlateRack_Plate_04
   m_TagString: Untagged
@@ -365,6 +410,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20320004, y: 0.28166777, z: 0.009525193}
   m_Center: {x: -0.000000033527613, y: -0.029207412, z: 0.000000029802322}
+--- !u!114 &6200095744771279788
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1076285593652880273}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 2
+  axis: {x: 1, y: 0, z: 0}
+  angle: 180
+  direction: 0
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &1179756203522961967
 GameObject:
   m_ObjectHideFlags: 0
@@ -377,6 +443,7 @@ GameObject:
   - component: {fileID: 8447880958840684475}
   - component: {fileID: 1714950766353120827}
   - component: {fileID: 5862494382926835683}
+  - component: {fileID: 2660551747169277520}
   m_Layer: 0
   m_Name: SpinningPlateRack_Plate_08
   m_TagString: Untagged
@@ -473,6 +540,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.2032, y: 0.28166777, z: 0.009525051}
   m_Center: {x: -0.000000014901161, y: 0.029207252, z: 0.000000024680048}
+--- !u!114 &2660551747169277520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1179756203522961967}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 2
+  axis: {x: 1, y: 0, z: 0}
+  angle: 180
+  direction: 0
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &2578433094478314561
 GameObject:
   m_ObjectHideFlags: 0
@@ -485,6 +573,7 @@ GameObject:
   - component: {fileID: 6398729264438438577}
   - component: {fileID: 6700738109730512751}
   - component: {fileID: 3875614031446895623}
+  - component: {fileID: 5478908211861615925}
   m_Layer: 0
   m_Name: SpinningPlateRack_Plate_05
   m_TagString: Untagged
@@ -581,6 +670,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20319998, y: 0.28166777, z: 0.009525146}
   m_Center: {x: -0.000000026077032, y: -0.029207356, z: 2.3283064e-10}
+--- !u!114 &5478908211861615925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2578433094478314561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 2
+  axis: {x: 1, y: 0, z: 0}
+  angle: 180
+  direction: 0
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &3932860649641026803
 GameObject:
   m_ObjectHideFlags: 0
@@ -811,6 +921,7 @@ GameObject:
   - component: {fileID: 5217633636673350201}
   - component: {fileID: 8427249499344055601}
   - component: {fileID: 2813126617477535675}
+  - component: {fileID: 8335840111485624856}
   m_Layer: 0
   m_Name: SpinningPlateRack_Plate_06
   m_TagString: Untagged
@@ -907,6 +1018,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20319997, y: 0.28166777, z: 0.009525051}
   m_Center: {x: 1.89204e-23, y: 0.029207341, z: 0.00000002514571}
+--- !u!114 &8335840111485624856
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5532748697887467761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 2
+  axis: {x: 1, y: 0, z: 0}
+  angle: 180
+  direction: 0
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &7892867336692871000
 GameObject:
   m_ObjectHideFlags: 0
@@ -919,6 +1051,7 @@ GameObject:
   - component: {fileID: 828959193813009849}
   - component: {fileID: 873937896854271330}
   - component: {fileID: 733285579752112808}
+  - component: {fileID: 114478215746230795}
   m_Layer: 0
   m_Name: SpinningPlateRack_Plate_03
   m_TagString: Untagged
@@ -1015,6 +1148,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20320004, y: 0.28166777, z: 0.009525051}
   m_Center: {x: -0.0000001527369, y: 0.029207293, z: 0.000000024447218}
+--- !u!114 &114478215746230795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7892867336692871000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 2
+  axis: {x: 1, y: 0, z: 0}
+  angle: 180
+  direction: 0
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &7943294289540082881
 GameObject:
   m_ObjectHideFlags: 0
@@ -1027,6 +1181,7 @@ GameObject:
   - component: {fileID: 6393616204140729634}
   - component: {fileID: 4137845013131490621}
   - component: {fileID: 3667593622562209740}
+  - component: {fileID: 459720384960585317}
   m_Layer: 0
   m_Name: SpinningPlateRack_Plate_07
   m_TagString: Untagged
@@ -1123,3 +1278,24 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.20320001, y: 0.28166777, z: 0.009525146}
   m_Center: {x: -1.8920412e-23, y: -0.02920742, z: -2.3283064e-10}
+--- !u!114 &459720384960585317
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7943294289540082881}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 2
+  axis: {x: 1, y: 0, z: 0}
+  angle: 180
+  direction: 0
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14

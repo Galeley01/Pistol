@@ -45,6 +45,7 @@ GameObject:
   - component: {fileID: 7004286429660466677}
   - component: {fileID: 9043007685355828971}
   - component: {fileID: 3674100326821104264}
+  - component: {fileID: 3536527592703517017}
   m_Layer: 0
   m_Name: HostageSteel_Target
   m_TagString: Untagged
@@ -141,6 +142,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.23071711, y: 0.15641144, z: 0.03497339}
   m_Center: {x: -0.10714466, y: -0.050674204, z: -0.0023896703}
+--- !u!114 &3536527592703517017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2651199366977961050}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 0
+  axis: {x: 0, y: 0, z: 1}
+  angle: 90
+  direction: 1
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &5758342812997322493
 GameObject:
   m_ObjectHideFlags: 0

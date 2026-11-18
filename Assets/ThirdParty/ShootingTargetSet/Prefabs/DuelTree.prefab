@@ -121,6 +121,7 @@ GameObject:
   - component: {fileID: 2877869121874282078}
   - component: {fileID: 5240959205017905758}
   - component: {fileID: 4018454704209402067}
+  - component: {fileID: 2613740586486970631}
   m_Layer: 0
   m_Name: DuelTree_Target_05
   m_TagString: Untagged
@@ -217,6 +218,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.26691565, y: 0.15639347, z: 0.035025496}
   m_Center: {x: -0.12519221, y: -0.050683707, z: -0.0025208488}
+--- !u!114 &2613740586486970631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 810103296670082466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 1
+  axis: {x: 0, y: 0, z: 1}
+  angle: 138
+  direction: 1
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &2496496191700818293
 GameObject:
   m_ObjectHideFlags: 0
@@ -267,6 +289,7 @@ GameObject:
   - component: {fileID: 2645528769202691880}
   - component: {fileID: 7726938055245646024}
   - component: {fileID: 8253531707652681853}
+  - component: {fileID: 2568630091142615886}
   m_Layer: 0
   m_Name: DuelTree_Target_01
   m_TagString: Untagged
@@ -363,6 +386,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.26691565, y: 0.1563935, z: 0.035025496}
   m_Center: {x: -0.12519221, y: -0.050683048, z: -0.0025208488}
+--- !u!114 &2568630091142615886
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2630523415077636939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 1
+  axis: {x: 0, y: 0, z: 1}
+  angle: 138
+  direction: 1
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &6038489369043936043
 GameObject:
   m_ObjectHideFlags: 0
@@ -375,6 +419,7 @@ GameObject:
   - component: {fileID: 2651675186395284545}
   - component: {fileID: 7426736161306265007}
   - component: {fileID: 7934317959632236715}
+  - component: {fileID: 181170096673876839}
   m_Layer: 0
   m_Name: DuelTree_Target_06
   m_TagString: Untagged
@@ -471,6 +516,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.2668593, y: 0.15640937, z: 0.03497339}
   m_Center: {x: 0.12521827, y: -0.050673984, z: 0.0023931144}
+--- !u!114 &181170096673876839
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6038489369043936043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 1
+  axis: {x: 0, y: 0, z: 1}
+  angle: 138
+  direction: 1
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &6794249848319843892
 GameObject:
   m_ObjectHideFlags: 0
@@ -483,6 +549,7 @@ GameObject:
   - component: {fileID: 8027385027832650048}
   - component: {fileID: 4933234554814049224}
   - component: {fileID: 7381096277025383777}
+  - component: {fileID: 2615519031045133045}
   m_Layer: 0
   m_Name: DuelTree_Target_02
   m_TagString: Untagged
@@ -579,6 +646,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.2668593, y: 0.15640938, z: 0.03497339}
   m_Center: {x: 0.12521827, y: -0.050674032, z: 0.0023931144}
+--- !u!114 &2615519031045133045
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6794249848319843892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 1
+  axis: {x: 0, y: 0, z: 1}
+  angle: 138
+  direction: 1
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &8722516657518179082
 GameObject:
   m_ObjectHideFlags: 0
@@ -591,6 +679,7 @@ GameObject:
   - component: {fileID: 5012663531674399095}
   - component: {fileID: 6140382669238425834}
   - component: {fileID: 7623983894664579826}
+  - component: {fileID: 2425018791570498757}
   m_Layer: 0
   m_Name: DuelTree_Target_04
   m_TagString: Untagged
@@ -687,6 +776,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.2668593, y: 0.15640938, z: 0.03497339}
   m_Center: {x: 0.12521827, y: -0.05067426, z: 0.0023931144}
+--- !u!114 &2425018791570498757
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8722516657518179082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 1
+  axis: {x: 0, y: 0, z: 1}
+  angle: 138
+  direction: 1
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14
 --- !u!1 &8897768911361461474
 GameObject:
   m_ObjectHideFlags: 0
@@ -699,6 +809,7 @@ GameObject:
   - component: {fileID: 8816095966869951207}
   - component: {fileID: 7514667250906825197}
   - component: {fileID: 7926131991871127295}
+  - component: {fileID: 8343287901918529584}
   m_Layer: 0
   m_Name: DuelTree_Target_03
   m_TagString: Untagged
@@ -795,3 +906,24 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.26691565, y: 0.1563935, z: 0.035025496}
   m_Center: {x: -0.12519221, y: -0.050683513, z: -0.0025208488}
+--- !u!114 &8343287901918529584
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8897768911361461474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+  kind: 1
+  axis: {x: 0, y: 0, z: 1}
+  angle: 138
+  direction: 1
+  invert: 0
+  duration: 0.22
+  bounce: 0.08
+  bounceTime: 0.14

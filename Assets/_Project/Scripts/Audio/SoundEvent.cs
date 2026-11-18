@@ -49,13 +49,13 @@ namespace Pistol.Audio
             return clips[i];
         }
 
-        // Puts all settings of this event onto the source (before Play)
-        public void ApplyTo(AudioSource source, float volumeScale = 1f)
+        // Puts all settings of this event onto the source (before Play); pitchScale multiplies the pitch
+        public void ApplyTo(AudioSource source, float volumeScale = 1f, float pitchScale = 1f)
         {
             source.outputAudioMixerGroup = output;
             source.priority = priority;
             source.volume = volume * volumeScale * (1f - Random.Range(0f, volumeVariation));
-            source.pitch = 1f + Random.Range(-pitchVariation, pitchVariation);
+            source.pitch = (1f + Random.Range(-pitchVariation, pitchVariation)) * pitchScale;
             source.spatialBlend = spatialBlend;
             source.spread = spread;
             source.minDistance = minDistance;

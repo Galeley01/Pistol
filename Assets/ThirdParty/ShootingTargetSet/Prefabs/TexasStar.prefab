@@ -119,7 +119,7 @@ GameObject:
   - component: {fileID: 7100132554418804829}
   - component: {fileID: 1789781580485983180}
   - component: {fileID: 5021272022255050644}
-  - component: {fileID: 5423055053053375593}
+  - component: {fileID: 2959675051365455816}
   m_Layer: 0
   m_Name: TexasStar_Arm
   m_TagString: Untagged
@@ -195,8 +195,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &5423055053053375593
-BoxCollider:
+--- !u!64 &2959675051365455816
+MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -213,9 +213,10 @@ BoxCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1.1861691, y: 1.130724, z: 0.28451824}
-  m_Center: {x: 0.0012872517, y: 0.044195354, z: -0.12068251}
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 2405689725367848144, guid: 99dd392bf3224484b1fdedb95e6e9c25, type: 3}
 --- !u!1 &1876922526543801792
 GameObject:
   m_ObjectHideFlags: 0
