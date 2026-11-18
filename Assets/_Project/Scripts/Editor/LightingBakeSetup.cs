@@ -15,16 +15,8 @@ namespace Pistol.EditorTools
     //   - a light probe grid and a baked reflection probe over the range;
     //   - the bake starts (a few minutes, progress bottom right). Save the scene when it is done.
     // Menu: Pistol > Bake Lighting. Pistol > Remove Baked Lighting goes back to the look before (for a before / after look).
-    [InitializeOnLoad]
     public static class LightingBakeSetup
     {
-        // DebugSettings > Baked Light switched outside Play: bake, or remove the bake
-        static LightingBakeSetup()
-        {
-            Pistol.Core.DebugSettings.BakedLightSwitched += on =>
-                EditorApplication.delayCall += () => { if (on) Bake(); else Remove(); };
-        }
-
         const string SettingsPath = "Assets/_Project/Environment/Lighting_Range.lighting";
         const string TargetModelPath = "Assets/ThirdParty/ShootingTargetSet/Models/ShootingTargetCollection.fbx";
         const float GroundScaleInLightmap = 0.04f;   // the 1500 m plane: ~0.4 texel per metre at resolution 10

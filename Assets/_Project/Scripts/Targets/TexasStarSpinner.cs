@@ -32,6 +32,7 @@ namespace Pistol.Targets
         void Awake()
         {
             rest = transform.localRotation;
+            MakeKinematic();   // the plates hanging on the arm turn with it as parts of this body
             var root = transform.parent;
             if (root == null) return;
             foreach (var plate in root.GetComponentsInChildren<DetachingPlate>(true))

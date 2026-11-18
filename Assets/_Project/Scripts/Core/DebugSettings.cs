@@ -63,30 +63,11 @@ namespace Pistol.Core
         [BoxGroup("Сравнение вида"), Tooltip("Какой след в бетоне: фото, наклейка из скана (вход / выход пули), объёмная воронка из скана, или каждый раз случайный. " +
                                               "Действует на новые выстрелы")]
         public HoleStyle bulletHoleStyle = HoleStyle.AsInSurfaceTable;
-        [BoxGroup("Сравнение вида"), EnableIf("NotPlaying")]
-        [Tooltip("Запечённый свет (карты освещения). Переключается только вне Play: вкл — запекается заново (несколько минут), " +
-                 "выкл — запечённое убирается, неподвижное освещено только общим светом неба. Потом сохраните сцену")]
-        public bool bakedLight = true;
-
-        bool NotPlaying() => !Application.isPlaying;
-
-        // The editor bakes or removes the baked light when the switch changes outside Play (LightingBakeSetup listens)
-        public static event System.Action<bool> BakedLightSwitched;
-        [System.NonSerialized] bool lastBakedLight;
-        [System.NonSerialized] bool loaded;
-
-        void OnEnable()
-        {
-            lastBakedLight = bakedLight;
-            loaded = true;
-        }
-
-        void OnValidate()
-        {
-            if (!loaded || bakedLight == lastBakedLight) return;
-            lastBakedLight = bakedLight;
-            if (!Application.isPlaying) BakedLightSwitched?.Invoke(bakedLight);
-        }
+        // Baked light is baked or removed only by hand: Pistol > Bake Lighting / Remove Baked Lighting.
+        // (It used to follow a checkbox here, but OnValidate also fires on undo and on reimport after a branch switch,
+        // which could strip the bake from the open scene unasked.)
+        [ShowNativeProperty]
+        string BakedLight => LightmapSettings.lightmaps.Length > 0 ? "есть (Pistol → Remove Baked Lighting)" : "нет (Pistol → Bake Lighting)";
 
         // Editor and Development builds only
         public static bool Allowed => Debug.isDebugBuild;

@@ -5,7 +5,7 @@ using Pistol.Ballistics;
 namespace Pistol.Targets
 {
     // A plate that breaks off when hit (Texas star): it leaves the arm, gets a Rigidbody with the arm's motion
-    // and the bullet's push, and falls to the ground. While it lies there, more hits push it around.
+    // and its push from the bullet, and falls to the ground. While it lies there, more hits push it around (same push).
     // Reset hangs it back on the arm in its start place.
     //
     // Goes on the plate (next to its collider). TexasStarSpinner hangs it on the arm at start.
@@ -49,7 +49,13 @@ namespace Pistol.Targets
 
         protected override void OnHit(in BulletHit hit)
         {
-            if (body != null || arm == null) return;   // already lying: the bullet pushes it through the Rigidbody
+            if (body != null)
+            {
+                // Already lying: the plate's own push moves it (BulletSystem leaves the push of targets to them)
+                body.AddForceAtPosition(hit.direction * push, hit.point, ForceMode.Impulse);
+                return;
+            }
+            if (arm == null) return;
             Vector3 armVelocity = Time.deltaTime > 0f ? (transform.position - lastPosition) / Time.deltaTime : Vector3.zero;
             transform.SetParent(looseParent, true);
             body = gameObject.AddComponent<Rigidbody>();

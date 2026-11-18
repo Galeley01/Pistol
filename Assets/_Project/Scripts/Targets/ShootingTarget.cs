@@ -18,5 +18,17 @@ namespace Pistol.Targets
 
         // Back to the state it had at the start
         public abstract void ResetTarget();
+
+        // A part moved by code (a hinged plate, the spinning arm) needs a kinematic Rigidbody: without one the physics
+        // treats its collider as static, rebuilds the static scene on every move and doesn't push loose bodies with it
+        protected Rigidbody MakeKinematic()
+        {
+            var body = GetComponent<Rigidbody>();
+            if (body == null) body = gameObject.AddComponent<Rigidbody>();
+            body.isKinematic = true;
+            body.useGravity = false;
+            body.interpolation = RigidbodyInterpolation.None;
+            return body;
+        }
     }
 }

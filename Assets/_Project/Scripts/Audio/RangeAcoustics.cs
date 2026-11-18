@@ -41,14 +41,21 @@ namespace Pistol.Audio
         AcousticZone[] zones = System.Array.Empty<AcousticZone>();
         AcousticsProfile current;
         readonly List<(Collider collider, float distance, Vector3 point, Vector3 dir)> found = new List<(Collider, float, Vector3, Vector3)>();
-        static readonly RaycastHit[] hits = new RaycastHit[8];
+        static RaycastHit[] hits = new RaycastHit[8];
+        const int MaxHits = 256;
 
         // The nearest hit that isn't the shooter (the player's own capsule would stop every ray going backwards)
         bool FirstHit(Vector3 from, Vector3 dir, float distance, out RaycastHit hit)
         {
             hit = default;
             Transform self = listener != null ? listener.root : null;
+            // The buffer gets hits in no particular order: when it is full the nearest one may be missing, so grow it and ask again
             int n = Physics.RaycastNonAlloc(from, dir, hits, distance, echoMask, QueryTriggerInteraction.Ignore);
+            while (n == hits.Length && hits.Length < MaxHits)
+            {
+                hits = new RaycastHit[hits.Length * 2];
+                n = Physics.RaycastNonAlloc(from, dir, hits, distance, echoMask, QueryTriggerInteraction.Ignore);
+            }
             float best = float.MaxValue;
             for (int i = 0; i < n; i++)
             {

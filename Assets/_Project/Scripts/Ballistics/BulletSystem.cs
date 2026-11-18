@@ -63,7 +63,7 @@ namespace Pistol.Ballistics
 
         readonly Queue<Hole> holes = new Queue<Hole>();
         Transform holeRoot;
-        static readonly RaycastHit[] hitBuffer = new RaycastHit[16];
+        static RaycastHit[] hitBuffer = new RaycastHit[16];
 
         static Material sharedMaterial;
         static Mesh discMesh;
@@ -96,7 +96,8 @@ namespace Pistol.Ballistics
                 float left = seg.magnitude;
                 Vector3 dir = left > 0f ? seg / left : b.vel.normalized;
                 bool stopped = false;
-                for (int pass = 0; pass < MaxPassThrough && Raycast(from, dir, left, hitMask, b.ignoreRoot, out RaycastHit hit); pass++)
+                int pass = 0;
+                for (; pass < MaxPassThrough && Raycast(from, dir, left, hitMask, b.ignoreRoot, out RaycastHit hit); pass++)
                 {
                     b.travelled += hit.distance;
                     var through = hit.collider.GetComponentInParent<IBulletPassThrough>();
@@ -119,6 +120,15 @@ namespace Pistol.Ballistics
                     Finish(i);
                     stopped = true;
                     break;
+                }
+                // Too many cards crossed in one frame: whatever comes next stops the bullet, it never flies through a wall
+                if (!stopped && pass == MaxPassThrough && left > 0f && Raycast(from, dir, left, hitMask, b.ignoreRoot, out RaycastHit last))
+                {
+                    b.travelled += last.distance;
+                    b.path?.Add(last.point);
+                    OnHit(b, last, newVel.magnitude);
+                    Finish(i);
+                    stopped = true;
                 }
                 if (stopped) continue;
 
@@ -143,7 +153,13 @@ namespace Pistol.Ballistics
         {
             best = default;
             if (dist <= 0f) return false;
+            // The buffer gets hits in no particular order: when it is full the nearest one may be missing, so grow it and ask again
             int n = Physics.RaycastNonAlloc(from, dir.normalized, hitBuffer, dist, mask, QueryTriggerInteraction.Ignore);
+            while (n == hitBuffer.Length && hitBuffer.Length < MaxHitBuffer)
+            {
+                hitBuffer = new RaycastHit[hitBuffer.Length * 2];
+                n = Physics.RaycastNonAlloc(from, dir.normalized, hitBuffer, dist, mask, QueryTriggerInteraction.Ignore);
+            }
             float bestDist = float.MaxValue;
             bool found = false;
             for (int i = 0; i < n; i++)
@@ -155,7 +171,8 @@ namespace Pistol.Ballistics
             return found;
         }
 
-        const int MaxPassThrough = 4;            // surfaces a bullet may cross in one frame
+        const int MaxHitBuffer = 256;
+        const int MaxPassThrough = 8;            // surfaces a bullet may cross in one frame
         const float PassThroughStep = 0.006f;    // past the surface (a card is a few mm thick)
 
         static BulletHit MakeHit(Bullet b, RaycastHit hit, float speed) => new BulletHit
@@ -177,11 +194,13 @@ namespace Pistol.Ballistics
         {
             var info = MakeHit(b, hit, speed);
 
-            if (hit.rigidbody != null)
-                hit.rigidbody.AddForceAtPosition(info.direction * b.ammo.bulletMass * speed, hit.point, ForceMode.Impulse);
-
+            // One push per hit: a target (IDamageable) pushes itself with its own tuned push; anything else
+            // with a Rigidbody gets the bullet's momentum
             var target = hit.collider.GetComponentInParent<IDamageable>();
-            if (target is Object unityObj ? unityObj != null : target != null) target.TakeHit(info);
+            bool isTarget = target is Object unityObj ? unityObj != null : target != null;
+            if (!isTarget && hit.rigidbody != null && !hit.rigidbody.isKinematic)
+                hit.rigidbody.AddForceAtPosition(info.direction * b.ammo.bulletMass * speed, hit.point, ForceMode.Impulse);
+            if (isTarget) target.TakeHit(info);
 
             var decal = surfaceSounds != null && (debug == null || debug.NewBulletHoles) ? surfaceSounds.DecalFor(hit.collider.sharedMaterial) : null;
             if (decal != null && surfaceSounds != null && decal == surfaceSounds.defaultDecal) decal = StyleOverride(decal);

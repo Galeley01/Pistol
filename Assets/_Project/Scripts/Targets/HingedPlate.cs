@@ -50,6 +50,7 @@ namespace Pistol.Targets
         {
             rest = transform.localRotation;
             hasRest = true;
+            MakeKinematic();
             var mf = GetComponent<MeshFilter>();
             lever = mf != null && mf.sharedMesh != null ? mf.sharedMesh.bounds.center : Vector3.up;
         }

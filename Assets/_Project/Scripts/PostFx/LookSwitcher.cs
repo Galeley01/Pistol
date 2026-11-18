@@ -17,7 +17,7 @@ namespace Pistol.PostFx
     //   new camera — a narrower field of view and a weaker lens distortion, or the old wide ones;
     //   eye adaptation — auto exposure: the picture slowly brightens when the frame is dark and darkens on a bright
     //   one (no effect in WebGL: it needs compute shaders).
-    // The baked light is switched outside Play only (it needs a bake): DebugSettings > Baked Light, the label shows it.
+    // The baked light is switched outside Play only (it needs a bake): Pistol > Bake Lighting / Remove Baked Lighting, the label shows it.
     // A small label in the corner shows what is on. In a normal build everything new is on and nothing switches.
     //
     // Goes on the object with the look volume (Pistol > Create Look Volume makes it and fills the references).
@@ -220,7 +220,7 @@ namespace Pistol.PostFx
         void TestToggleAll() { if (Application.isPlaying) SetAllOld(!allOld); }
 
         // No baked light for a moment: static renderers drop their lightmap and take the sky's light like before
-        // the bake (a close look, not the exact scene without a bake: that is DebugSettings > Baked Light, outside Play)
+        // the bake (a close look, not the exact scene without a bake: that is Pistol > Remove Baked Lighting, outside Play)
         void ApplyBaked(bool on)
         {
             if (!on)
