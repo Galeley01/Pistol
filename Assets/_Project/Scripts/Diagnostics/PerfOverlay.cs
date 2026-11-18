@@ -8,6 +8,7 @@ using Unity.Profiling;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering.PostProcessing;
 using UnityEngine.InputSystem;
+using Pistol.Audio;
 using Pistol.Core;
 using Pistol.Player;
 using Pistol.PostFx;
@@ -81,6 +82,9 @@ namespace Pistol.Diagnostics
         readonly FrameTiming[] timings = new FrameTiming[1];
         float cpuMs, gpuMs = -1f;
         ProfilerRecorder systemMemory, gfxMemory, mainThreadRec, gcAllocRec;
+        // Render load (counted in the editor and in Development builds)
+        ProfilerRecorder drawCallsRec, batchesRec, setPassRec, trianglesRec, verticesRec, shadowCastersRec, textureMemRec, meshMemRec;
+        float renderMs;
 
         System.Diagnostics.Process process;
         TimeSpan lastCpuTime;
@@ -107,6 +111,9 @@ namespace Pistol.Diagnostics
         PlayerMovement movement;
         WeaponAim weaponAim;
         RevolverFire revolver;
+        LookSwitcher look;            // what of the new look is on (sky, light, post, camera)
+        RangeAcoustics acoustics;     // the sound of the place
+        int lookMask = -1;            // look state as bits: a change starts a new mode in the stats
         float refSearchTimer;
 
         // ---------- Game events ----------
@@ -132,6 +139,19 @@ namespace Pistol.Diagnostics
             readonly int[] bins = new int[2001];
             public int count, hitches;
             public float seconds, sumMs, maxMs;
+            // Where the frame time goes and how heavy the picture is (averaged over the mode)
+            public int loadCount, gpuCount;
+            public double cpuSum, renderSum, gpuSum, drawSum, batchSum, setPassSum, trisSum, vertsSum, shadowSum, gcSum;
+
+            public void AddLoad(float cpu, float render, float gpu, long draws, long batches, long setPass,
+                                long tris, long verts, long shadows, long gc)
+            {
+                loadCount++;
+                cpuSum += cpu; renderSum += render;
+                if (gpu > 0f) { gpuSum += gpu; gpuCount++; }
+                drawSum += draws; batchSum += batches; setPassSum += setPass;
+                trisSum += tris; vertsSum += verts; shadowSum += shadows; gcSum += gc;
+            }
 
             public void Add(float ms)
             {
@@ -187,6 +207,14 @@ namespace Pistol.Diagnostics
             gfxMemory = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Gfx Used Memory");
             mainThreadRec = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Main Thread", 1);
             gcAllocRec = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame", 1);
+            drawCallsRec = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count");
+            batchesRec = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Batches Count");
+            setPassRec = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count");
+            trianglesRec = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Triangles Count");
+            verticesRec = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Vertices Count");
+            shadowCastersRec = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Shadow Casters Count");
+            textureMemRec = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Texture Memory");
+            meshMemRec = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Mesh Memory");
             if (IsWeb) processCpuAvailable = false;   // not available in the browser
             else try
             {
@@ -217,6 +245,8 @@ namespace Pistol.Diagnostics
             gfxMemory.Dispose();
             mainThreadRec.Dispose();
             gcAllocRec.Dispose();
+            drawCallsRec.Dispose(); batchesRec.Dispose(); setPassRec.Dispose(); trianglesRec.Dispose();
+            verticesRec.Dispose(); shadowCastersRec.Dispose(); textureMemRec.Dispose(); meshMemRec.Dispose();
             if (process != null) { process.Dispose(); process = null; }
         }
 
@@ -294,7 +324,11 @@ namespace Pistol.Diagnostics
             {
                 cpuMs = (float)(timings[0].cpuMainThreadFrameTime - timings[0].cpuMainThreadPresentWaitTime);
                 gpuMs = timings[0].gpuFrameTime > 0 ? (float)timings[0].gpuFrameTime : -1f;
+                renderMs = (float)timings[0].cpuRenderThreadFrameTime;
             }
+            if (now >= settleUntil)
+                CurrentSegment().AddLoad(cpuMs, renderMs, gpuMs, drawCallsRec.LastValue, batchesRec.LastValue, setPassRec.LastValue,
+                                         trianglesRec.LastValue, verticesRec.LastValue, shadowCastersRec.LastValue, gcAllocRec.LastValue);
 
             accum += Time.unscaledDeltaTime;
             if (accum < UpdateInterval) return;
@@ -439,6 +473,8 @@ namespace Pistol.Diagnostics
             if (movement == null) movement = FindFirstObjectByType<PlayerMovement>();
             if (weaponAim == null) weaponAim = FindFirstObjectByType<WeaponAim>();
             if (revolver == null) revolver = FindFirstObjectByType<RevolverFire>();
+            if (look == null) look = FindFirstObjectByType<LookSwitcher>();
+            if (acoustics == null) acoustics = FindFirstObjectByType<RangeAcoustics>();
             if (ppLayer == null)
             {
                 var cam = Camera.main;
@@ -502,7 +538,81 @@ namespace Pistol.Diagnostics
             bool pp = ppLayer == null || ppLayer.enabled;
             string mb = motionBlurs.Count == 0 ? "none" : OnOff(motionBlurOn);
             return $"{Screen.width}x{Screen.height}, VSync {OnOff(VSyncOn)}, " +
-                   $"Motion Blur {mb}, post {OnOff(pp)}, screen fx {OnOff(screenFxOn)}";
+                   $"Motion Blur {mb}, post {OnOff(pp)}, screen fx {OnOff(screenFxOn)}, look {LookShort()}";
+        }
+
+        // ---------- The look of the scene: sky, light, post-processing, camera, sound (it affects FPS) ----------
+        int LookMask()
+        {
+            int m = 0;
+            if (look != null)
+            {
+                if (look.AllOld) m |= 1;
+                if (look.PostOn) m |= 2;
+                if (look.SkyNew) m |= 4;
+                if (look.CameraNew) m |= 8;
+                if (look.LightmapsUsed) m |= 16;
+            }
+            if (acoustics != null && acoustics.Active) m |= 32;
+            if (RenderSettings.fog) m |= 64;
+            return m;
+        }
+
+        string LookShort()
+        {
+            if (look == null) return "—";
+            if (look.AllOld) return "ALL OLD";
+            return $"post {OnOff(look.PostOn)}/sky {(look.SkyNew ? "HDRI" : "default")}/baked {OnOff(look.LightmapsUsed)}/" +
+                   $"cam {(look.CameraNew ? "new" : "old")}/sound {OnOff(acoustics != null && acoustics.Active)}";
+        }
+
+        // The full picture for the report: what exactly is drawn and heard
+        string LookDetails()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Look:");
+            sb.AppendLine($"  Switch (key 4): {(look == null ? "no LookSwitcher in the scene" : look.AllOld ? "ALL OLD" : "new")}");
+            var sky = RenderSettings.skybox;
+            var skyTex = sky != null && sky.HasProperty("_MainTex") ? sky.GetTexture("_MainTex") : null;
+            sb.AppendLine($"  Sky: {(sky != null ? sky.name : "none")}" +
+                          (skyTex != null ? $", texture {skyTex.width}x{skyTex.height} {(skyTex is Texture2D t2 ? t2.format.ToString() : skyTex.GetType().Name)}" : "") +
+                          $", ambient {RenderSettings.ambientMode}");
+            sb.AppendLine(RenderSettings.fog
+                ? $"  Fog: on, {RenderSettings.fogMode} {RenderSettings.fogStartDistance:F0}–{RenderSettings.fogEndDistance:F0} m"
+                : "  Fog: off");
+            var maps = LightmapSettings.lightmaps;
+            int maxMap = 0;
+            foreach (var lm in maps) if (lm.lightmapColor != null) maxMap = Mathf.Max(maxMap, lm.lightmapColor.width);
+            sb.AppendLine($"  Baked light: {maps.Length} lightmap(s){(maps.Length > 0 ? $" up to {maxMap}px" : "")}, " +
+                          $"{(look != null && !look.LightmapsUsed && maps.Length > 0 ? "not used now (old look)" : maps.Length > 0 ? "used" : "none")}; " +
+                          $"light probes {(LightmapSettings.lightProbes != null ? LightmapSettings.lightProbes.count : 0)}; " +
+                          $"reflection probes {FindObjectsByType<ReflectionProbe>(FindObjectsSortMode.None).Length}");
+            var sun = RenderSettings.sun;
+            sb.AppendLine($"  Sun: {(sun != null ? $"{sun.name}, intensity {sun.intensity:F2}, shadows {sun.shadows}" : "none")}");
+            sb.AppendLine($"  Shadows: {QualitySettings.shadows}, resolution {QualitySettings.shadowResolution}, " +
+                          $"cascades {QualitySettings.shadowCascades}, distance {QualitySettings.shadowDistance:F0} m; quality level {QualitySettings.names[QualitySettings.GetQualityLevel()]}");
+            sb.AppendLine($"  Post: {(look == null ? "?" : look.PostOn ? "new look on" : "new look off")}{PostDetails()}");
+            var cam = Camera.main;
+            sb.AppendLine($"  Camera: FOV {(cam != null ? cam.fieldOfView.ToString("F0") : "?")}° vertical, " +
+                          $"{(look != null && look.CameraNew ? $"lens distortion {look.LensDistortion:F0} (new)" : "lens distortion from the profile (old)")}, " +
+                          $"HDR {(cam != null && cam.allowHDR ? "on" : "off")}, MSAA {QualitySettings.antiAliasing}x, anisotropic {QualitySettings.anisotropicFiltering}");
+            sb.AppendLine($"  Sound of the place: {(acoustics == null ? "no RangeAcoustics" : acoustics.Active ? $"on, {acoustics.Place}" : "off (recorded shot)")}");
+            return sb.ToString();
+        }
+
+        // Which effects of all active volumes are on (AO mode, bloom, tonemapping...)
+        string PostDetails()
+        {
+            bool ao = false, bloom = false, aces = false;
+            string aoMode = "";
+            foreach (var v in FindObjectsByType<PostProcessVolume>(FindObjectsSortMode.None))
+            {
+                if (!v.isActiveAndEnabled || v.weight <= 0f || v.sharedProfile == null) continue;
+                if (v.sharedProfile.TryGetSettings(out AmbientOcclusion a) && a.active && a.enabled.value) { ao = true; aoMode = a.mode.value.ToString(); }
+                if (v.sharedProfile.TryGetSettings(out Bloom b) && b.active && b.enabled.value) bloom = true;
+                if (v.sharedProfile.TryGetSettings(out ColorGrading g) && g.active && g.enabled.value && g.tonemapper.overrideState && g.tonemapper.value == Tonemapper.ACES) aces = true;
+            }
+            return $"; AO {(ao ? aoMode : "off")}, bloom {OnOff(bloom)}, ACES {OnOff(aces)}";
         }
 
         // The mode key is rebuilt only when something changed — otherwise a new string would be created
@@ -531,6 +641,15 @@ namespace Pistol.Diagnostics
         // What is happening in the game — to understand what preceded a hitch
         void PollState(float now)
         {
+            // The look changed (key 4, a DebugSettings switch): a new mode in the stats, its first seconds not counted
+            int mask = LookMask();
+            if (mask != lookMask)
+            {
+                bool first = lookMask == -1;
+                lookMask = mask;
+                if (first) currentSegment = null;
+                else OnSettingsChanged("look: " + LookShort());
+            }
             if (movement != null)
             {
                 Track(ref wasRunning, movement.IsRunning, "started running", "stopped running");
@@ -698,14 +817,21 @@ namespace Pistol.Diagnostics
                 $"Unity {Application.unityVersion}, {(Application.isEditor ? "editor" : Debug.isDebugBuild ? "Development Build" : "release build")}, " +
                 $"quality \"{QualitySettings.names[QualitySettings.GetQualityLevel()]}\"\n" +
                 $"Display: {nativeW}x{nativeH}, {Screen.currentResolution.refreshRateRatio.value:F0} Hz, window mode {Screen.fullScreenMode}\n" +
+                $"Memory now: textures {Mb(textureMemRec.LastValue)}, meshes {Mb(meshMemRec.LastValue)}, " +
+                $"system {Mb(systemMemory.LastValue)}, graphics {Mb(gfxMemory.LastValue)}\n" +
+                $"Power: {SystemInfo.batteryStatus}" + (SystemInfo.batteryLevel >= 0f ? $", battery {SystemInfo.batteryLevel * 100f:F0}%" : "") +
+                (SystemInfo.batteryStatus == BatteryStatus.Discharging ? " — on battery the Mac may lower its clocks" : "") + "\n" +
                 $"Current: {SettingsString()}";
         }
+
+        static string Mb(long bytes) => bytes > 0 ? $"{bytes / (1024f * 1024f):F0} MB" : "n/a";
 
         string BuildReport(string title)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"=== {title} ===");
             sb.AppendLine(DeviceString());
+            sb.Append(LookDetails());
             sb.AppendLine($"Session length: {SessionTime / 60f:F1} min. Hitches (excluding the first {SettleTime:F0} s after settings changes): {hitchCount}");
             sb.AppendLine();
             sb.AppendLine("Modes:");
@@ -718,6 +844,15 @@ namespace Pistol.Diagnostics
                 sb.AppendLine($"  • {key}");
                 sb.AppendLine($"      {seg.seconds:F0} s: FPS {1000f / avg:F0}, 1% low {1000f / low1:F0}, min {1000f / max:F0}, " +
                               $"hitches {seg.hitches} ({perMin:F1} per minute)");
+                if (seg.loadCount > 0)
+                {
+                    double k = 1.0 / seg.loadCount;
+                    string gpu = seg.gpuCount > 0 ? $"{seg.gpuSum / seg.gpuCount:F1} ms" : "n/a (enable Frame Timing Stats in Player Settings)";
+                    sb.AppendLine($"      frame: CPU main {seg.cpuSum * k:F1} ms, render thread {seg.renderSum * k:F1} ms, GPU {gpu} — {Bottleneck(seg)}");
+                    sb.AppendLine($"      render: draw calls {seg.drawSum * k:F0}, batches {seg.batchSum * k:F0}, SetPass {seg.setPassSum * k:F0}, " +
+                                  $"triangles {seg.trisSum * k / 1000:F0}k, vertices {seg.vertsSum * k / 1000:F0}k, shadow casters {seg.shadowSum * k:F0}, " +
+                                  $"GC {seg.gcSum * k / 1024:F1} KB/frame");
+                }
             }
             string period = PeriodString();
             if (period != null) { sb.AppendLine(); sb.AppendLine(period); }
@@ -732,6 +867,17 @@ namespace Pistol.Diagnostics
             sb.AppendLine($"Recent hitches ({n} of {hitchLines.Count}):");
             for (int i = hitchLines.Count - n; i < hitchLines.Count; i++) sb.AppendLine(hitchLines[i]);
             return sb.ToString();
+        }
+
+        // Which side limits the frame: the GPU (drawing), the CPU main thread (game code) or the render thread
+        static string Bottleneck(Segment seg)
+        {
+            double k = 1.0 / seg.loadCount;
+            double cpu = seg.cpuSum * k, render = seg.renderSum * k;
+            double gpu = seg.gpuCount > 0 ? seg.gpuSum / seg.gpuCount : -1;
+            if (gpu < 0) return "GPU time unknown";
+            double top = System.Math.Max(gpu, System.Math.Max(cpu, render));
+            return top == gpu ? "GPU-bound (the picture is the limit)" : top == cpu ? "CPU-bound (game code)" : "render-thread-bound (draw call submission)";
         }
 
         // Are hitches "on a timer": the typical interval between neighbouring hitches and how many intervals match it

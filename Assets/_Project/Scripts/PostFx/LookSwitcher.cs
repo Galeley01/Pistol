@@ -61,6 +61,12 @@ namespace Pistol.PostFx
             new System.Collections.Generic.List<(Renderer, int)>();
 
         [ShowNativeProperty] public bool AllOld => allOld;
+        // What is on right now (for the performance report)
+        public bool PostOn => appliedPost == true;
+        public bool SkyNew => appliedSky == true;
+        public bool CameraNew => appliedCamera == true;
+        public bool LightmapsUsed => appliedBaked != false && LightmapSettings.lightmaps.Length > 0;
+        public float LensDistortion => appliedCamera == true ? newLensDistortion : float.NaN;   // NaN: the profile's own
 
         void Awake()
         {
