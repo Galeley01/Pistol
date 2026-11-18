@@ -17,6 +17,8 @@ namespace Pistol.PostFx
     //   new camera — a narrower field of view and a weaker lens distortion, or the old wide ones;
     //   eye adaptation — auto exposure: the picture slowly brightens when the frame is dark and darkens on a bright
     //   one (no effect in WebGL: it needs compute shaders).
+    // "All old" also puts the shadows back as they were (quality: resolution, cascades, distance; the sun's bias);
+    // the project's own values are restored on "new" and when Play ends.
     // The baked light is switched outside Play only (it needs a bake): Pistol > Bake Lighting / Remove Baked Lighting, the label shows it.
     // A small label in the corner shows what is on. In a normal build everything new is on and nothing switches.
     //
@@ -57,6 +59,17 @@ namespace Pistol.PostFx
         [BoxGroup("Адаптация глаз"), SerializeField, Range(0.1f, 10f), Tooltip("Скорость привыкания к яркому (картинка темнеет)")]
         float adaptToBright = 3f;
 
+        [BoxGroup("Тени (как было)"), SerializeField, Tooltip("Разрешение теней в Quality при «всё как было»")]
+        ShadowResolution oldShadowResolution = ShadowResolution.Medium;
+        [BoxGroup("Тени (как было)"), SerializeField, Tooltip("Каскадов теней при «всё как было» (1, 2 или 4)")]
+        int oldShadowCascades = 2;
+        [BoxGroup("Тени (как было)"), SerializeField, Range(10f, 200f), Tooltip("Дальность теней при «всё как было», м")]
+        float oldShadowDistance = 40f;
+        [BoxGroup("Тени (как было)"), SerializeField, Range(0f, 2f), Tooltip("Смещение тени солнца (Bias) при «всё как было»")]
+        float oldSunBias = 0.05f;
+        [BoxGroup("Тени (как было)"), SerializeField, Range(0f, 3f), Tooltip("Normal Bias тени солнца при «всё как было»")]
+        float oldSunNormalBias = 0.4f;
+
         [SerializeField, Tooltip("Клавиша: всё новое ↔ всё как было (небо, туман, запечённый свет, постобработка, камера, звук окружения)")]
         string key = "<Keyboard>/4";
         [SerializeField, Tooltip("Показывать в углу экрана, что сейчас включено")]
@@ -79,7 +92,13 @@ namespace Pistol.PostFx
         LensDistortion lens;
         PostProcessVolume exposureVolume;
         AutoExposure exposure;
-        bool? appliedEyes;
+        bool? appliedEyes, appliedShadows;
+        // The project's own (new) shadow settings, read at start: put back on "new" and when Play ends.
+        // Quality settings changed in Play stay in the project in the editor, so they must always be restored.
+        bool shadowsCaptured;
+        ShadowResolution newShadowResolution;
+        int newShadowCascades;
+        float newShadowDistance, newSunBias, newSunNormalBias;
         bool localAllOld;   // key 4 without debug settings
         bool allOld => debug != null ? debug.AllOld : localAllOld;
         void SetAllOld(bool on) { if (debug != null) debug.SetAllOld(on); else localAllOld = on; }
@@ -100,6 +119,7 @@ namespace Pistol.PostFx
             volume = GetComponent<PostProcessVolume>();
             if (debug != null) debug.SetAllOld(false);   // the asset outlives Play sessions: start with the new look
             if (sun != null) newSunRotation = sun.transform.rotation;
+            CaptureShadows();
             newFog = RenderSettings.fog;   // the scene is saved with the new sky and its fog
             if (DebugSettings.Allowed && (debug == null || newSky == null || oldSky == null || sun == null || cameraMotion == null))
                 Debug.LogWarning("LookSwitcher: some references are empty (debug settings, skies, sun). Run Pistol > Create Look Volume and save the scene.", this);
@@ -139,7 +159,33 @@ namespace Pistol.PostFx
             if (appliedPost != post) { volume.weight = post ? 1f : 0f; appliedPost = post; }
             if (appliedSky != sky) { ApplySky(sky); appliedSky = sky; }
             if (appliedBaked != baked) { ApplyBaked(baked); appliedBaked = baked; }
+            if (appliedShadows != !allOld) { ApplyShadows(!allOld); appliedShadows = !allOld; }
         }
+
+        void CaptureShadows()
+        {
+            newShadowResolution = QualitySettings.shadowResolution;
+            newShadowCascades = QualitySettings.shadowCascades;
+            newShadowDistance = QualitySettings.shadowDistance;
+            if (sun != null) { newSunBias = sun.shadowBias; newSunNormalBias = sun.shadowNormalBias; }
+            shadowsCaptured = true;
+        }
+
+        // Shadow quality and the sun's shadow offsets: the project's own, or as they were before the new look
+        void ApplyShadows(bool useNew)
+        {
+            if (!shadowsCaptured) return;
+            QualitySettings.shadowResolution = useNew ? newShadowResolution : oldShadowResolution;
+            QualitySettings.shadowCascades = useNew ? newShadowCascades : oldShadowCascades;
+            QualitySettings.shadowDistance = useNew ? newShadowDistance : oldShadowDistance;
+            if (sun != null)
+            {
+                sun.shadowBias = useNew ? newSunBias : oldSunBias;
+                sun.shadowNormalBias = useNew ? newSunNormalBias : oldSunNormalBias;
+            }
+        }
+
+        void OnApplicationQuit() => ApplyShadows(true);   // the editor keeps Quality changes made in Play
 
         void ApplyBlocks(bool useNew)
         {
@@ -183,6 +229,7 @@ namespace Pistol.PostFx
 
         void OnDestroy()
         {
+            ApplyShadows(true);
             if (lensVolume != null) RuntimeUtilities.DestroyVolume(lensVolume, true, true);
             if (exposureVolume != null) RuntimeUtilities.DestroyVolume(exposureVolume, true, true);
         }
