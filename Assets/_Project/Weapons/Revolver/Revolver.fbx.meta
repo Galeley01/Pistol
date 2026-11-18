@@ -3,7 +3,17 @@ guid: 0a3304ad35f416f4894c5ad4a86522b5
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Revolver_Grip
+    second: {fileID: 2100000, guid: 4413c1863dd94b7184a800d1ab894c69, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Revolver_Metal
+    second: {fileID: 2100000, guid: a0252d22db674d1e9cf2bbb71c0a8ed3, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
