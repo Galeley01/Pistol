@@ -16,6 +16,12 @@ MonoBehaviour:
   tail: {fileID: 11400000, guid: 70fc9a6d16fc24d438d5ddef8ab8993b, type: 2}
   tailVolume: 0.25
   tailDelay: 0.04
+  reflection: {fileID: 11400000, guid: c2400c902c3b7492baa3359f4172bfe4, type: 2}
+  reflectionMin: 1
+  reflectionVolume: 0.9
+  maxReflections: 6
+  reflectionLowPass: 4000
+  floorVolume: 0.35
   echo: {fileID: 11400000, guid: 4579d71dfe8db4c52bd723b2a7d1884d, type: 2}
   rays: 12
   maxEchoes: 3
@@ -24,6 +30,13 @@ MonoBehaviour:
   minSurfaceSize: 2
   echoVolume: 0.2
   echoPitch: 0.8
+  lowPassNear: 1200
+  lowPassFar: 450
+  mergeTime: 0.12
+  verticalRays: 1
+  directivity: 0.5
   terrainEcho: 0
   terrainDistance: 260
   terrainVolume: 0.35
+  terrainLowPass: 350
+  tailAimInfluence: 0.35

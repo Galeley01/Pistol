@@ -29,7 +29,7 @@ namespace Pistol.EditorTools
             var tail = Sound("Shot_Tail", TailClip, weapons, s =>
             {
                 s.volume = 0.7f; s.pitchVariation = 0.04f;
-                s.spatialBlend = 0.3f; s.spread = 180f;          // rolls in from everywhere
+                s.spatialBlend = 0.7f; s.spread = 60f;           // rolls away to the open side
                 s.minDistance = 50f; s.maxDistance = 500f;
             });
             var echo = Sound("Shot_Echo", EchoClip, weapons, s =>
@@ -38,6 +38,21 @@ namespace Pistol.EditorTools
                 s.spatialBlend = 0.85f; s.spread = 90f;           // from where it bounced, but wide
                 s.minDistance = 400f; s.maxDistance = 1000f;      // the volume is set by RangeAcoustics, not by the distance
             });
+
+            // Early reflections: the bang itself, short, heard from the wall (no fading with distance: set by the code)
+            var shotEvent = AssetDatabase.LoadAssetAtPath<SoundEvent>(ShotPath);
+            var reflection = AssetDatabase.LoadAssetAtPath<SoundEvent>(Dir + "Shot_Reflection.asset");
+            if (reflection == null && shotEvent != null)
+            {
+                reflection = ScriptableObject.CreateInstance<SoundEvent>();
+                reflection.clips = shotEvent.clips;
+                reflection.output = weapons;
+                reflection.volume = 1f; reflection.pitchVariation = 0.03f;
+                reflection.spatialBlend = 1f; reflection.spread = 0f;   // a point on the wall: clearly left or right
+                reflection.minDistance = 30f; reflection.maxDistance = 300f;
+                reflection.endTime = 0.45f; reflection.endFade = 0.2f;
+                AssetDatabase.CreateAsset(reflection, Dir + "Shot_Reflection.asset");
+            }
 
             var outdoor = Profile(OutdoorPath, p =>
             {
@@ -52,6 +67,15 @@ namespace Pistol.EditorTools
                 p.echo = echo; p.minDistance = 4f; p.maxDistance = 40f; p.maxEchoes = 3; p.echoVolume = 0.2f;
                 p.terrainEcho = false;
             });
+
+            foreach (var p in new[] { outdoor, indoor })
+                if (p != null && p.reflection == null)
+                {
+                    Undo.RecordObject(p, "Early reflections");
+                    p.reflection = reflection;
+                    if (p == indoor) { p.reflectionVolume = 0.6f; p.maxReflections = 6; }
+                    EditorUtility.SetDirty(p);
+                }
 
             // The revolver shot recording has an echo of the place it was recorded in (1.1–1.5 s): cut before it
             var shot = AssetDatabase.LoadAssetAtPath<SoundEvent>(ShotPath);

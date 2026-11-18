@@ -20,6 +20,23 @@ namespace Pistol.Audio
         [BoxGroup("Хвост выстрела"), Range(0f, 0.5f), Tooltip("Через сколько секунд после хлопка вступает хвост")]
         public float tailDelay = 0.04f;
 
+        [BoxGroup("Ранние отражения"), Tooltip("Отражение самого выстрела от близких стен и пола (1–12 м): приходит через доли секунды " +
+                                                  "из точки на стене — по нему слышно, с какой стороны стена. Пусто — без ранних отражений")]
+        public SoundEvent reflection;
+        [BoxGroup("Ранние отражения"), Range(0.3f, 5f), Tooltip("Ближе этого отражение не отделяется от выстрела, м")]
+        public float reflectionMin = 1f;
+        [BoxGroup("Ранние отражения"), Range(0f, 1.5f), Tooltip("Громкость отражения от стены в 1.5 м (дальше — тише)")]
+        public float reflectionVolume = 0.9f;
+        [BoxGroup("Ранние отражения"), Range(1f, 4f), Tooltip("Преувеличение задержки отражения. 1 — как в жизни (но ухо сливает его с выстрелом и не слышит, " +
+                                                            "откуда стена), 2 — отчётливый ответ с той стороны")]
+        public float reflectionDelayScale = 2f;
+        [BoxGroup("Ранние отражения"), Range(1, 8), Tooltip("Сколько отражений максимум (самые близкие)")]
+        public int maxReflections = 4;
+        [BoxGroup("Ранние отражения"), Range(500f, 12000f), Tooltip("Насколько приглушено отражение: слышно только ниже этой частоты, Гц")]
+        public float reflectionLowPass = 4000f;
+        [BoxGroup("Ранние отражения"), Range(0f, 1f), Tooltip("Отражение от пола (оно есть всегда; громче, когда стреляешь вниз)")]
+        public float floorVolume = 0.35f;
+
         [BoxGroup("Эхо от стен"), Tooltip("Звук эха (приглушённый выстрел). Пусто — без эха")]
         public SoundEvent echo;
         [BoxGroup("Эхо от стен"), Range(0, 32), Tooltip("Сколько лучей искать вокруг стрелка")]
@@ -55,6 +72,11 @@ namespace Pistol.Audio
         public float terrainVolume = 0.15f;
         [BoxGroup("Эхо от рельефа"), ShowIf("terrainEcho"), Range(100f, 4000f), Tooltip("Насколько глухое эхо от холмов, Гц")]
         public float terrainLowPass = 350f;
+
+        [BoxGroup("Хвост выстрела"), Range(0f, 1f), Tooltip("Насколько меняется хвост от направления: в небо — суше и тише, в землю — плотнее")]
+        public float tailAimInfluence = 0.35f;
+        [BoxGroup("Хвост выстрела"), Range(0f, 60f), Tooltip("Хвост уходит в открытую сторону: на сколько метров в сторону, где нет стен (0 — из точки выстрела)")]
+        public float tailOpenSide = 25f;
 
         public const float SpeedOfSound = 343f;
     }
