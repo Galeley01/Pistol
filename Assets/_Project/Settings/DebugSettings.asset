@@ -26,8 +26,9 @@ MonoBehaviour:
   newPostFx: 1
   newSky: 1
   newCamera: 0
+  autoExposure: 0
   newAcoustics: 1
   forceIndoor: 0
+  steamAudioHrtf: 1
   newBulletHoles: 1
-  bulletHoleStyle: 3
-  bakedLight: 1
+  bulletHoleStyle: 8

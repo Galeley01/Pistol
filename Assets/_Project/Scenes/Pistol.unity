@@ -401,6 +401,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e1b74a20479464d038ee0092cdbdf4ba, type: 2}
   - {fileID: 11400000, guid: 029bdb4d113cb4a20b70e16e1ffc812e, type: 2}
   - {fileID: 11400000, guid: 1bf21e290a7404c728762572c8926c99, type: 2}
+  - {fileID: 11400000, guid: ff3843458269e4048bd3e3ceac4e6cd7, type: 2}
+  - {fileID: 11400000, guid: a6b83a7420d9a43b480c39bf79345082, type: 2}
   debug: {fileID: 11400000, guid: 3e030d4c69b24d3a8b821d584ba30d88, type: 2}
   pathLifetime: 4
   pathColor: {r: 1, g: 0.85, b: 0.2, a: 0.9}
@@ -788,6 +790,12 @@ MonoBehaviour:
   cameraMotion: {fileID: 1862555705}
   newFieldOfView: 70
   newLensDistortion: 12
+  exposureKey: 1
+  darkestEv: -1
+  brightestEv: 2
+  meteringPercent: {x: 10, y: 85}
+  adaptToDark: 1.5
+  adaptToBright: 3
   key: <Keyboard>/4
   showLabel: 1
   restyled:

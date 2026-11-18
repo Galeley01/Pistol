@@ -11,7 +11,9 @@ namespace Pistol.EditorTools
     //   Scan flat entry / exit — flat decals baked from the concrete scan (real relief), one per side of the hole;
     //     the exit one is the default mark;
     //   Scan crater entry / exit — 3D crater meshes cut from the scan: a stencil mask opens the wall, the crater is
-    //     drawn inside it, the scan decal around it gives the dust and chips.
+    //     drawn inside it, the scan decal around it gives the dust and chips (looked flat: no depth order, no shadow);
+    //   Scan depth entry / exit — the scan decals with a height map baked from the same scan (Pistol/BulletDecalDepth):
+    //     a flat quad on the wall that shows the crater sunk in, with the rim's shadow inside it.
     // Texture and model import is set here too. Existing assets are kept (they may be tuned).
     // Menu: Pistol > Setup Bullet Decals. Save the scene afterwards (BulletSystem gets the style list).
     public static class BulletDecalSetup
@@ -36,6 +38,9 @@ namespace Pistol.EditorTools
             var mask = MaterialAt(Dir + "M_BulletHole_Mask.mat", "Pistol/BulletHoleMask", null);
             var craterEntry = CraterDecal("Entry", mask, flatEntry.material);
             var craterExit = CraterDecal("Exit", mask, flatExit.material);
+            // Scan with depth: same textures + height, same size; depth as a fraction of the size = 2.5 cm / side
+            var depthEntry = DepthDecal("Entry", flatEntry, 0.025f / 0.112f);
+            var depthExit = DepthDecal("Exit", flatExit, 0.025f / 0.154f);
 
             var table = AssetDatabase.LoadAssetAtPath<SurfaceTable>(TablePath);
             if (table != null && table.defaultDecal == null)
@@ -49,14 +54,14 @@ namespace Pistol.EditorTools
             if (bullets != null)
             {
                 Undo.RecordObject(bullets, "Bullet hole styles");
-                bullets.SetHoleStyles(new[] { photo, flatEntry, flatExit, craterEntry, craterExit });
+                bullets.SetHoleStyles(new[] { photo, flatEntry, flatExit, craterEntry, craterExit, depthEntry, depthExit });
                 EditorUtility.SetDirty(bullets);
                 UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(bullets.gameObject.scene);
             }
             else Debug.LogWarning("No BulletSystem in the open scene: the style list isn't filled.");
 
             AssetDatabase.SaveAssets();
-            Debug.Log("Bullet hole styles set up: photo, scan flat entry/exit (exit is the default), scan crater entry/exit. " +
+            Debug.Log("Bullet hole styles set up: photo, scan flat entry/exit (exit is the default), scan crater entry/exit, scan depth entry/exit. " +
                       "Compare: DebugSettings > Bullet Hole Style. Save the scene.");
         }
 
@@ -130,6 +135,46 @@ namespace Pistol.EditorTools
             d.meshMaterials = mats;
             d.material = cavity;
             EditorUtility.SetDirty(d);
+            return d;
+        }
+
+        // The scan decal of that side with its height map: a copy of the flat decal's settings, the depth shader
+        static ImpactDecal DepthDecal(string side, ImpactDecal flat, float parallax)
+        {
+            string albedo = Dir + $"T_BulletHole_Scan{side}_Albedo.png", normal = Dir + $"T_BulletHole_Scan{side}_Normal.png";
+            string height = Dir + $"T_BulletHole_Scan{side}_Height.png";
+            if (AssetImporter.GetAtPath(height) is TextureImporter hi &&
+                (hi.sRGBTexture || hi.wrapMode != TextureWrapMode.Clamp || hi.textureCompression != TextureImporterCompression.Uncompressed))
+            {
+                hi.textureType = TextureImporterType.Default;
+                hi.sRGBTexture = false;   // heights, not colours
+                hi.alphaSource = TextureImporterAlphaSource.None;
+                hi.wrapMode = TextureWrapMode.Clamp;
+                hi.mipmapEnabled = true;
+                hi.textureCompression = TextureImporterCompression.Uncompressed;   // single channel, no blocky steps
+                hi.SetPlatformTextureSettings(new TextureImporterPlatformSettings { name = "Standalone", overridden = true, format = TextureImporterFormat.R8, maxTextureSize = 512 });
+                hi.SetPlatformTextureSettings(new TextureImporterPlatformSettings { name = "WebGL", overridden = true, format = TextureImporterFormat.R8, maxTextureSize = 512 });
+                hi.SaveAndReimport();
+            }
+            else if (!(AssetImporter.GetAtPath(height) is TextureImporter)) { Debug.LogWarning("Height map not found: " + height); return null; }
+
+            var material = MaterialAt(Dir + $"M_BulletHole_ScanDepth{side}.mat", "Pistol/BulletDecalDepth", m =>
+            {
+                m.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(albedo));
+                m.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(normal));
+                m.SetTexture("_HeightMap", AssetDatabase.LoadAssetAtPath<Texture2D>(height));
+                m.SetColor("_Color", new Color(0.85f, 0.85f, 0.84f));
+                m.SetFloat("_Parallax", parallax);
+            });
+            string path = Dir + $"Decal_ScanDepth{side}.asset";
+            var d = AssetDatabase.LoadAssetAtPath<ImpactDecal>(path);
+            if (d != null) return d;
+            d = ScriptableObject.CreateInstance<ImpactDecal>();
+            d.kind = ImpactDecal.Kind.Flat;
+            d.material = material;
+            d.columns = 1; d.rows = 1; d.variants = 1;
+            d.sizeInMeters = true; d.meters = flat != null ? flat.meters : 0.15f; d.sizeJitter = 0.2f;
+            AssetDatabase.CreateAsset(d, path);
             return d;
         }
 

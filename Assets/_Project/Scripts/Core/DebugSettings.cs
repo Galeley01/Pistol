@@ -59,9 +59,14 @@ namespace Pistol.Core
         public bool steamAudioHrtf = true;
         [BoxGroup("Сравнение вида"), Tooltip("Новые следы от пуль (воронки в бетоне). Выкл — простые тёмные точки. Действует на новые выстрелы")]
         public bool newBulletHoles = true;
-        public enum HoleStyle { AsInSurfaceTable, Photo, ScanFlatEntry, ScanFlatExit, ScanCraterEntry, ScanCraterExit, RandomOfAll }
-        [BoxGroup("Сравнение вида"), Tooltip("Какой след в бетоне: фото, наклейка из скана (вход / выход пули), объёмная воронка из скана, или каждый раз случайный. " +
-                                              "Действует на новые выстрелы")]
+        // The numbers are saved in the asset: new styles get new numbers, never renumber
+        public enum HoleStyle
+        {
+            AsInSurfaceTable = 0, Photo = 1, ScanFlatEntry = 2, ScanFlatExit = 3, ScanCraterEntry = 4, ScanCraterExit = 5,
+            ScanDepthEntry = 7, ScanDepthExit = 8, RandomOfAll = 6
+        }
+        [BoxGroup("Сравнение вида"), Tooltip("Какой след в бетоне: фото, наклейка из скана (вход / выход пули), объёмная воронка из скана (старая, сквозь стену), " +
+                                              "наклейка из скана с глубиной (Scan Depth: углубление и тень внутри), или каждый раз случайный. Действует на новые выстрелы")]
         public HoleStyle bulletHoleStyle = HoleStyle.AsInSurfaceTable;
         // Baked light is baked or removed only by hand: Pistol > Bake Lighting / Remove Baked Lighting.
         // (It used to follow a checkbox here, but OnValidate also fires on undo and on reimport after a branch switch,
@@ -90,8 +95,14 @@ namespace Pistol.Core
         public bool SteamAudioHrtf => !Allowed || (steamAudioHrtf && !AllOld);
         public bool NewBulletHoles => !Allowed || (newBulletHoles && !AllOld);
         // -1 = as in the surface table, -2 = random of all, else the index in BulletSystem's style list
-        public int BulletHoleStyleIndex => !Allowed ? -1 :
-            bulletHoleStyle == HoleStyle.AsInSurfaceTable ? -1 : bulletHoleStyle == HoleStyle.RandomOfAll ? -2 : (int)bulletHoleStyle - 1;
+        public int BulletHoleStyleIndex => !Allowed ? -1 : bulletHoleStyle switch
+        {
+            HoleStyle.AsInSurfaceTable => -1,
+            HoleStyle.RandomOfAll => -2,
+            HoleStyle.ScanDepthEntry => 5,
+            HoleStyle.ScanDepthExit => 6,
+            _ => (int)bulletHoleStyle - 1   // Photo .. ScanCraterExit -> 0 .. 4
+        };
 
         // Key 4 (LookSwitcher): everything as before this work, for the moment (not saved)
         [System.NonSerialized] bool allOld;

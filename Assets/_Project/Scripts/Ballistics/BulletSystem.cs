@@ -30,7 +30,7 @@ namespace Pistol.Ballistics
         [BoxGroup("Звук попаданий"), SerializeField, Tooltip("Какой звук у какой поверхности (по Physics Material коллайдера) и звук по умолчанию")]
         SurfaceTable surfaceSounds;
         [BoxGroup("Следы"), SerializeField, Tooltip("Стили следа для сравнения (DebugSettings → Bullet Hole Style), по порядку: " +
-                                                    "фото, скан-наклейка вход, выход, скан-воронка вход, выход")]
+                                                    "фото, скан-наклейка вход, выход, скан-воронка вход, выход, скан с глубиной вход, выход")]
         ImpactDecal[] holeStyles = new ImpactDecal[0];
 
         [BoxGroup("Отладка"), SerializeField, Tooltip("Отладочные флаги: пути пуль и логи попаданий включаются там")]
