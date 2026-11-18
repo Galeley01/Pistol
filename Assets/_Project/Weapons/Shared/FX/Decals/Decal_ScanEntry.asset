@@ -20,8 +20,8 @@ MonoBehaviour:
   meshes: []
   meshMaterials: []
   meshRotation: {x: 0, y: 0, z: 0}
-  sizeInMeters: 1
+  sizeInMeters: 0
   meters: 0.112
-  sizeScale: 3.5
+  sizeScale: 6.8
   sizeJitter: 0.2
   randomRotation: 1

@@ -7,8 +7,9 @@ namespace Pistol.EditorTools
 {
     // Sets up the bullet hole styles in concrete and lists them on BulletSystem for the comparison
     // (DebugSettings > Bullet Hole Style):
-    //   Photo — flat decal, an atlas of 5 photos (ActionVFX), normal map derived from them; the default mark;
+    //   Photo — flat decal, an atlas of 5 photos (ActionVFX), normal map derived from them;
     //   Scan flat entry / exit — flat decals baked from the concrete scan (real relief), one per side of the hole;
+    //     the exit one is the default mark;
     //   Scan crater entry / exit — 3D crater meshes cut from the scan: a stencil mask opens the wall, the crater is
     //     drawn inside it, the scan decal around it gives the dust and chips.
     // Texture and model import is set here too. Existing assets are kept (they may be tuned).
@@ -40,7 +41,7 @@ namespace Pistol.EditorTools
             if (table != null && table.defaultDecal == null)
             {
                 Undo.RecordObject(table, "Default bullet decal");
-                table.defaultDecal = photo;
+                table.defaultDecal = flatExit;   // the scan exit decal looked best in Play
                 EditorUtility.SetDirty(table);
             }
 
@@ -55,7 +56,7 @@ namespace Pistol.EditorTools
             else Debug.LogWarning("No BulletSystem in the open scene: the style list isn't filled.");
 
             AssetDatabase.SaveAssets();
-            Debug.Log("Bullet hole styles set up: photo (default), scan flat entry/exit, scan crater entry/exit. " +
+            Debug.Log("Bullet hole styles set up: photo, scan flat entry/exit (exit is the default), scan crater entry/exit. " +
                       "Compare: DebugSettings > Bullet Hole Style. Save the scene.");
         }
 

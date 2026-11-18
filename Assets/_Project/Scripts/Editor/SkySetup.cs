@@ -83,6 +83,9 @@ namespace Pistol.EditorTools
                 float elev = SunElevation * Mathf.Deg2Rad;
                 var toSun = new Vector3(Mathf.Cos(longitude) * Mathf.Cos(elev), Mathf.Sin(elev), Mathf.Sin(longitude) * Mathf.Cos(elev));
                 sun.transform.rotation = Quaternion.LookRotation(-toSun);
+                // Shadows that start right at the foot of a wall (a big normal bias leaves a light gap under it)
+                sun.shadowBias = 0.03f;
+                sun.shadowNormalBias = 0.15f;
                 RenderSettings.sun = sun;
             }
             else Debug.LogWarning("No directional light in the scene: shadows won't match the sky.");

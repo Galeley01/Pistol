@@ -30,6 +30,7 @@ namespace Pistol.Arms
             }
             var go = Instantiate(arms.prefab, transform, false);
             go.name = arms.prefab.name;
+            Pistol.Core.FirstPersonShadows.TurnOff(go);   // first-person arms throw no shadow into the world
             go.transform.SetLocalPositionAndRotation(arms.rootLocalPosition, Quaternion.identity);
             rig = go.GetComponent<ArmsRig>();
             if (rig == null) Debug.LogError($"PlayerArms: the prefab {arms.prefab.name} has no ArmsRig. Rebuild it.", this);

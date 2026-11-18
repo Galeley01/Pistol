@@ -138,6 +138,7 @@ namespace Pistol.Items
             Unequip();
 
             current = newItem;
+            FirstPersonShadows.TurnOff(newItem.gameObject);   // the weapon at the face throws no shadow into the world
             var t = newItem.transform;
             if (t.parent != transform) t.SetParent(transform, false);
 

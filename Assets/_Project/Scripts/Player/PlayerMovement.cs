@@ -66,6 +66,7 @@ namespace Pistol.Player
         void Awake()
         {
             if (profile == null) { Debug.LogError("PlayerMovement: no profile assigned.", this); enabled = false; return; }
+            FirstPersonShadows.TurnOff(GetComponent<Renderer>());   // the body capsule: no box-shaped shadow on the floor
             if (context == null) context = GetComponent<PlayerContext>();
             if (context == null)
             {
