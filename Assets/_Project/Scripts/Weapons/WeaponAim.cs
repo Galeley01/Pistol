@@ -39,7 +39,6 @@ namespace Pistol.Weapons
         WeaponSway sway;
         CameraEffects cameraEffects;
         ScreenEffectsRequest effectsRequest;
-        Vector3 hip;                 // hip pose used at runtime (never written back to the profile)
         float aimT, aimArc;          // smoothed aim (0..1) and the arc to the face (0 at the ends, 1 halfway)
 
         // Default front sight above the muzzle when ItemRig has no Front Sight
@@ -76,13 +75,15 @@ namespace Pistol.Weapons
             held = GetComponent<HeldItem>();
             rig = ItemRig.On(this);
             sway = GetComponent<WeaponSway>();
-            // Hip pose: the position the weapon has in the scene/prefab, or the one from the profile
-            hip = profile.useScenePosition ? transform.localPosition : profile.hipPosition;
         }
 
         public void ApplyPose(ref PoseFrame frame)
         {
+            if (profile == null) return;
             frame.Aim = aim;
+            // Hip pose: the holder's rest pose (where the weapon sits in the prefab/scene), or the one from the profile.
+            // Taken from the frame, not from the transform: the transform already carries last frame's composed pose.
+            Vector3 hip = profile.useScenePosition ? frame.BasePosition : profile.hipPosition;
             // The path to the face is an arc from below with a roll halfway, not a straight line
             frame.BasePosition = Vector3.Lerp(hip, profile.aimPosition, aimT) + Vector3.down * (profile.transitionDip * aimArc);
             frame.BaseRotation = Quaternion.Euler(0f, 0f, profile.transitionRoll * aimArc);

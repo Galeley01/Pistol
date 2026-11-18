@@ -52,6 +52,7 @@ namespace Pistol.Player
         public bool ReloadPressed => reload.WasPressedThisFrame();
         public bool InspectPressed => inspect.WasPressedThisFrame();
         public bool ResetTargetsPressed => resetTargets.WasPressedThisFrame();
+        public bool SwitchItemPressed => switchItem.WasPressedThisFrame();
 
         // ---------- Inspect input (zero / false outside Inspect mode) ----------
         public Vector2 PointerPosition => point.ReadValue<Vector2>();
@@ -62,7 +63,7 @@ namespace Pistol.Player
         ControlMode mode;
         bool initialized;
         InputActionMap gameplayMap, inspectMap, cursorFreeMap;
-        InputAction move, look, sprint, jump, crouch, leanLeft, leanRight, fire, aim, reload, inspect, pause, resetTargets;
+        InputAction move, look, sprint, jump, crouch, leanLeft, leanRight, fire, aim, reload, inspect, pause, resetTargets, switchItem;
         InputAction point, select, inspectExit, inspectCancel, inspectReload;
         InputAction resume;
 
@@ -102,6 +103,7 @@ namespace Pistol.Player
             aim = gameplayMap.FindAction("Aim", true);
             reload = gameplayMap.FindAction("Reload", true);
             resetTargets = gameplayMap.FindAction("ResetTargets", true);
+            switchItem = gameplayMap.FindAction("SwitchItem", true);
             inspect = gameplayMap.FindAction("Inspect", true);
             pause = gameplayMap.FindAction("Pause", true);
 

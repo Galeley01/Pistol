@@ -50,8 +50,11 @@ namespace Pistol.Items
         Vector3 restPosition;
         Quaternion restRotation;
         PoseFrame last;
+        int equipFrame = -1;
 
         public HeldItem Current => current;
+        // The prefab (or scene object) the holder started with
+        public HeldItem StartItem => startItem;
         public ItemContext Context { get; private set; }
 
         // Raised after an item is equipped (the item) and after it is unequipped (null)
@@ -148,6 +151,7 @@ namespace Pistol.Items
             foreach (var user in users) user.Bind(Context);
 
             last = default;
+            equipFrame = Time.frameCount;
             ItemChanged?.Invoke(newItem);
         }
 
@@ -196,6 +200,9 @@ namespace Pistol.Items
             if (current == null) return;
             float dt = Time.deltaTime;
             if (dt <= 0f) return;
+            // An item taken mid-frame (switched to) hasn't run its Start yet: its pose layers start next frame,
+            // until then it stays at its rest pose
+            if (Time.frameCount == equipFrame) return;
 
             var frame = PoseFrame.Begin(dt, restPosition, restRotation);
             stack.Apply(ref frame);
