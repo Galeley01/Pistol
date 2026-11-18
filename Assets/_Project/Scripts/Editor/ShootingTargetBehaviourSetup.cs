@@ -43,8 +43,7 @@ namespace Pistol.EditorTools
 
         // One-piece steel targets: the component goes on the root
         static readonly string[] SteelRoots = { "Steel10Inch", "Steel66" };
-        // Parts that for now only ring (the gong plate swings later, step 4)
-        static readonly string[] SteelParts = { "GongTarget_Plate" };
+
 
         [MenuItem("Pistol/Setup Shooting Target Behaviours")]
         static void Setup()
@@ -78,8 +77,19 @@ namespace Pistol.EditorTools
                     if (Array.IndexOf(SteelRoots, root.name) >= 0)
                         added += Add<SteelTarget>(root, null);
                     foreach (Transform part in root.GetComponentsInChildren<Transform>(true))
-                        if (Array.IndexOf(SteelParts, part.name) >= 0)
-                            added += Add<SteelTarget>(part.gameObject, null);
+                    {
+                        // Texas star: the turning arm and the plates that break off
+                        if (part.name == "TexasStar_Arm") added += Add<TexasStarSpinner>(part.gameObject, null);
+                        if (part.name.StartsWith("TexasStar_Plate_", StringComparison.Ordinal)) added += Add<DetachingPlate>(part.gameObject, null);
+                    }
+                    foreach (Transform part in root.GetComponentsInChildren<Transform>(true))
+                        if (part.name == "GongTarget_Plate")
+                        {
+                            // Earlier setups put a plain SteelTarget here: the plate swings now
+                            var old = part.GetComponent<SteelTarget>();
+                            if (old != null) { UnityEngine.Object.DestroyImmediate(old, true); added++; }
+                            added += Add<GongPlate>(part.gameObject, null);
+                        }
 
                     foreach (Transform part in root.GetComponentsInChildren<Transform>(true))
                         foreach (var rule in Plates)

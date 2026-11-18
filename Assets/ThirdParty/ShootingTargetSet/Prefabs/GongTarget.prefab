@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 8587166092303370275}
   - component: {fileID: 2813198570020706165}
   - component: {fileID: 7118338660764660646}
-  - component: {fileID: 8505653955060531282}
+  - component: {fileID: 3233476401576696907}
   m_Layer: 0
   m_Name: GongTarget_Plate
   m_TagString: Untagged
@@ -109,7 +109,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.915, y: 0.942, z: 0.01}
   m_Center: {x: 0, y: -0.654, z: 0.0105}
---- !u!114 &8505653955060531282
+--- !u!114 &3233476401576696907
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -118,9 +118,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 820626163054730824}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d27029be997d4a998c452738df97f7a9, type: 3}
+  m_Script: {fileID: 11500000, guid: b3b8f2b8a8e84827aa1c793a74c67c80, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  axis: {x: 1, y: 0, z: 0}
+  mass: 30
+  push: 25
+  damping: 0.25
 --- !u!1 &5923571555156315566
 GameObject:
   m_ObjectHideFlags: 0
