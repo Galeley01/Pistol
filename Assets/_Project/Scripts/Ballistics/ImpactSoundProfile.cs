@@ -2,9 +2,9 @@ using UnityEngine;
 using NaughtyAttributes;
 using Pistol.Audio;
 
-namespace Pistol.Targets
+namespace Pistol.Ballistics
 {
-    // How a bullet hit on steel sounds. Plays at the hit point (3D: the closer, the louder), so the SoundEvents
+    // How a bullet hit on one kind of surface (steel, wood...) sounds. BulletSystem plays it at the hit point (3D: the closer, the louder), so the SoundEvents
     // should have Spatial Blend 1. The angle of the hit picks the sound: straight on — the full ring of the plate,
     // the more glancing — quieter, higher and shorter. Far hits are heard a moment later (speed of sound).
     // Changes made in Play Mode are kept (it is an asset).

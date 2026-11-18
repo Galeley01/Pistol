@@ -95,7 +95,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 200548726715098026}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -121,7 +121,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
   kind: 2
   axis: {x: 1, y: 0, z: 0}
   angle: 180
@@ -225,7 +224,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 317652569942646076}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -251,7 +250,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
   kind: 2
   axis: {x: 1, y: 0, z: 0}
   angle: 180
@@ -396,7 +394,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1076285593652880273}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -422,7 +420,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
   kind: 2
   axis: {x: 1, y: 0, z: 0}
   angle: 180
@@ -526,7 +523,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1179756203522961967}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -552,7 +549,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
   kind: 2
   axis: {x: 1, y: 0, z: 0}
   angle: 180
@@ -656,7 +652,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2578433094478314561}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -682,7 +678,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
   kind: 2
   axis: {x: 1, y: 0, z: 0}
   angle: 180
@@ -785,7 +780,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3932860649641026803}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -894,7 +889,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4608838554115522932}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1004,7 +999,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5532748697887467761}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1030,7 +1025,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
   kind: 2
   axis: {x: 1, y: 0, z: 0}
   angle: 180
@@ -1134,7 +1128,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7892867336692871000}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1160,7 +1154,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
   kind: 2
   axis: {x: 1, y: 0, z: 0}
   angle: 180
@@ -1264,7 +1257,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7943294289540082881}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1290,7 +1283,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
   kind: 2
   axis: {x: 1, y: 0, z: 0}
   angle: 180

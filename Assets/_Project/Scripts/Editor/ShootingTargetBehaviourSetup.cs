@@ -1,18 +1,24 @@
 using System;
 using UnityEditor;
 using UnityEngine;
+using Pistol.Ballistics;
 using Pistol.Targets;
 
 namespace Pistol.EditorTools
 {
     // Puts the target behaviours onto the shooting target prefabs (built by ShootingTargetPrefabBuilder):
-    // hinged plates with their starting axes and angles, steel targets, the shared impact sound.
+    // hinged plates with their starting axes and angles, steel targets, and the Steel Physics Material on
+    // every collider of the steel targets (the impact sound comes from it: SurfaceSounds table, Steel -> Steel_Impact).
     // Menu: Pistol > Setup Shooting Target Behaviours. A part that already has its component is skipped,
     // so settings tuned by hand stay; remove a component to set it up again.
     public static class ShootingTargetBehaviourSetup
     {
         const string PrefabDir = "Assets/ThirdParty/ShootingTargetSet/Prefabs/";
         const string ImpactPath = "Assets/_Project/Targets/Steel_Impact.asset";
+        const string SteelPath = "Assets/_Project/Targets/PM_Steel.physicMaterial";
+        const string TablePath = "Assets/_Project/Settings/SurfaceSounds.asset";
+        // Not steel: the cardboard target keeps its colliders without the steel material
+        static readonly string[] NotSteel = { "PaperTarget" };
 
         class PlateRule
         {
@@ -45,7 +51,8 @@ namespace Pistol.EditorTools
         {
             if (Application.isPlaying) { Debug.LogWarning("Set up the targets outside Play Mode."); return; }
             var impact = AssetDatabase.LoadAssetAtPath<ImpactSoundProfile>(ImpactPath);
-            if (impact == null) Debug.LogWarning("Impact sound profile not found: " + ImpactPath + " (targets will be silent).");
+            if (impact == null) Debug.LogWarning("Impact sound profile not found: " + ImpactPath + " (steel will be silent).");
+            var steel = SteelMaterialAndTable(impact);
 
             int added = 0;
             foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { PrefabDir }))
@@ -64,16 +71,20 @@ namespace Pistol.EditorTools
                             Debug.Log($"Target behaviours: {part.name} box collider replaced with a mesh collider");
                         }
 
+                    if (Array.IndexOf(NotSteel, root.name) < 0)
+                        foreach (var col in root.GetComponentsInChildren<Collider>(true))
+                            if (col.sharedMaterial == null) { col.sharedMaterial = steel; added++; }
+
                     if (Array.IndexOf(SteelRoots, root.name) >= 0)
-                        added += Add<SteelTarget>(root, impact, null);
+                        added += Add<SteelTarget>(root, null);
                     foreach (Transform part in root.GetComponentsInChildren<Transform>(true))
                         if (Array.IndexOf(SteelParts, part.name) >= 0)
-                            added += Add<SteelTarget>(part.gameObject, impact, null);
+                            added += Add<SteelTarget>(part.gameObject, null);
 
                     foreach (Transform part in root.GetComponentsInChildren<Transform>(true))
                         foreach (var rule in Plates)
                             if (part.name.StartsWith(rule.prefix, StringComparison.Ordinal))
-                                added += Add<HingedPlate>(part.gameObject, impact,
+                                added += Add<HingedPlate>(part.gameObject,
                                     p => p.Configure(rule.kind, rule.axis, rule.angle, rule.direction));
 
                     if (added > before)
@@ -87,18 +98,41 @@ namespace Pistol.EditorTools
                     PrefabUtility.UnloadPrefabContents(root);
                 }
             }
-            Debug.Log($"Target behaviours: {added} components added. Existing ones were left as they are.");
+            Debug.Log($"Target behaviours: {added} changes. Existing components were left as they are.");
         }
 
-        static int Add<T>(GameObject go, ImpactSoundProfile impact, Action<T> configure) where T : ShootingTarget
+        static int Add<T>(GameObject go, Action<T> configure) where T : ShootingTarget
         {
             if (go.GetComponent<T>() != null) return 0;
             var c = go.AddComponent<T>();
             configure?.Invoke(c);
-            var so = new SerializedObject(c);
-            so.FindProperty("impactSound").objectReferenceValue = impact;
-            so.ApplyModifiedPropertiesWithoutUndo();
             return 1;
+        }
+
+        // The Steel Physics Material and the surface sound table (Steel -> steel impact), created when missing
+        static PhysicsMaterial SteelMaterialAndTable(ImpactSoundProfile impact)
+        {
+            var steel = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(SteelPath);
+            if (steel == null)
+            {
+                steel = new PhysicsMaterial("PM_Steel") { dynamicFriction = 0.4f, staticFriction = 0.5f, bounciness = 0.1f };
+                AssetDatabase.CreateAsset(steel, SteelPath);
+                Debug.Log("Created " + SteelPath);
+            }
+            var table = AssetDatabase.LoadAssetAtPath<SurfaceSoundTable>(TablePath);
+            if (table == null)
+            {
+                table = ScriptableObject.CreateInstance<SurfaceSoundTable>();
+                AssetDatabase.CreateAsset(table, TablePath);
+                Debug.Log("Created " + TablePath + ": assign it to BulletSystem (Surface Sounds)");
+            }
+            if (impact != null && table.For(steel) != impact)
+            {
+                table.Set(steel, impact);
+                EditorUtility.SetDirty(table);
+            }
+            AssetDatabase.SaveAssets();
+            return steel;
         }
     }
 }

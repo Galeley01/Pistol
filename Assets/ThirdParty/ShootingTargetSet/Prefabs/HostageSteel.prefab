@@ -128,7 +128,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2651199366977961050}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -154,7 +154,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 123e0fb051794c0caa6f27ae8bd3ba60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
   kind: 0
   axis: {x: 0, y: 0, z: 1}
   angle: 90
@@ -257,7 +256,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5758342812997322493}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0

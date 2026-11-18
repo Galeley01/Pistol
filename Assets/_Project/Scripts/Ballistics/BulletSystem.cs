@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using NaughtyAttributes;
+using Pistol.Audio;
 using Pistol.Core;
 
 namespace Pistol.Ballistics
@@ -9,6 +10,9 @@ namespace Pistol.Ballistics
     // at its own speed and drops under gravity. Hits are checked with a ray along that segment,
     // so bullets never pass through walls. No Rigidbody or collider is needed for bullets.
     // Bullet holes follow what was hit: they move with a falling box and disappear with a destroyed one.
+    // Every hit also sounds at the hit point: the sound of the collider's Physics Material (SurfaceSoundTable),
+    // or of an ImpactSurface on the object; the hit angle changes it and it arrives after the time the sound
+    // needs to come back along the bullet's path.
     //
     // Goes on its own object in the scene; held weapons get it through ItemContext.
     [DisallowMultipleComponent]
@@ -19,6 +23,11 @@ namespace Pistol.Ballistics
         [BoxGroup("Попадания"), Range(10, 500), Tooltip("Сколько отметин от пуль держать одновременно (старые исчезают)")]
         public int maxHoles = 100;
         [BoxGroup("Попадания")] public Color holeColor = new Color(0.05f, 0.05f, 0.05f, 0.9f);
+
+        [BoxGroup("Звук попаданий"), SerializeField, Tooltip("Звук игры. Пусто — попадания беззвучны")]
+        GameAudio gameAudio;
+        [BoxGroup("Звук попаданий"), SerializeField, Tooltip("Какой звук у какой поверхности (по Physics Material коллайдера) и звук по умолчанию")]
+        SurfaceSoundTable surfaceSounds;
 
         [BoxGroup("Отладка"), SerializeField, Tooltip("Отладочные флаги: пути пуль и логи попаданий включаются там")]
         DebugSettings debug;
@@ -135,9 +144,28 @@ namespace Pistol.Ballistics
             if (target is Object unityObj ? unityObj != null : target != null) target.TakeHit(info);
 
             PlaceHole(hit.point, hit.normal, b.ammo.holeSize, hit.collider.transform);
+            PlayImpact(info, hit.collider, b.travelled);
 
             if (LogHits)
                 Debug.Log($"Hit: {hit.collider.name}, {info.distance:F1} m, speed {speed:F0} m/s");
+        }
+
+        // ---------- Impact sound ----------
+        void PlayImpact(in BulletHit hit, Collider collider, float travelled)
+        {
+            if (gameAudio == null) return;
+            var surface = collider.GetComponentInParent<ImpactSurface>();
+            var profile = surface != null && surface.Sound != null ? surface.Sound
+                        : surfaceSounds != null ? surfaceSounds.For(collider.sharedMaterial) : null;
+            if (profile == null) return;
+
+            float incidence = Vector3.Angle(-hit.direction, hit.normal);
+            profile.Evaluate(incidence, hit.speed, out float directWeight, out float glancingWeight, out float pitch, out float volume);
+            float delay = profile.Delay(travelled);   // the shooter hears it after it travels back along the path
+
+            const float Audible = 0.05f;
+            if (directWeight > Audible) gameAudio.Play(profile.direct, hit.point, volume * directWeight, pitch, delay);
+            if (glancingWeight > Audible) gameAudio.Play(profile.glancing, hit.point, volume * glancingWeight, pitch, delay);
         }
 
         // ---------- Bullet holes ----------

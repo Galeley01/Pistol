@@ -95,7 +95,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 820626163054730824}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -121,7 +121,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d27029be997d4a998c452738df97f7a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactSound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
 --- !u!1 &5923571555156315566
 GameObject:
   m_ObjectHideFlags: 0
@@ -249,7 +248,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9141916751820251281}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
