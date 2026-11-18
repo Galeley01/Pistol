@@ -47,6 +47,9 @@ namespace Pistol.Core
         public bool newSky = true;
         [BoxGroup("Сравнение вида"), Tooltip("Новая камера: поле зрения 70° и слабое искажение линзы. Выкл — как было (90° и сильное искажение)")]
         public bool newCamera = true;
+        [BoxGroup("Сравнение вида"), Tooltip("Авто-экспозиция (адаптация глаз): картинка плавно светлеет, когда в кадре темно, и темнеет на ярком. " +
+                                              "Нет в WebGL (нужны вычислительные шейдеры). Выкл — экспозиция постоянная, как было")]
+        public bool autoExposure = true;
         [BoxGroup("Сравнение вида"), Tooltip("Новый звук окружения: хвост выстрела, эхо от стен и холмов, реверберация. Выкл — выстрел как записан")]
         public bool newAcoustics = true;
         [BoxGroup("Сравнение вида"), Tooltip("Проверка: звучать как в закрытом тире, где бы ни стоял (иначе — по зонам, по умолчанию улица)")]
@@ -100,6 +103,7 @@ namespace Pistol.Core
         public bool NewPostFx => !Allowed || newPostFx;
         public bool NewSky => !Allowed || newSky;
         public bool NewCamera => !Allowed || newCamera;
+        public bool AutoExposure => !Allowed || autoExposure;
         public bool NewAcoustics => !Allowed || (newAcoustics && !AllOld);
         public bool ForceIndoor => Allowed && forceIndoor;
         public bool SteamAudioHrtf => !Allowed || (steamAudioHrtf && !AllOld);

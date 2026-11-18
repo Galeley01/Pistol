@@ -14,7 +14,9 @@ namespace Pistol.PostFx
     //   new post-processing — this volume (ACES, light bloom, AO) on / off;
     //   new sky — the HDRI sky with the sun turned to it and the horizon fog, or Unity's default sky with the old sun
     //   and no fog;
-    //   new camera — a narrower field of view and a weaker lens distortion, or the old wide ones.
+    //   new camera — a narrower field of view and a weaker lens distortion, or the old wide ones;
+    //   eye adaptation — auto exposure: the picture slowly brightens when the frame is dark and darkens on a bright
+    //   one (no effect in WebGL: it needs compute shaders).
     // The baked light is switched outside Play only (it needs a bake): DebugSettings > Baked Light, the label shows it.
     // A small label in the corner shows what is on. In a normal build everything new is on and nothing switches.
     //
@@ -40,6 +42,21 @@ namespace Pistol.PostFx
         [BoxGroup("Камера"), SerializeField, Range(-100f, 100f), Tooltip("Новое искажение линзы (в старом профиле 35)")]
         float newLensDistortion = 12f;
 
+        [BoxGroup("Адаптация глаз"), SerializeField, Range(0.05f, 4f), Tooltip("Общая яркость при адаптации: больше — светлее всё. " +
+            "Подбирается так, чтобы обычный вид был как без адаптации")]
+        float exposureKey = 1f;
+        [BoxGroup("Адаптация глаз"), SerializeField, Range(-6f, 0f), Tooltip("Насколько глаз может «высветлить» тёмный кадр, ступени (EV): -1 = до 2 раз светлее")]
+        float darkestEv = -1f;
+        [BoxGroup("Адаптация глаз"), SerializeField, Range(0f, 6f), Tooltip("Насколько глаз может «притемнить» яркий кадр, ступени (EV)")]
+        float brightestEv = 2f;
+        [BoxGroup("Адаптация глаз"), SerializeField, MinMaxSlider(1f, 99f), Tooltip("Какую часть яркостей кадра учитывать, % (от тёмных к ярким). " +
+            "Низ поменьше — тёмный пистолет весомее; верх ниже 100 — солнце и блики не тянут экспозицию вниз")]
+        Vector2 meteringPercent = new Vector2(10f, 85f);
+        [BoxGroup("Адаптация глаз"), SerializeField, Range(0.1f, 10f), Tooltip("Скорость привыкания к темноте (картинка светлеет)")]
+        float adaptToDark = 1.5f;
+        [BoxGroup("Адаптация глаз"), SerializeField, Range(0.1f, 10f), Tooltip("Скорость привыкания к яркому (картинка темнеет)")]
+        float adaptToBright = 3f;
+
         [SerializeField, Tooltip("Клавиша: всё новое ↔ всё как было (небо, туман, запечённый свет, постобработка, камера, звук окружения)")]
         string key = "<Keyboard>/4";
         [SerializeField, Tooltip("Показывать в углу экрана, что сейчас включено")]
@@ -60,6 +77,9 @@ namespace Pistol.PostFx
         float oldFieldOfView = -1f;
         PostProcessVolume lensVolume;
         LensDistortion lens;
+        PostProcessVolume exposureVolume;
+        AutoExposure exposure;
+        bool? appliedEyes;
         bool localAllOld;   // key 4 without debug settings
         bool allOld => debug != null ? debug.AllOld : localAllOld;
         void SetAllOld(bool on) { if (debug != null) debug.SetAllOld(on); else localAllOld = on; }
@@ -71,6 +91,7 @@ namespace Pistol.PostFx
         public bool PostOn => appliedPost == true;
         public bool SkyNew => appliedSky == true;
         public bool CameraNew => appliedCamera == true;
+        public bool EyeAdaptationOn => appliedEyes == true && SystemInfo.supportsComputeShaders;
         public bool LightmapsUsed => appliedBaked != false && LightmapSettings.lightmaps.Length > 0;
         public float LensDistortion => appliedCamera == true ? newLensDistortion : float.NaN;   // NaN: the profile's own
 
@@ -112,6 +133,9 @@ namespace Pistol.PostFx
             if (lens != null) lens.intensity.value = newLensDistortion;   // tunable live
             if (appliedCamera == true && cameraMotion != null && !Mathf.Approximately(cameraMotion.FieldOfView, newFieldOfView))
                 cameraMotion.SetFieldOfView(newFieldOfView);   // tunable live
+            bool eyes = !allOld && (debug == null || debug.AutoExposure);
+            if (appliedEyes != eyes) { ApplyEyes(eyes); appliedEyes = eyes; }
+            if (exposure != null) TuneEyes();   // tunable live
             if (appliedPost != post) { volume.weight = post ? 1f : 0f; appliedPost = post; }
             if (appliedSky != sky) { ApplySky(sky); appliedSky = sky; }
             if (appliedBaked != baked) { ApplyBaked(baked); appliedBaked = baked; }
@@ -160,6 +184,36 @@ namespace Pistol.PostFx
         void OnDestroy()
         {
             if (lensVolume != null) RuntimeUtilities.DestroyVolume(lensVolume, true, true);
+            if (exposureVolume != null) RuntimeUtilities.DestroyVolume(exposureVolume, true, true);
+        }
+
+        // Auto exposure: a small volume above the others with only this effect
+        void ApplyEyes(bool on)
+        {
+            if (exposureVolume == null && on)
+            {
+                exposure = ScriptableObject.CreateInstance<AutoExposure>();
+                exposure.enabled.Override(true);
+                exposure.eyeAdaptation.Override(EyeAdaptation.Progressive);
+                exposure.filtering.Override(meteringPercent);
+                exposure.minLuminance.Override(darkestEv);
+                exposure.maxLuminance.Override(brightestEv);
+                exposure.keyValue.Override(exposureKey);
+                exposure.speedUp.Override(adaptToBright);   // speedUp: from dark to light
+                exposure.speedDown.Override(adaptToDark);
+                exposureVolume = PostProcessManager.instance.QuickVolume(gameObject.layer, 5f, exposure);
+            }
+            if (exposureVolume != null) exposureVolume.enabled = on;
+        }
+
+        void TuneEyes()
+        {
+            exposure.filtering.value = meteringPercent;
+            exposure.minLuminance.value = Mathf.Min(darkestEv, brightestEv);
+            exposure.maxLuminance.value = brightestEv;
+            exposure.keyValue.value = exposureKey;
+            exposure.speedUp.value = adaptToBright;
+            exposure.speedDown.value = adaptToDark;
         }
 
         [Button("Тест: всё новое / всё как было")]
@@ -203,7 +257,7 @@ namespace Pistol.PostFx
             style ??= new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperRight };
             string text = allOld
                 ? "Look: OLD  (4 = new)"
-                : $"Look: NEW (4 = old)   Post: {(debug == null || debug.NewPostFx ? "on" : "off")}   Sky: {(debug == null || debug.NewSky ? "on" : "off")}   Camera: {(debug == null || debug.NewCamera ? "on" : "off")}   Sound: {(debug == null || debug.NewAcoustics ? (debug != null && debug.ForceIndoor ? "indoor" : "on") : "off")}   Baked: {(LightmapSettings.lightmaps.Length > 0 ? "on" : "off")}";
+                : $"Look: NEW (4 = old)   Post: {(debug == null || debug.NewPostFx ? "on" : "off")}   Sky: {(debug == null || debug.NewSky ? "on" : "off")}   Camera: {(debug == null || debug.NewCamera ? "on" : "off")}   Eyes: {(appliedEyes == true ? (SystemInfo.supportsComputeShaders ? "on" : "n/a") : "off")}   Sound: {(debug == null || debug.NewAcoustics ? (debug != null && debug.ForceIndoor ? "indoor" : "on") : "off")}   Baked: {(LightmapSettings.lightmaps.Length > 0 ? "on" : "off")}";
             var rect = new Rect(Screen.width - 900, 12, 888, 26);
             GUI.color = Color.black;
             GUI.Label(new Rect(rect.x + 1, rect.y + 1, rect.width, rect.height), text, style);
