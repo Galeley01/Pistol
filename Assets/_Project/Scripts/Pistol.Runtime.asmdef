@@ -5,7 +5,8 @@
         "NaughtyAttributes.Core",
         "Unity.InputSystem",
         "Unity.Postprocessing.Runtime",
-        "Unity.Animation.Rigging"
+        "Unity.Animation.Rigging",
+        "SteamAudioUnity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

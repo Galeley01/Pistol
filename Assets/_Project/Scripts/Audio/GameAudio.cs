@@ -49,6 +49,11 @@ namespace Pistol.Audio
                 go.transform.SetParent(transform, false);
                 var source = go.AddComponent<AudioSource>();
                 source.playOnAwake = false;
+                // Steam Audio: the voice is heard through a head model (HRTF), so in headphones it comes from its
+                // direction — left, right, behind, above. Switched per sound (3D sounds only) and by DebugSettings
+                var steam = go.AddComponent<SteamAudio.SteamAudioSource>();
+                steam.directBinaural = true;
+                steam.distanceAttenuation = false;   // Unity's own rolloff of the SoundEvent stays
                 var lowPass = go.AddComponent<AudioLowPassFilter>();
                 lowPass.cutoffFrequency = FullRange;
                 pool.Add(new Voice { Source = source, LowPass = lowPass });
@@ -102,6 +107,7 @@ namespace Pistol.Audio
             voice.StartTime = Time.unscaledTime;
             voice.Source.transform.position = position;
             sound.ApplyTo(voice.Source, volumeScale, pitchScale);
+            voice.Source.spatialize = (debug == null || debug.SteamAudioHrtf) && sound.spatialBlend > 0.05f;
             voice.Source.clip = clip;
             startAt += sound.startTime;   // silence at the start of the file is skipped
             voice.Source.time = startAt > 0f ? Mathf.Min(startAt, Mathf.Max(clip.length - 0.01f, 0f)) : 0f;

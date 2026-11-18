@@ -51,6 +51,9 @@ namespace Pistol.Core
         public bool newAcoustics = true;
         [BoxGroup("Сравнение вида"), Tooltip("Проверка: звучать как в закрытом тире, где бы ни стоял (иначе — по зонам, по умолчанию улица)")]
         public bool forceIndoor = false;
+        [BoxGroup("Сравнение вида"), Tooltip("Объёмный звук Steam Audio (HRTF): в наушниках слышно, откуда звук — слева, справа, сзади, сверху. " +
+                                              "Выкл — обычная стереопанорама Unity")]
+        public bool steamAudioHrtf = true;
         [BoxGroup("Сравнение вида"), Tooltip("Новые следы от пуль (воронки в бетоне). Выкл — простые тёмные точки. Действует на новые выстрелы")]
         public bool newBulletHoles = true;
         public enum HoleStyle { AsInSurfaceTable, Photo, ScanFlatEntry, ScanFlatExit, ScanCraterEntry, ScanCraterExit, RandomOfAll }
@@ -99,6 +102,7 @@ namespace Pistol.Core
         public bool NewCamera => !Allowed || newCamera;
         public bool NewAcoustics => !Allowed || (newAcoustics && !AllOld);
         public bool ForceIndoor => Allowed && forceIndoor;
+        public bool SteamAudioHrtf => !Allowed || (steamAudioHrtf && !AllOld);
         public bool NewBulletHoles => !Allowed || (newBulletHoles && !AllOld);
         // -1 = as in the surface table, -2 = random of all, else the index in BulletSystem's style list
         public int BulletHoleStyleIndex => !Allowed ? -1 :

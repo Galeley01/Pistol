@@ -6,7 +6,8 @@
         "NaughtyAttributes.Core",
         "NaughtyAttributes.Editor",
         "Unity.Animation.Rigging",
-        "Unity.Postprocessing.Runtime"
+        "Unity.Postprocessing.Runtime",
+        "SteamAudioUnity"
     ],
     "includePlatforms": [
         "Editor"

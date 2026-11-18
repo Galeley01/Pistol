@@ -21,3 +21,9 @@
 *.wav filter=lfs diff=lfs merge=lfs -text
 *.ogg filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
+# Native audio plugin libraries (Steam Audio)
+Assets/Plugins/SteamAudio/Binaries/**/*.dll filter=lfs diff=lfs merge=lfs -text
+Assets/Plugins/SteamAudio/Binaries/**/*.a filter=lfs diff=lfs merge=lfs -text
+Assets/Plugins/SteamAudio/Binaries/**/Contents/MacOS/* filter=lfs diff=lfs merge=lfs -text
+# The macOS bundles are code-signed: keep their files byte-for-byte (no line-ending changes)
+Assets/Plugins/SteamAudio/Binaries/macOS/**/Contents/** -text
