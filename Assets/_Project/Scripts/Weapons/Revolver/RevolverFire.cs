@@ -195,7 +195,7 @@ namespace Pistol.Weapons.Revolver
 
             int chamber = cylinder.Model.UnderHammer;
             var state = cylinder.Model.GetState(chamber);
-            if (cylinder.TryFire(out var ammo))
+            if (cylinder.TryFire(out var ammo, debug != null && debug.InfiniteAmmo))
             {
                 if (shooter != null) shooter.Fire(ammo);
                 if (LogEvents) Debug.Log($"BANG! (chamber {chamber})  {cylinder.Model.Describe()}");

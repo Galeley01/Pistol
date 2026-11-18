@@ -136,7 +136,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 65
+  m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!64 &15792492
 MeshCollider:
@@ -287,7 +287,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2203174774572040702, guid: 60be7183894be40f4a6bf458c29f2b3b, type: 3}
       propertyPath: m_StaticEditorFlags
-      value: 65
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3591379494054590961, guid: 60be7183894be40f4a6bf458c29f2b3b, type: 3}
       propertyPath: m_LocalPosition.x
@@ -395,6 +395,12 @@ MonoBehaviour:
   holeColor: {r: 0.05, g: 0.05, b: 0.05, a: 0.9}
   gameAudio: {fileID: 1486424569}
   surfaceSounds: {fileID: 11400000, guid: d3365bac3196449178f43d4d7a7ea8f0, type: 2}
+  holeStyles:
+  - {fileID: 11400000, guid: 3dc5d58167c084a468d301ee2f88b586, type: 2}
+  - {fileID: 11400000, guid: a8385b454b6894a11bcfedcf6cc905ea, type: 2}
+  - {fileID: 11400000, guid: e1b74a20479464d038ee0092cdbdf4ba, type: 2}
+  - {fileID: 11400000, guid: 029bdb4d113cb4a20b70e16e1ffc812e, type: 2}
+  - {fileID: 11400000, guid: 1bf21e290a7404c728762572c8926c99, type: 2}
   debug: {fileID: 11400000, guid: 3e030d4c69b24d3a8b821d584ba30d88, type: 2}
   pathLifetime: 4
   pathColor: {r: 1, g: 0.85, b: 0.2, a: 0.9}
@@ -497,7 +503,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7809964188061641702, guid: 170efa52a158b4900bbe18956a830668, type: 3}
       propertyPath: m_StaticEditorFlags
-      value: 65
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8437204311838436729, guid: 170efa52a158b4900bbe18956a830668, type: 3}
       propertyPath: m_Name
@@ -505,7 +511,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8502744330655745736, guid: 170efa52a158b4900bbe18956a830668, type: 3}
       propertyPath: m_StaticEditorFlags
-      value: 65
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -556,7 +562,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 65
+  m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!65 &1209350701
 BoxCollider:
@@ -602,7 +608,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 6c02e455acb4e44098f18c08922a7923, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -714,7 +720,7 @@ Light:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingLayerMask: 1
-  m_Lightmapping: 1
+  m_Lightmapping: 4
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
   m_BounceIntensity: 1
@@ -784,6 +790,12 @@ MonoBehaviour:
   newLensDistortion: 12
   key: <Keyboard>/4
   showLabel: 1
+  restyled:
+  - {fileID: 1286572770}
+  - {fileID: 1260221256}
+  - {fileID: 1209350702}
+  - {fileID: 1399252197}
+  oldBlockMaterial: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
 --- !u!114 &1226039672
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -848,7 +860,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 65
+  m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!65 &1260221255
 BoxCollider:
@@ -894,7 +906,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 6c02e455acb4e44098f18c08922a7923, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -956,7 +968,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 65
+  m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!65 &1286572769
 BoxCollider:
@@ -1002,7 +1014,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 6c02e455acb4e44098f18c08922a7923, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1069,7 +1081,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 65
+  m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!65 &1399252196
 BoxCollider:
@@ -1115,7 +1127,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 6c02e455acb4e44098f18c08922a7923, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1380,7 +1392,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9141916751820251281, guid: b5aeb96645c204e22bef93f515e38e97, type: 3}
       propertyPath: m_StaticEditorFlags
-      value: 65
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2304,7 +2316,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4368619529004539833, guid: ddb6e815f34944c4ba5b3736ff9d02ae, type: 3}
       propertyPath: m_StaticEditorFlags
-      value: 65
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5003689220474656294, guid: ddb6e815f34944c4ba5b3736ff9d02ae, type: 3}
       propertyPath: tear

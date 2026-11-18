@@ -50,7 +50,13 @@ namespace Pistol.PostFx
         GUIStyle style;
         Quaternion newSunRotation;
         bool newFog;
-        bool? appliedPost, appliedSky, appliedBaked, appliedCamera;
+        bool? appliedPost, appliedSky, appliedBaked, appliedCamera, appliedBlocks;
+
+        [BoxGroup("Блоки"), SerializeField, Tooltip("Стены, платформа и кубик: при «всё как было» (4) становятся снова белыми")]
+        Renderer[] restyled = new Renderer[0];
+        [BoxGroup("Блоки"), SerializeField, Tooltip("Старый материал блоков (стандартный белый Unity)")]
+        Material oldBlockMaterial;
+        Material[] newBlockMaterials;
         float oldFieldOfView = -1f;
         PostProcessVolume lensVolume;
         LensDistortion lens;
@@ -101,6 +107,7 @@ namespace Pistol.PostFx
             bool sky = !allOld && (debug == null || debug.NewSky);
             bool baked = !allOld;
             bool camera = !allOld && (debug == null || debug.NewCamera);
+            if (appliedBlocks != !allOld) { ApplyBlocks(!allOld); appliedBlocks = !allOld; }
             if (appliedCamera != camera && ApplyCamera(camera)) appliedCamera = camera;
             if (lens != null) lens.intensity.value = newLensDistortion;   // tunable live
             if (appliedCamera == true && cameraMotion != null && !Mathf.Approximately(cameraMotion.FieldOfView, newFieldOfView))
@@ -108,6 +115,25 @@ namespace Pistol.PostFx
             if (appliedPost != post) { volume.weight = post ? 1f : 0f; appliedPost = post; }
             if (appliedSky != sky) { ApplySky(sky); appliedSky = sky; }
             if (appliedBaked != baked) { ApplyBaked(baked); appliedBaked = baked; }
+        }
+
+        void ApplyBlocks(bool useNew)
+        {
+            if (restyled == null || restyled.Length == 0) return;
+            if (newBlockMaterials == null)
+            {
+                newBlockMaterials = new Material[restyled.Length];
+                for (int i = 0; i < restyled.Length; i++) newBlockMaterials[i] = restyled[i] != null ? restyled[i].sharedMaterial : null;
+            }
+            for (int i = 0; i < restyled.Length; i++)
+                if (restyled[i] != null) restyled[i].sharedMaterial = useNew ? newBlockMaterials[i] : (oldBlockMaterial != null ? oldBlockMaterial : newBlockMaterials[i]);
+        }
+
+        // Called by Pistol > Apply Range Concrete
+        public void SetRestyled(Renderer[] blocks, Material oldMaterial)
+        {
+            restyled = blocks;
+            oldBlockMaterial = oldMaterial;
         }
 
         // False while the camera hasn't started yet (its field of view isn't known): tried again next frame

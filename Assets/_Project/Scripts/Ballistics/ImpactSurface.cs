@@ -4,7 +4,7 @@ using NaughtyAttributes;
 namespace Pistol.Ballistics
 {
     // A rare exception: this object (and its children) sounds its own way when hit, whatever its Physics Material.
-    // Normally the sound comes from the material through the SurfaceSoundTable of BulletSystem.
+    // Normally the sound comes from the material through the SurfaceTable of BulletSystem.
     [DisallowMultipleComponent]
     public class ImpactSurface : MonoBehaviour
     {

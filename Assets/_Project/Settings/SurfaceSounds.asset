@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: SurfaceSounds
   m_EditorClassIdentifier: 
   defaultSound: {fileID: 0}
+  defaultDecal: {fileID: 11400000, guid: 3dc5d58167c084a468d301ee2f88b586, type: 2}
   entries:
   - material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
     sound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
+    decal: {fileID: 0}

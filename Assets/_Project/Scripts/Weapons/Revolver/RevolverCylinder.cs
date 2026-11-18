@@ -192,7 +192,7 @@ namespace Pistol.Weapons.Revolver
         }
 
         // The hammer fell
-        public bool TryFire(out AmmoType firedAmmo) => model.TryFire(out firedAmmo);
+        public bool TryFire(out AmmoType firedAmmo, bool keepRound = false) => model.TryFire(out firedAmmo, keepRound);
 
         void LateUpdate()
         {

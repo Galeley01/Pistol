@@ -44,16 +44,26 @@ namespace Pistol.Weapons.Revolver
         }
 
         // The hammer falls on the chamber under it
-        public bool TryFire(out AmmoType firedAmmo)
+        // keepRound (debug: infinite ammo): the round isn't spent, and an empty chamber fires a round of the
+        // kind loaded elsewhere in the cylinder
+        public bool TryFire(out AmmoType firedAmmo, bool keepRound = false)
         {
             int i = UnderHammer;
             if (states[i] == RoundState.Live)
             {
-                states[i] = RoundState.Spent;
                 firedAmmo = ammo[i];
-                ChamberChanged?.Invoke(i);
+                if (!keepRound)
+                {
+                    states[i] = RoundState.Spent;
+                    ChamberChanged?.Invoke(i);
+                }
                 Fired?.Invoke(i, firedAmmo);
                 return true;
+            }
+            if (keepRound)
+            {
+                foreach (var a in ammo)
+                    if (a != null) { firedAmmo = a; Fired?.Invoke(i, firedAmmo); return true; }
             }
             firedAmmo = null;
             DryFired?.Invoke(i, states[i]);

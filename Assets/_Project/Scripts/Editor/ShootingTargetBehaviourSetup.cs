@@ -130,10 +130,10 @@ namespace Pistol.EditorTools
                 AssetDatabase.CreateAsset(steel, SteelPath);
                 Debug.Log("Created " + SteelPath);
             }
-            var table = AssetDatabase.LoadAssetAtPath<SurfaceSoundTable>(TablePath);
+            var table = AssetDatabase.LoadAssetAtPath<SurfaceTable>(TablePath);
             if (table == null)
             {
-                table = ScriptableObject.CreateInstance<SurfaceSoundTable>();
+                table = ScriptableObject.CreateInstance<SurfaceTable>();
                 AssetDatabase.CreateAsset(table, TablePath);
                 Debug.Log("Created " + TablePath + ": assign it to BulletSystem (Surface Sounds)");
             }

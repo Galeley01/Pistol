@@ -20,6 +20,9 @@ namespace Pistol.Core
         [BoxGroup("Логи в Console"), Tooltip("Каждое попадание пули: во что, с какого расстояния, с какой скоростью")]
         public bool bulletHits = true;
 
+        [BoxGroup("Оружие"), Tooltip("Бесконечные патроны: каморы не пустеют, перезаряжать не нужно")]
+        public bool infiniteAmmo = false;
+
         [BoxGroup("На экране"), Tooltip("Путь каждой пули жёлтой линией")]
         public bool bulletPaths = true;
         [BoxGroup("На экране"), Tooltip("Линия, куда полетит пуля, если выстрелить сейчас")]
@@ -48,6 +51,12 @@ namespace Pistol.Core
         public bool newAcoustics = true;
         [BoxGroup("Сравнение вида"), Tooltip("Проверка: звучать как в закрытом тире, где бы ни стоял (иначе — по зонам, по умолчанию улица)")]
         public bool forceIndoor = false;
+        [BoxGroup("Сравнение вида"), Tooltip("Новые следы от пуль (воронки в бетоне). Выкл — простые тёмные точки. Действует на новые выстрелы")]
+        public bool newBulletHoles = true;
+        public enum HoleStyle { AsInSurfaceTable, Photo, ScanFlatEntry, ScanFlatExit, ScanCraterEntry, ScanCraterExit, RandomOfAll }
+        [BoxGroup("Сравнение вида"), Tooltip("Какой след в бетоне: фото, наклейка из скана (вход / выход пули), объёмная воронка из скана, или каждый раз случайный. " +
+                                              "Действует на новые выстрелы")]
+        public HoleStyle bulletHoleStyle = HoleStyle.AsInSurfaceTable;
         [BoxGroup("Сравнение вида"), EnableIf("NotPlaying")]
         [Tooltip("Запечённый свет (карты освещения). Переключается только вне Play: вкл — запекается заново (несколько минут), " +
                  "выкл — запечённое убирается, неподвижное освещено только общим светом неба. Потом сохраните сцену")]
@@ -83,12 +92,17 @@ namespace Pistol.Core
         public bool BulletPaths => Allowed && bulletPaths;
         public bool TrajectoryPreview => Allowed && trajectoryPreview;
         public bool AimPoint => Allowed && aimPoint;
+        public bool InfiniteAmmo => Allowed && infiniteAmmo;
         // In a normal build the new look is always on
         public bool NewPostFx => !Allowed || newPostFx;
         public bool NewSky => !Allowed || newSky;
         public bool NewCamera => !Allowed || newCamera;
         public bool NewAcoustics => !Allowed || (newAcoustics && !AllOld);
         public bool ForceIndoor => Allowed && forceIndoor;
+        public bool NewBulletHoles => !Allowed || (newBulletHoles && !AllOld);
+        // -1 = as in the surface table, -2 = random of all, else the index in BulletSystem's style list
+        public int BulletHoleStyleIndex => !Allowed ? -1 :
+            bulletHoleStyle == HoleStyle.AsInSurfaceTable ? -1 : bulletHoleStyle == HoleStyle.RandomOfAll ? -2 : (int)bulletHoleStyle - 1;
 
         // Key 4 (LookSwitcher): everything as before this work, for the moment (not saved)
         [System.NonSerialized] bool allOld;

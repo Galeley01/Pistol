@@ -10,7 +10,8 @@ namespace Pistol.Ballistics
     // at its own speed and drops under gravity. Hits are checked with a ray along that segment,
     // so bullets never pass through walls. No Rigidbody or collider is needed for bullets.
     // Bullet holes follow what was hit: they move with a falling box and disappear with a destroyed one.
-    // Every hit also sounds at the hit point: the sound of the collider's Physics Material (SurfaceSoundTable),
+    // Every hit leaves the mark of the surface (SurfaceTable: a concrete crater...; a plain dark dot when none)
+    // and sounds at the hit point: the sound of the collider's Physics Material (SurfaceTable),
     // or of an ImpactSurface on the object; the hit angle changes it and it arrives after the time the sound
     // needs to come back along the bullet's path.
     //
@@ -27,7 +28,10 @@ namespace Pistol.Ballistics
         [BoxGroup("Звук попаданий"), SerializeField, Tooltip("Звук игры. Пусто — попадания беззвучны")]
         GameAudio gameAudio;
         [BoxGroup("Звук попаданий"), SerializeField, Tooltip("Какой звук у какой поверхности (по Physics Material коллайдера) и звук по умолчанию")]
-        SurfaceSoundTable surfaceSounds;
+        SurfaceTable surfaceSounds;
+        [BoxGroup("Следы"), SerializeField, Tooltip("Стили следа для сравнения (DebugSettings → Bullet Hole Style), по порядку: " +
+                                                    "фото, скан-наклейка вход, выход, скан-воронка вход, выход")]
+        ImpactDecal[] holeStyles = new ImpactDecal[0];
 
         [BoxGroup("Отладка"), SerializeField, Tooltip("Отладочные флаги: пути пуль и логи попаданий включаются там")]
         DebugSettings debug;
@@ -179,12 +183,25 @@ namespace Pistol.Ballistics
             var target = hit.collider.GetComponentInParent<IDamageable>();
             if (target is Object unityObj ? unityObj != null : target != null) target.TakeHit(info);
 
-            PlaceHole(hit.point, hit.normal, b.ammo.holeSize, hit.collider.transform);
+            var decal = surfaceSounds != null && (debug == null || debug.NewBulletHoles) ? surfaceSounds.DecalFor(hit.collider.sharedMaterial) : null;
+            if (decal != null && surfaceSounds != null && decal == surfaceSounds.defaultDecal) decal = StyleOverride(decal);
+            PlaceHole(hit.point, hit.normal, b.ammo.holeSize, hit.collider.transform, decal);
             PlayImpact(info, hit.collider, b.travelled);
 
             if (LogHits)
                 Debug.Log($"Hit: {hit.collider.name}, {info.distance:F1} m, speed {speed:F0} m/s");
         }
+
+        // Debug comparison: the default (concrete) mark replaced by the style picked in DebugSettings, or a random one
+        ImpactDecal StyleOverride(ImpactDecal decal)
+        {
+            if (debug == null || holeStyles == null || holeStyles.Length == 0) return decal;
+            int style = debug.BulletHoleStyleIndex;   // -1 = as in the surface table, -2 = random of all
+            if (style == -2) return holeStyles[Random.Range(0, holeStyles.Length)] ?? decal;
+            return style >= 0 && style < holeStyles.Length && holeStyles[style] != null ? holeStyles[style] : decal;
+        }
+
+        public void SetHoleStyles(ImpactDecal[] styles) => holeStyles = styles;   // Pistol > Setup Bullet Decals
 
         // ---------- Impact sound ----------
         void PlayImpact(in BulletHit hit, Collider collider, float travelled)
@@ -208,7 +225,7 @@ namespace Pistol.Ballistics
         // A hole is never a child of what it hit: under a stretched object (a wall is a scaled cube) a rotated
         // child gets squashed into a line. Holes live in their own unscaled container and follow the surface
         // by its position and rotation only, so they are always round and of the right size.
-        void PlaceHole(Vector3 point, Vector3 normal, float size, Transform surface)
+        void PlaceHole(Vector3 point, Vector3 normal, float size, Transform surface, ImpactDecal decal = null)
         {
             if (holeRoot == null) holeRoot = new GameObject("BulletHoles").transform;
 
@@ -222,6 +239,33 @@ namespace Pistol.Ballistics
 
             Vector3 position = point + normal * 0.0015f;
             Quaternion rotation = Quaternion.LookRotation(normal);
+            var mf = hole.transform.GetComponent<MeshFilter>();
+            var mr = hole.transform.GetComponent<MeshRenderer>();
+            Mesh mesh = decal != null && (decal.material != null || decal.kind == ImpactDecal.Kind.Mesh) && decal.Count > 0
+                ? decal.MeshFor(Random.Range(0, decal.Count)) : null;
+            if (mesh != null)
+            {
+                // The surface's own mark: a random variant, size and turn around the normal
+                mf.sharedMesh = mesh;
+                mr.sharedMaterials = decal.MaterialsFor();
+                mr.SetPropertyBlock(null);
+                mr.receiveShadows = true;
+                size = decal.Size(size) * (1f + Random.Range(-decal.sizeJitter, decal.sizeJitter));
+                if (decal.randomRotation) rotation *= Quaternion.Euler(0f, 0f, Random.value * 360f);
+                rotation *= Quaternion.Euler(decal.meshRotation);
+                if (decal.kind == ImpactDecal.Kind.Mesh) position = point;   // a crater mesh starts at the surface level
+            }
+            else
+            {
+                // The plain dark dot
+                if (discMesh == null) discMesh = BuildDisc(16);
+                mf.sharedMesh = discMesh;
+                mr.sharedMaterial = GetMaterial();
+                mr.receiveShadows = false;
+                var block = new MaterialPropertyBlock();
+                block.SetColor("_Color", holeColor);
+                mr.SetPropertyBlock(block);
+            }
             hole.transform.SetPositionAndRotation(position, rotation);
             hole.transform.localScale = Vector3.one * size;
             hole.transform.gameObject.SetActive(true);

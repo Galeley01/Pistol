@@ -1,0 +1,3 @@
+Bullet hole photos (T_BulletHole_Concrete_*): "Pistol Concrete Entry 1-5", ActionVFX free Bullet Hole Textures (actionvfx.com).
+Combined into an atlas; the normal map is derived from the photos.
+Concrete bullet hole scan (T_BulletHole_Scan*, T_BulletHole_Crater*, BulletCrater_*.fbx): "concrete-bullet-hole-pistol" photogrammetry model; decals and crater meshes baked from it.
