@@ -87,16 +87,38 @@ namespace Pistol.Ballistics
                 BulletMath.Step(b.pos, b.vel, BulletMath.Gravity(b.ammo), dt, out Vector3 newPos, out Vector3 newVel);
                 Vector3 seg = newPos - b.pos;
 
-                if (Raycast(b.pos, seg, seg.magnitude, hitMask, b.ignoreRoot, out RaycastHit hit))
+                // A surface that lets bullets through (a cardboard target) is crossed and the ray goes on
+                Vector3 from = b.pos;
+                float left = seg.magnitude;
+                Vector3 dir = left > 0f ? seg / left : b.vel.normalized;
+                bool stopped = false;
+                for (int pass = 0; pass < MaxPassThrough && Raycast(from, dir, left, hitMask, b.ignoreRoot, out RaycastHit hit); pass++)
                 {
                     b.travelled += hit.distance;
+                    var through = hit.collider.GetComponentInParent<IBulletPassThrough>();
+                    if (through is Object throughObj ? throughObj != null : through != null)
+                    {
+                        var info = MakeHit(b, hit, newVel.magnitude);
+                        if (through.PassesThrough(info, out bool counts))
+                        {
+                            if (counts) HitThrough(info, hit, b.travelled);
+                            float step = hit.distance + PassThroughStep;
+                            from += dir * step;
+                            left -= step;
+                            b.travelled += PassThroughStep;
+                            if (left <= 0f) break;
+                            continue;
+                        }
+                    }
                     b.path?.Add(hit.point);
                     OnHit(b, hit, newVel.magnitude);
                     Finish(i);
-                    continue;
+                    stopped = true;
+                    break;
                 }
+                if (stopped) continue;
 
-                b.travelled += seg.magnitude;
+                b.travelled += left > 0f ? left : 0f;
                 b.pos = newPos;
                 b.vel = newVel;
                 b.age += dt;
@@ -129,13 +151,27 @@ namespace Pistol.Ballistics
             return found;
         }
 
+        const int MaxPassThrough = 4;            // surfaces a bullet may cross in one frame
+        const float PassThroughStep = 0.006f;    // past the surface (a card is a few mm thick)
+
+        static BulletHit MakeHit(Bullet b, RaycastHit hit, float speed) => new BulletHit
+        {
+            point = hit.point, normal = hit.normal, direction = b.vel.normalized,
+            speed = speed, distance = b.travelled, ammo = b.ammo, collider = hit.collider
+        };
+
+        // A hit on a surface the bullet goes through: the surface reacts and sounds, but no hole mark and no stop
+        void HitThrough(in BulletHit info, RaycastHit hit, float travelled)
+        {
+            var target = hit.collider.GetComponentInParent<IDamageable>();
+            if (target is Object unityObj ? unityObj != null : target != null) target.TakeHit(info);
+            PlayImpact(info, hit.collider, travelled);
+            if (LogHits) Debug.Log($"Hit through: {hit.collider.name}, {info.distance:F1} m");
+        }
+
         void OnHit(Bullet b, RaycastHit hit, float speed)
         {
-            var info = new BulletHit
-            {
-                point = hit.point, normal = hit.normal, direction = b.vel.normalized,
-                speed = speed, distance = b.travelled, ammo = b.ammo, collider = hit.collider
-            };
+            var info = MakeHit(b, hit, speed);
 
             if (hit.rigidbody != null)
                 hit.rigidbody.AddForceAtPosition(info.direction * b.ammo.bulletMass * speed, hit.point, ForceMode.Impulse);

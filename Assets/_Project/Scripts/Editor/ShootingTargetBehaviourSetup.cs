@@ -79,6 +79,7 @@ namespace Pistol.EditorTools
                     foreach (Transform part in root.GetComponentsInChildren<Transform>(true))
                     {
                         // Texas star: the turning arm and the plates that break off
+                        if (part.name == "PaperTarget_Card") added += Add<PaperTargetCard>(part.gameObject, null);
                         if (part.name == "TexasStar_Arm") added += Add<TexasStarSpinner>(part.gameObject, null);
                         if (part.name.StartsWith("TexasStar_Plate_", StringComparison.Ordinal)) added += Add<DetachingPlate>(part.gameObject, null);
                     }

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1661391997889191830}
   - component: {fileID: 4018274426660889869}
   - component: {fileID: 5177879409165959841}
+  - component: {fileID: 5003689220474656294}
   m_Layer: 0
   m_Name: PaperTarget_Card
   m_TagString: Untagged
@@ -109,6 +110,21 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -4650019286200619702, guid: 99dd392bf3224484b1fdedb95e6e9c25, type: 3}
+--- !u!114 &5003689220474656294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 874660522840416606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7736369bd0be44de9d636f555aab2a7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maskWidth: 512
+  holeScale: 1
+  tear: 0.25
 --- !u!1 &4368619529004539833
 GameObject:
   m_ObjectHideFlags: 0
