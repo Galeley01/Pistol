@@ -2,6 +2,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering.PostProcessing;
+using Pistol.Core;
 using Pistol.PostFx;
 
 namespace Pistol.EditorTools
@@ -12,10 +13,14 @@ namespace Pistol.EditorTools
     //   light bloom — only really bright things glow (sun glints, the muzzle flash);
     //   ambient occlusion — darker creases and contact spots (where objects touch the ground).
     // Settings it doesn't override stay as in the PostFX profile (saturation, contrast, vignette, grain...).
-    // Menu: Pistol > Create Look Volume. An existing profile is kept (it may be tuned); save the scene afterwards.
+    // It also fills the LookSwitcher (before / after switches in DebugSettings: post-processing, sky, baked light).
+    // Menu: Pistol > Create Look Volume. An existing profile is kept (it may be tuned); run it again to refill the
+    // switcher's references; save the scene afterwards.
     public static class LookVolumeSetup
     {
         const string ProfilePath = "Assets/_Project/Settings/PostFX Look.asset";
+        const string DebugPath = "Assets/_Project/Settings/DebugSettings.asset";
+        const string SkyPath = "Assets/_Project/Environment/Sky/M_Sky_GoldenGate.mat";
 
         [MenuItem("Pistol/Create Look Volume")]
         static void Create()
@@ -39,7 +44,7 @@ namespace Pistol.EditorTools
                 bloom.softKnee.Override(0.5f);
 
                 var ao = Add<AmbientOcclusion>(profile);
-                ao.mode.Override(AmbientOcclusionMode.MultiScaleVolumetricObscurance);
+                ao.mode.Override(AmbientOcclusionMode.ScalableAmbientObscurance);   // works in WebGL too (multi-scale needs compute shaders)
                 ao.intensity.Override(0.6f);
                 ao.thicknessModifier.Override(1f);
 
@@ -51,7 +56,16 @@ namespace Pistol.EditorTools
             int layer = 0;
             foreach (var v in Object.FindObjectsByType<PostProcessVolume>(FindObjectsSortMode.None))   // editor tool, once
             {
-                if (v.sharedProfile == profile) { Selection.activeObject = v.gameObject; Debug.Log("The look volume is already in the scene."); return; }
+                if (v.sharedProfile == profile)
+                {
+                    var existing = v.GetComponent<LookSwitcher>();
+                    if (existing == null) existing = v.gameObject.AddComponent<LookSwitcher>();
+                    Fill(existing);
+                    Selection.activeObject = v.gameObject;
+                    EditorSceneManager.MarkSceneDirty(v.gameObject.scene);
+                    Debug.Log("The look volume is already in the scene: switcher references refilled. Save the scene.");
+                    return;
+                }
                 layer = v.gameObject.layer;
             }
 
@@ -61,10 +75,22 @@ namespace Pistol.EditorTools
             volume.isGlobal = true;
             volume.priority = 1f;   // above the PostFX volume
             volume.sharedProfile = profile;
-            go.AddComponent<LookComparison>();
+            Fill(go.AddComponent<LookSwitcher>());
             Selection.activeObject = go;
             EditorSceneManager.MarkSceneDirty(go.scene);
-            Debug.Log("Look volume added. In Play press 4 to compare before / after. Save the scene.");
+            Debug.Log("Look volume added. Before / after: DebugSettings > Сравнение вида, or key 4 in Play. Save the scene.");
+        }
+
+        static void Fill(LookSwitcher switcher)
+        {
+            Undo.RecordObject(switcher, "Fill look switcher");
+            switcher.Configure(
+                AssetDatabase.LoadAssetAtPath<DebugSettings>(DebugPath),
+                AssetDatabase.LoadAssetAtPath<Material>(SkyPath),
+                AssetDatabase.GetBuiltinExtraResource<Material>("Default-Skybox.mat"),
+                RenderSettings.sun,
+                Object.FindFirstObjectByType<Pistol.Cameras.CameraMotion>());   // editor tool, once
+            EditorUtility.SetDirty(switcher);
         }
 
         static T Add<T>(PostProcessProfile profile) where T : PostProcessEffectSettings

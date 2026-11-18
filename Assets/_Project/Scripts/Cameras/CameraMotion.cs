@@ -26,6 +26,17 @@ namespace Pistol.Cameras
 
 
         Camera cam;
+        float fieldOfView;
+
+        // The camera's normal field of view (vertical, degrees); aiming zooms from it
+        public float FieldOfView => fieldOfView;
+
+        // Changes the normal field of view at runtime (e.g. the look comparison in debug)
+        public void SetFieldOfView(float fov)
+        {
+            fieldOfView = fov;
+            if (cam != null) cam.fieldOfView = fov;   // an aiming weapon lerps from it next frame
+        }
         float bobPhase, bobWeight, runWeight, tiredWeight;
         int lastStep;
         float breathPhase, shakeTime, impactTime;
@@ -48,7 +59,8 @@ namespace Pistol.Cameras
             cam = GetComponent<Camera>();
             if (controller == null || movement == null) { Debug.LogError("CameraMotion: assign Controller and Movement.", this); enabled = false; return; }
 
-            cam.fieldOfView = profile.fieldOfView;
+            fieldOfView = profile.fieldOfView;
+            cam.fieldOfView = fieldOfView;
             cam.nearClipPlane = 0.01f;
             leanLimitLeft = leanLimitRight = profile.leanOffset;
         }

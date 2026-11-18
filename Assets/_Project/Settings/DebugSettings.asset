@@ -22,3 +22,7 @@ MonoBehaviour:
   closeSlowMotion: 1
   closePauseAtPhase: -1
   closePauseAtLatch: 0
+  newPostFx: 1
+  newSky: 1
+  newCamera: 0
+  bakedLight: 1

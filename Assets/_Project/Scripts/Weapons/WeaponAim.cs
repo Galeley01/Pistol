@@ -1,5 +1,6 @@
 using UnityEngine;
 using NaughtyAttributes;
+using Pistol.Cameras;
 using Pistol.Core;
 using Pistol.Items;
 using Pistol.Player;
@@ -36,6 +37,7 @@ namespace Pistol.Weapons
         ItemRig rig;
         PlayerMovement movement;
         float aim, baseFov = -1f, currentAimIn;
+        CameraMotion cameraMotion;   // gives the normal field of view (it can change at runtime)
         WeaponSway sway;
         CameraEffects cameraEffects;
         ScreenEffectsRequest effectsRequest;
@@ -49,6 +51,7 @@ namespace Pistol.Weapons
         public void Bind(ItemContext pose)
         {
             cam = pose.Camera;
+            cameraMotion = cam != null ? cam.GetComponent<CameraMotion>() : null;
             movement = pose.Movement;
             context = pose.Player;
             cameraEffects = pose.Effects;
@@ -64,6 +67,7 @@ namespace Pistol.Weapons
             aim = aimT = aimArc = 0f;
             baseFov = -1f;   // read again from the next camera
             cam = null;
+            cameraMotion = null;
             movement = null;
             context = null;
             cameraEffects = null;
@@ -92,7 +96,8 @@ namespace Pistol.Weapons
         void Update()
         {
             if (cam == null) return;
-            if (baseFov < 0f) baseFov = cam.fieldOfView;   // read the FOV after CameraMotion has set it
+            if (cameraMotion != null && cameraMotion.FieldOfView > 0f) baseFov = cameraMotion.FieldOfView;
+            else if (baseFov < 0f) baseFov = cam.fieldOfView;   // read the FOV after CameraMotion has set it
 
             bool canAim = held == null || held.CanAim;   // e.g. not with the revolver cylinder open
             bool want = (forceAim || (context != null && context.AimHeld)) && canAim;

@@ -38,6 +38,37 @@ namespace Pistol.Core
         [BoxGroup("Закрытие барабана"), Tooltip("Поставить редактор на паузу в момент защёлкивания крана")]
         public bool closePauseAtLatch = false;
 
+        [BoxGroup("Сравнение вида"), Tooltip("Новая постобработка: ACES, лёгкий bloom, AO. Выкл — как было. Клавиша 4 в игре — то же")]
+        public bool newPostFx = true;
+        [BoxGroup("Сравнение вида"), Tooltip("Новое небо (HDRI) и солнце по нему. Выкл — стандартное небо Unity и прежнее солнце")]
+        public bool newSky = true;
+        [BoxGroup("Сравнение вида"), Tooltip("Новая камера: поле зрения 70° и слабое искажение линзы. Выкл — как было (90° и сильное искажение)")]
+        public bool newCamera = true;
+        [BoxGroup("Сравнение вида"), EnableIf("NotPlaying")]
+        [Tooltip("Запечённый свет (карты освещения). Переключается только вне Play: вкл — запекается заново (несколько минут), " +
+                 "выкл — запечённое убирается, неподвижное освещено только общим светом неба. Потом сохраните сцену")]
+        public bool bakedLight = true;
+
+        bool NotPlaying() => !Application.isPlaying;
+
+        // The editor bakes or removes the baked light when the switch changes outside Play (LightingBakeSetup listens)
+        public static event System.Action<bool> BakedLightSwitched;
+        [System.NonSerialized] bool lastBakedLight;
+        [System.NonSerialized] bool loaded;
+
+        void OnEnable()
+        {
+            lastBakedLight = bakedLight;
+            loaded = true;
+        }
+
+        void OnValidate()
+        {
+            if (!loaded || bakedLight == lastBakedLight) return;
+            lastBakedLight = bakedLight;
+            if (!Application.isPlaying) BakedLightSwitched?.Invoke(bakedLight);
+        }
+
         // Editor and Development builds only
         public static bool Allowed => Debug.isDebugBuild;
 
@@ -48,6 +79,12 @@ namespace Pistol.Core
         public bool BulletPaths => Allowed && bulletPaths;
         public bool TrajectoryPreview => Allowed && trajectoryPreview;
         public bool AimPoint => Allowed && aimPoint;
+        // In a normal build the new look is always on
+        public bool NewPostFx => !Allowed || newPostFx;
+        public bool NewSky => !Allowed || newSky;
+        public bool NewCamera => !Allowed || newCamera;
+        public void SetNewPostFx(bool on) => newPostFx = on;
+
         public float CloseSlowMotion => Allowed ? Mathf.Clamp(closeSlowMotion, 0.02f, 1f) : 1f;
         public int ClosePauseAtPhase => Allowed ? closePauseAtPhase : -1;
         public bool ClosePauseAtLatch => Allowed && closePauseAtLatch;
