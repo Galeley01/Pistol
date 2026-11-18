@@ -13,7 +13,8 @@ namespace Pistol.EditorTools
     //   Scan crater entry / exit — 3D crater meshes cut from the scan: a stencil mask opens the wall, the crater is
     //     drawn inside it, the scan decal around it gives the dust and chips (looked flat: no depth order, no shadow);
     //   Scan depth entry / exit — the scan decals with a height map baked from the same scan (Pistol/BulletDecalDepth):
-    //     a flat quad on the wall that shows the crater sunk in, with the rim's shadow inside it.
+    //     a flat quad on the wall that shows the crater sunk in, with the rim's shadow inside it;
+    //     the exit one has angled-hit variants (ScanExit45/65/80): elongated along the bullet's travel.
     // Texture and model import is set here too. Existing assets are kept (they may be tuned).
     // Menu: Pistol > Setup Bullet Decals. Save the scene afterwards (BulletSystem gets the style list).
     public static class BulletDecalSetup
@@ -41,6 +42,22 @@ namespace Pistol.EditorTools
             // Scan with depth: same textures + height, same size; depth as a fraction of the size = 2.5 cm / side
             var depthEntry = DepthDecal("Entry", flatEntry, 0.025f / 0.112f);
             var depthExit = DepthDecal("Exit", flatExit, 0.025f / 0.154f);
+            // Angled hits on the exit style: the scan crater deformed for 45 / 65 / 80 degrees (stretched along the
+            // travel, shallower, pit pushed downrange, hole filled); picked from 35 / 55 / 72 degrees
+            if (depthExit != null && (depthExit.angleVariants == null || depthExit.angleVariants.Length == 0 ||
+                                      depthExit.angleVariants.Any(v => v == null || v.decal == null)))   // empty or deleted: make again
+            {
+                var a45 = AngledDecal("ScanExit45", 0.223f, 0.025f / 0.223f);
+                var a65 = AngledDecal("ScanExit65", 0.27f, 0.025f / 0.308f);
+                var a80 = AngledDecal("ScanExit80", 0.28f, 0.025f / 0.400f);
+                depthExit.angleVariants = new[]
+                {
+                    new ImpactDecal.AngleVariant { fromAngle = 35f, decal = a45 },
+                    new ImpactDecal.AngleVariant { fromAngle = 55f, decal = a65 },
+                    new ImpactDecal.AngleVariant { fromAngle = 72f, decal = a80 },
+                };
+                EditorUtility.SetDirty(depthExit);
+            }
 
             var table = AssetDatabase.LoadAssetAtPath<SurfaceTable>(TablePath);
             if (table != null && table.defaultDecal == null)
@@ -143,20 +160,7 @@ namespace Pistol.EditorTools
         {
             string albedo = Dir + $"T_BulletHole_Scan{side}_Albedo.png", normal = Dir + $"T_BulletHole_Scan{side}_Normal.png";
             string height = Dir + $"T_BulletHole_Scan{side}_Height.png";
-            if (AssetImporter.GetAtPath(height) is TextureImporter hi &&
-                (hi.sRGBTexture || hi.wrapMode != TextureWrapMode.Clamp || hi.textureCompression != TextureImporterCompression.Uncompressed))
-            {
-                hi.textureType = TextureImporterType.Default;
-                hi.sRGBTexture = false;   // heights, not colours
-                hi.alphaSource = TextureImporterAlphaSource.None;
-                hi.wrapMode = TextureWrapMode.Clamp;
-                hi.mipmapEnabled = true;
-                hi.textureCompression = TextureImporterCompression.Uncompressed;   // single channel, no blocky steps
-                hi.SetPlatformTextureSettings(new TextureImporterPlatformSettings { name = "Standalone", overridden = true, format = TextureImporterFormat.R8, maxTextureSize = 512 });
-                hi.SetPlatformTextureSettings(new TextureImporterPlatformSettings { name = "WebGL", overridden = true, format = TextureImporterFormat.R8, maxTextureSize = 512 });
-                hi.SaveAndReimport();
-            }
-            else if (!(AssetImporter.GetAtPath(height) is TextureImporter)) { Debug.LogWarning("Height map not found: " + height); return null; }
+            if (!ImportHeight(height)) return null;
 
             var material = MaterialAt(Dir + $"M_BulletHole_ScanDepth{side}.mat", "Pistol/BulletDecalDepth", m =>
             {
@@ -166,6 +170,7 @@ namespace Pistol.EditorTools
                 m.SetColor("_Color", new Color(0.85f, 0.85f, 0.84f));
                 m.SetFloat("_Parallax", parallax);
             });
+            FillMissing(material, albedo, normal, height);
             string path = Dir + $"Decal_ScanDepth{side}.asset";
             var d = AssetDatabase.LoadAssetAtPath<ImpactDecal>(path);
             if (d != null) return d;
@@ -174,6 +179,70 @@ namespace Pistol.EditorTools
             d.material = material;
             d.columns = 1; d.rows = 1; d.variants = 1;
             d.sizeInMeters = true; d.meters = flat != null ? flat.meters : 0.15f; d.sizeJitter = 0.2f;
+            AssetDatabase.CreateAsset(d, path);
+            return d;
+        }
+
+        // A material made in the same run as its textures' first import can come out without them: fill the empty slots
+        static void FillMissing(Material m, string albedo, string normal, string height)
+        {
+            if (m == null) return;
+            bool changed = false;
+            foreach (var (prop, path) in new[] { ("_MainTex", albedo), ("_BumpMap", normal), ("_HeightMap", height) })
+            {
+                if (m.GetTexture(prop) != null) continue;
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                if (tex == null) { Debug.LogWarning($"{m.name}: texture not loaded yet: {path}. Run the menu again."); continue; }
+                m.SetTexture(prop, tex);
+                changed = true;
+            }
+            if (changed) EditorUtility.SetDirty(m);
+        }
+
+        // Heights: linear, single channel, uncompressed (no blocky steps in the parallax)
+        static bool ImportHeight(string path)
+        {
+            if (!(AssetImporter.GetAtPath(path) is TextureImporter hi)) { Debug.LogWarning("Height map not found: " + path); return false; }
+            if (!hi.sRGBTexture && hi.wrapMode == TextureWrapMode.Clamp && hi.textureCompression == TextureImporterCompression.Uncompressed) return true;
+            hi.textureType = TextureImporterType.Default;
+            hi.sRGBTexture = false;
+            hi.alphaSource = TextureImporterAlphaSource.None;
+            hi.wrapMode = TextureWrapMode.Clamp;
+            hi.mipmapEnabled = true;
+            hi.textureCompression = TextureImporterCompression.Uncompressed;
+            hi.SetPlatformTextureSettings(new TextureImporterPlatformSettings { name = "Standalone", overridden = true, format = TextureImporterFormat.R8, maxTextureSize = 512 });
+            hi.SetPlatformTextureSettings(new TextureImporterPlatformSettings { name = "WebGL", overridden = true, format = TextureImporterFormat.R8, maxTextureSize = 512 });
+            hi.SaveAndReimport();
+            return true;
+        }
+
+        // An angled-hit mark (T_BulletHole_<tag>_*): depth shader, laid along the bullet's travel
+        static ImpactDecal AngledDecal(string tag, float meters, float parallax)
+        {
+            string albedo = Dir + $"T_BulletHole_{tag}_Albedo.png", normal = Dir + $"T_BulletHole_{tag}_Normal.png";
+            string height = Dir + $"T_BulletHole_{tag}_Height.png";
+            ImportTexture(albedo, false);
+            ImportTexture(normal, true);
+            if (!ImportHeight(height)) return null;
+            var material = MaterialAt(Dir + $"M_BulletHole_{tag}.mat", "Pistol/BulletDecalDepth", m =>
+            {
+                m.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(albedo));
+                m.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(normal));
+                m.SetTexture("_HeightMap", AssetDatabase.LoadAssetAtPath<Texture2D>(height));
+                m.SetColor("_Color", new Color(0.85f, 0.85f, 0.84f));
+                m.SetFloat("_Parallax", parallax);
+            });
+            FillMissing(material, albedo, normal, height);
+            string path = Dir + $"Decal_{tag}.asset";
+            var d = AssetDatabase.LoadAssetAtPath<ImpactDecal>(path);
+            if (d != null) return d;
+            d = ScriptableObject.CreateInstance<ImpactDecal>();
+            d.kind = ImpactDecal.Kind.Flat;
+            d.material = material;
+            d.columns = 1; d.rows = 1; d.variants = 1;
+            d.sizeInMeters = true; d.meters = meters; d.sizeJitter = 0.15f;
+            d.randomRotation = false;
+            d.alongTravel = true;
             AssetDatabase.CreateAsset(d, path);
             return d;
         }

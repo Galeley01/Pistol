@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d3df08302a64842bec3b47f687a983f, type: 3}
+  m_Name: Decal_ScanExit80
+  m_EditorClassIdentifier: 
+  kind: 0
+  material: {fileID: 2100000, guid: e8e48cbfe765c4a56a86dbc4e1f032ed, type: 2}
+  columns: 1
+  rows: 1
+  variants: 1
+  meshes: []
+  meshMaterials: []
+  meshRotation: {x: 0, y: 0, z: 0}
+  sizeInMeters: 1
+  meters: 0.28
+  sizeScale: 3.5
+  sizeJitter: 0.15
+  randomRotation: 0
+  angleVariants: []
+  alongTravel: 1
+  travelJitter: 4

@@ -38,11 +38,11 @@ Material:
     m_Ints: []
     m_Floats:
     - _BumpScale: 1
-    - _CavityAO: 0.7
+    - _CavityAO: 0.9
     - _Glossiness: 0.12
-    - _Parallax: 0.16233766
+    - _Parallax: 0.4
     - _ShadowSoftness: 12
-    - _ShadowStrength: 0.85
+    - _ShadowStrength: 1
     - _Steps: 16
     m_Colors:
     - _Color: {r: 0.85, g: 0.85, b: 0.84, a: 1}

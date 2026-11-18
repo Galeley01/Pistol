@@ -29,3 +29,6 @@ MonoBehaviour:
   sizeScale: 3.5
   sizeJitter: 0.15
   randomRotation: 1
+  angleVariants: []
+  alongTravel: 0
+  travelJitter: 4

@@ -59,6 +59,9 @@ namespace Pistol.Core
         public bool steamAudioHrtf = true;
         [BoxGroup("Сравнение вида"), Tooltip("Новые следы от пуль (воронки в бетоне). Выкл — простые тёмные точки. Действует на новые выстрелы")]
         public bool newBulletHoles = true;
+        [BoxGroup("Сравнение вида"), Tooltip("Следы под углом: при косом попадании след вытянут вдоль полёта пули и мельче. " +
+                                              "Выкл — всегда обычный круглый след. Действует на новые выстрелы")]
+        public bool angledBulletHoles = false;
         // The numbers are saved in the asset: new styles get new numbers, never renumber
         public enum HoleStyle
         {
@@ -94,6 +97,7 @@ namespace Pistol.Core
         public bool ForceIndoor => Allowed && forceIndoor;
         public bool SteamAudioHrtf => !Allowed || (steamAudioHrtf && !AllOld);
         public bool NewBulletHoles => !Allowed || (newBulletHoles && !AllOld);
+        public bool AngledBulletHoles => Allowed && angledBulletHoles && !AllOld;   // off in a normal build for now
         // -1 = as in the surface table, -2 = random of all, else the index in BulletSystem's style list
         public int BulletHoleStyleIndex => !Allowed ? -1 : bulletHoleStyle switch
         {

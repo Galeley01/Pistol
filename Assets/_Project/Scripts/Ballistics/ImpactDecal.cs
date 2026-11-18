@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using NaughtyAttributes;
@@ -41,6 +42,38 @@ namespace Pistol.Ballistics
         public float sizeJitter = 0.3f;
         [BoxGroup("Размер"), Tooltip("Случайный поворот вокруг нормали поверхности")]
         public bool randomRotation = true;
+
+        [Serializable]
+        public class AngleVariant
+        {
+            [Range(0f, 89f), Tooltip("С какого угла попадания (от перпендикуляра к стене, градусы) брать этот след")]
+            public float fromAngle = 45f;
+            [Tooltip("След для такого угла: вытянутый вдоль полёта пули (+X текстуры — по ходу пули)")]
+            public ImpactDecal decal;
+        }
+
+        [BoxGroup("Под углом"), Tooltip("Следы для попаданий под углом: берётся вариант с наибольшим «с какого угла», не больше угла попадания. " +
+                                         "Пусто — этот след при любом угле")]
+        public AngleVariant[] angleVariants = new AngleVariant[0];
+        [BoxGroup("Под углом"), Tooltip("Повернуть след вдоль полёта пули (+X текстуры — по ходу пули) вместо случайного поворота. Для вытянутых следов")]
+        public bool alongTravel;
+        [BoxGroup("Под углом"), ShowIf("alongTravel"), Range(0f, 20f), Tooltip("Случайное отклонение от направления полёта, градусы")]
+        public float travelJitter = 4f;
+
+        // The mark for a hit at this angle (0 = straight on, 90 = along the surface)
+        public ImpactDecal ForAngle(float incidence)
+        {
+            ImpactDecal best = this;
+            float bestFrom = -1f;
+            if (angleVariants != null)
+                foreach (var v in angleVariants)
+                    if (v != null && v.decal != null && v.decal != this && incidence >= v.fromAngle && v.fromAngle > bestFrom)
+                    {
+                        best = v.decal;
+                        bestFrom = v.fromAngle;
+                    }
+            return best;
+        }
 
         [System.NonSerialized] readonly List<Mesh> quads = new List<Mesh>();
 

@@ -25,3 +25,12 @@ MonoBehaviour:
   sizeScale: 3.5
   sizeJitter: 0.2
   randomRotation: 1
+  angleVariants:
+  - fromAngle: 35
+    decal: {fileID: 11400000, guid: c062914ce01a448a39470991d8b2ee30, type: 2}
+  - fromAngle: 55
+    decal: {fileID: 11400000, guid: 60e9e5ad2a3ae4f1fa87ce830cbf948e, type: 2}
+  - fromAngle: 72
+    decal: {fileID: 11400000, guid: aa3a0be3cfe7d44a3836dec76c4fba83, type: 2}
+  alongTravel: 0
+  travelJitter: 4

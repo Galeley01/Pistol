@@ -204,7 +204,8 @@ namespace Pistol.Ballistics
 
             var decal = surfaceSounds != null && (debug == null || debug.NewBulletHoles) ? surfaceSounds.DecalFor(hit.collider.sharedMaterial) : null;
             if (decal != null && surfaceSounds != null && decal == surfaceSounds.defaultDecal) decal = StyleOverride(decal);
-            PlaceHole(hit.point, hit.normal, b.ammo.holeSize, hit.collider.transform, decal);
+            if (decal != null && debug != null && debug.AngledBulletHoles) decal = decal.ForAngle(Vector3.Angle(-info.direction, hit.normal));   // angled hits: an elongated mark
+            PlaceHole(hit.point, hit.normal, info.direction, b.ammo.holeSize, hit.collider.transform, decal);
             PlayImpact(info, hit.collider, b.travelled);
 
             if (LogHits)
@@ -244,7 +245,7 @@ namespace Pistol.Ballistics
         // A hole is never a child of what it hit: under a stretched object (a wall is a scaled cube) a rotated
         // child gets squashed into a line. Holes live in their own unscaled container and follow the surface
         // by its position and rotation only, so they are always round and of the right size.
-        void PlaceHole(Vector3 point, Vector3 normal, float size, Transform surface, ImpactDecal decal = null)
+        void PlaceHole(Vector3 point, Vector3 normal, Vector3 direction, float size, Transform surface, ImpactDecal decal = null)
         {
             if (holeRoot == null) holeRoot = new GameObject("BulletHoles").transform;
 
@@ -270,7 +271,12 @@ namespace Pistol.Ballistics
                 mr.SetPropertyBlock(null);
                 mr.receiveShadows = true;
                 size = decal.Size(size) * (1f + Random.Range(-decal.sizeJitter, decal.sizeJitter));
-                if (decal.randomRotation) rotation *= Quaternion.Euler(0f, 0f, Random.value * 360f);
+                // Along the bullet's travel on the surface (an elongated mark, its +X downrange), or a random turn
+                Vector3 travel = Vector3.ProjectOnPlane(direction, normal);
+                if (decal.alongTravel && travel.sqrMagnitude > 1e-6f)
+                    rotation = Quaternion.LookRotation(normal, Vector3.Cross(normal, travel.normalized))
+                             * Quaternion.Euler(0f, 0f, Random.Range(-decal.travelJitter, decal.travelJitter));
+                else if (decal.randomRotation) rotation *= Quaternion.Euler(0f, 0f, Random.value * 360f);
                 rotation *= Quaternion.Euler(decal.meshRotation);
                 if (decal.kind == ImpactDecal.Kind.Mesh) position = point;   // a crater mesh starts at the surface level
             }
