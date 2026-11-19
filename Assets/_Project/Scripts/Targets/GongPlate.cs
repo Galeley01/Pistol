@@ -88,7 +88,6 @@ namespace Pistol.Targets
 
         public override void ResetTarget()
         {
-            if (body == null) return;
             body.linearVelocity = Vector3.zero;
             body.angularVelocity = Vector3.zero;
             transform.SetLocalPositionAndRotation(restPosition, restRotation);

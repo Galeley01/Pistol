@@ -69,7 +69,7 @@ namespace Pistol.Targets
 
         public override void ResetTarget()
         {
-            if (arm == null) return;
+            if (arm == null) return;   // not hung on a Texas star arm (HangOn): nothing to put back
             if (body != null) { body.isKinematic = true; Destroy(body); body = null; }   // Destroy waits for the frame end
             transform.SetParent(arm, false);
             transform.SetLocalPositionAndRotation(restPosition, restRotation);

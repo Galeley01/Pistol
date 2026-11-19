@@ -330,13 +330,11 @@ namespace Pistol.Diagnostics
                 CurrentSegment().AddLoad(cpuMs, renderMs, gpuMs, drawCallsRec.LastValue, batchesRec.LastValue, setPassRec.LastValue,
                                          trianglesRec.LastValue, verticesRec.LastValue, shadowCastersRec.LastValue, gcAllocRec.LastValue);
 
-            // The panel text and the process CPU are only for the panel: nothing to do while it is hidden
-            if (!visible) return;
             accum += Time.unscaledDeltaTime;
             if (accum < UpdateInterval) return;
             accum = 0f;
-            UpdateProcessCpu();
-            BuildText(budget);
+            UpdateProcessCpu();   // kept measuring while hidden: shown, it gives the last 0.5 s, not the hidden time
+            if (visible) BuildText(budget);   // the text is only for the panel
         }
 
         // =====================================================================

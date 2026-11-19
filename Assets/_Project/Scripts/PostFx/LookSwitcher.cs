@@ -131,6 +131,8 @@ namespace Pistol.PostFx
 
         void OnEnable()
         {
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneChanged;
+            UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
             if (!DebugSettings.Allowed) return;
             toggle = new InputAction("CompareLook", InputActionType.Button, key);
             toggle.Enable();
@@ -138,10 +140,17 @@ namespace Pistol.PostFx
 
         void OnDisable()
         {
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneChanged;
+            UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
             toggle?.Disable();
             toggle?.Dispose();
             toggle = null;
         }
+
+        // Another scene brings or takes away lightmaps: read their number again (not every frame: it allocates)
+        void OnSceneChanged(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode) =>
+            lightmapCount = LightmapSettings.lightmaps.Length;
+        void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) => lightmapCount = LightmapSettings.lightmaps.Length;
 
         void Update()
         {

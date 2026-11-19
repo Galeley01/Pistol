@@ -147,14 +147,21 @@ namespace Pistol.Ballistics
         BulletHit MakeHit(Bullet b, RaycastHit hit, float speed) => new BulletHit
         {
             point = hit.point, normal = hit.normal, direction = b.vel.normalized,
-            speed = speed, distance = b.travelled, ammo = b.ammo, collider = hit.collider, audio = gameAudio
+            speed = speed, distance = b.travelled, ammo = b.ammo, collider = hit.collider
         };
+
+        // The target's own sound on top of the impact (glass falling apart), when it has one for this hit
+        void PlayTargetSound(IDamageable target, in BulletHit hit)
+        {
+            if (gameAudio != null && target is IHitSound s && s.HitSound(hit, out var sound, out var at, out float delay) && sound != null)
+                gameAudio.Play(sound, at, 1f, 1f, delay);
+        }
 
         // A hit on a surface the bullet goes through: the surface reacts and sounds, but no hole mark and no stop
         void HitThrough(in BulletHit info, RaycastHit hit, float travelled)
         {
             var target = hit.collider.GetComponentInParent<IDamageable>();
-            if (UnityNull.Alive(target)) target.TakeHit(info);
+            if (UnityNull.Alive(target)) { target.TakeHit(info); PlayTargetSound(target, info); }
             PlayImpact(info, hit.collider, travelled);
             if (LogHits) Debug.Log($"Hit through: {hit.collider.name}, {info.distance:F1} m");
         }
@@ -169,7 +176,7 @@ namespace Pistol.Ballistics
             bool isTarget = UnityNull.Alive(target);
             if (!isTarget && hit.rigidbody != null && !hit.rigidbody.isKinematic)
                 hit.rigidbody.AddForceAtPosition(info.direction * b.ammo.bulletMass * speed, hit.point, ForceMode.Impulse);
-            if (isTarget) target.TakeHit(info);
+            if (isTarget) { target.TakeHit(info); PlayTargetSound(target, info); }
 
             var decal = surfaceSounds != null && (debug == null || debug.NewBulletHoles) ? surfaceSounds.DecalFor(hit.collider.sharedMaterial) : null;
             if (decal != null && decal == surfaceSounds.defaultDecal) decal = StyleOverride(decal);

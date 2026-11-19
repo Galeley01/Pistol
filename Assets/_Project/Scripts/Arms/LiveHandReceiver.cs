@@ -57,14 +57,16 @@ namespace Pistol.Arms
         volatile bool running;
         readonly object gate = new object();
         byte[] pending;
+        int failedPort = -1;
 #endif
 
         // Opens or closes the socket; called every frame by the arms with the DebugSettings switch
         public void SetListening(bool on, int port)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (on && (!Listening || port != Port)) Open(port);
-            else if (!on && Listening) Close();
+            // A port that failed to open is not tried again every frame: only after the switch goes off or the port changes
+            if (on && (!Listening || port != Port) && port != failedPort) Open(port);
+            else if (!on) { failedPort = -1; if (Listening) Close(); }
 #endif
         }
 
@@ -89,12 +91,14 @@ namespace Pistol.Arms
                 thread.Start();
                 Listening = true;
                 Port = port;
+                failedPort = -1;
                 Application.runInBackground = true;   // keep receiving while the tracking window has focus
             }
             catch (Exception e)
             {
                 Debug.LogWarning($"LiveHandReceiver: can't listen on port {port}: {e.Message}", this);
                 client = null;
+                failedPort = port;
             }
         }
 

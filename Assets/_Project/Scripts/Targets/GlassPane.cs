@@ -12,11 +12,12 @@ namespace Pistol.Targets
     //     crack is seen: the pane disappears and a burst of glass shards flies along the bullet, falls, bounces off
     //     the ground and fades out after a while.
     //   - Laminated glass (the windshield) holds and collects cracks; after "hits to shatter" it falls apart too.
-    // The crack sound comes from the glass Physics Material (SurfaceTable); the shatter sound is played here.
+    // The crack sound comes from the glass Physics Material (SurfaceTable); the shatter sound is given to BulletSystem
+    // with the hit that breaks the pane (IHitSound), timed with the shatter.
     // Shards are particles with small glass meshes, created on the first hit (nothing runs before that).
     // Reset (T) makes the pane whole again. Set up by Pistol > Setup Car Damage.
     [DisallowMultipleComponent]
-    public class GlassPane : ShootingTarget, IBulletPassThrough
+    public class GlassPane : ShootingTarget, IBulletPassThrough, IHitSound
     {
         public enum Kind { Tempered, Laminated }
 
@@ -59,7 +60,7 @@ namespace Pistol.Targets
         int hits, nextCrack;
         bool broken, shatterPending;
         Vector3 lastDirection = Vector3.forward;
-        GameAudio hitAudio;   // the game's audio, brought by the hit (BulletHit.audio)
+        bool shatterStarted;   // this hit started the shatter: its sound goes with the hit (HitSound)
 
         static bool warmed;
         static ParticleSystem.Particle[] particleBuffer = new ParticleSystem.Particle[256];
@@ -78,7 +79,11 @@ namespace Pistol.Targets
             if (!warmed) { warmed = true; StartCoroutine(WarmUp()); }
         }
 
-        void OnDestroy() => warmed = false;   // a reloaded scene warms up again
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            warmed = false;   // a reloaded scene warms up again
+        }
 
         // A build (Metal especially) compiles a shader the first time it is drawn: the first shatter froze for a moment.
         // At the start a tiny shard and a tiny crack are drawn once right in front of the camera, out of sight in practice.
@@ -119,15 +124,26 @@ namespace Pistol.Targets
         {
             if (broken) return;
             hits++;
-            if (hit.audio != null) hitAudio = hit.audio;
             lastDirection = hit.direction.sqrMagnitude > 1e-6f ? hit.direction.normalized : transform.forward;
             AddCrack(hit);
             Chips(hit.point, -lastDirection);
             if (hits >= hitsToShatter && !shatterPending)
             {
                 shatterPending = true;
+                shatterStarted = true;
                 Invoke(nameof(Shatter), shatterDelay);
             }
+        }
+
+        // Asked by BulletSystem right after the hit: the shatter sound when this hit breaks the glass, timed with it
+        public bool HitSound(in BulletHit hit, out SoundEvent sound, out Vector3 position, out float delay)
+        {
+            sound = shatterSound;
+            position = paneRenderer != null ? paneRenderer.bounds.center : transform.position;
+            delay = shatterDelay;
+            bool play = shatterStarted;
+            shatterStarted = false;
+            return play;
         }
 
         // ---------- Cracks ----------
@@ -192,8 +208,6 @@ namespace Pistol.Targets
                 system.SetParticles(particleBuffer, count, before);
             }
 
-            if (hitAudio != null && shatterSound != null)
-                hitAudio.Play(shatterSound, paneRenderer != null ? paneRenderer.bounds.center : transform.position);
         }
 
         // A few small chips thrown back towards the shooter on every hit
@@ -291,7 +305,7 @@ namespace Pistol.Targets
         public override void ResetTarget()
         {
             CancelInvoke(nameof(Shatter));
-            shatterPending = false;
+            shatterPending = shatterStarted = false;
             broken = false;
             hits = 0;
             nextCrack = 0;

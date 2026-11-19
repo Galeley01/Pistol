@@ -126,8 +126,9 @@ namespace Pistol.Targets
 
         public override void ResetTarget() => Clear();
 
-        void OnDestroy()
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             if (mask != null) Destroy(mask);
             if (material != null) Destroy(material);
         }

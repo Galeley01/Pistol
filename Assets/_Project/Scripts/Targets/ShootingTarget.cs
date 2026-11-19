@@ -9,14 +9,24 @@ namespace Pistol.Targets
     // BulletSystem plays it by the collider's Physics Material.
     //
     // Goes on the part that is hit (a plate) or on the root of a one-piece target: BulletSystem asks the hit
-    // collider and its parents. Every enabled target is in Active, wherever it is in the scene (TargetRange resets them).
+    // collider and its parents. Every target that has been enabled is in Active until it is destroyed, wherever it is
+    // in the scene and also while switched off (TargetRange resets them all).
     public abstract class ShootingTarget : MonoBehaviour, IDamageable
     {
         static readonly List<ShootingTarget> active = new List<ShootingTarget>();
         public static IReadOnlyList<ShootingTarget> Active => active;
 
-        protected virtual void OnEnable() => active.Add(this);
-        protected virtual void OnDisable() => active.Remove(this);
+        bool registered;
+
+        // After Awake: a target that never woke up (inactive since the start) has nothing to reset yet
+        protected virtual void OnEnable()
+        {
+            if (registered) return;
+            registered = true;
+            active.Add(this);
+        }
+
+        protected virtual void OnDestroy() => active.Remove(this);
 
         // Moves or disappears in play (plates, glass): the light bake keeps it dynamic. A fixed steel plate doesn't.
         public virtual bool MovesAtRuntime => true;
