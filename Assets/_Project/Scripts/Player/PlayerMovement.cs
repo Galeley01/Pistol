@@ -124,7 +124,7 @@ namespace Pistol.Player
                 // The body slowly turns after the weapon (if enabled)
                 if (profile.bodyFollowSpeed > 0f)
                 {
-                    Vector2 follow = fa * (1f - Mathf.Exp(-profile.bodyFollowSpeed * Time.deltaTime));
+                    Vector2 follow = fa * (Smoothing.Factor(profile.bodyFollowSpeed, Time.deltaTime));
                     fa -= follow;
                     toCamera += follow;
                 }
@@ -138,7 +138,7 @@ namespace Pistol.Player
             // Recoil goes straight into the camera (bypassing the Free-Aim deadzone)
             if (pendingRecoil.sqrMagnitude > 0.000001f)
             {
-                Vector2 r = pendingRecoil * (1f - Mathf.Exp(-25f * Time.deltaTime));
+                Vector2 r = pendingRecoil * (Smoothing.Factor(25f, Time.deltaTime));
                 pendingRecoil -= r;
                 toCamera += r;
             }
@@ -229,7 +229,7 @@ namespace Pistol.Player
             else if (targetVel.magnitude < curSpeed - 0.01f)
                 horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVel, profile.deceleration * Time.deltaTime);
             else
-                horizontalVelocity = Vector3.Lerp(horizontalVelocity, targetVel, 1f - Mathf.Exp(-profile.acceleration * Time.deltaTime));
+                horizontalVelocity = Vector3.Lerp(horizontalVelocity, targetVel, Smoothing.Factor(profile.acceleration, Time.deltaTime));
             LocalAcceleration = transform.InverseTransformDirection((horizontalVelocity - prevVel) / Mathf.Max(Time.deltaTime, 0.0001f));
 
             if (controller.isGrounded && verticalVelocity < 0f)

@@ -10,6 +10,8 @@ namespace Pistol.EditorTools
     // the light that comes from the sky and bounces off the ground and walls, and the soft darkening near walls and
     // under objects (baked AO). Moving things (the weapon, the arms, falling plates) get that light from light probes.
     //   - everything that never moves gets the "Contribute GI" static flag (moving target parts don't);
+    //   - a renderer set to take its light from the probes (the car: its lightmap UVs are many small pieces) keeps that:
+    //     it still blocks and bounces light in the bake, but gets no lightmap of its own;
     //   - the target model gets lightmap UVs; the huge ground plane gets a low resolution in the lightmap;
     //   - lighting settings: Baked Indirect, GPU lightmapper, baked AO; the sun is Mixed;
     //   - a light probe grid and a baked reflection probe over the range;
@@ -23,9 +25,6 @@ namespace Pistol.EditorTools
         // lightmap at a high resolution and squeezes everything else into a corner
         const float GroundTexelsPerMetre = 0.4f;
         const float NormalResolution = 10f, HighResolution = 30f;   // texels per metre for normal objects
-        // Complex props lit by the light probes instead of their own lightmap (their lightmap UVs are many small
-        // pieces): they still block and bounce light in the bake. Names of scene roots.
-        static readonly string[] ProbeLitRoots = { "Car" };
 
         [MenuItem("Pistol/Bake Lighting")]
         static void Bake() => Bake(false);
@@ -48,10 +47,15 @@ namespace Pistol.EditorTools
             ReflectionProbe(range);
 
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            StartBake();
+            Debug.Log($"Bake started ({(high ? "high quality" : "normal")}): {statics} static objects. Progress is in the bottom right corner of the editor.");
+        }
+
+        static void StartBake()
+        {
             Lightmapping.bakeCompleted -= OnBaked;
             Lightmapping.bakeCompleted += OnBaked;
             Lightmapping.BakeAsync();
-            Debug.Log($"Bake started ({(high ? "high quality" : "normal")}): {statics} static objects. Progress is in the bottom right corner of the editor.");
         }
 
         static void OnBaked()
@@ -70,12 +74,7 @@ namespace Pistol.EditorTools
             var scene = EditorSceneManager.GetActiveScene();
             foreach (var root in scene.GetRootGameObjects())
                 foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
-                {
-                    var go = r.gameObject;
-                    var flags = GameObjectUtility.GetStaticEditorFlags(go);
-                    var wanted = flags & ~(StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic);
-                    if (wanted != flags) { Undo.RecordObject(go, "Unmark static"); GameObjectUtility.SetStaticEditorFlags(go, wanted); }
-                }
+                    SetBakeStatic(r.gameObject, false);
             var sun = RenderSettings.sun;
             if (sun != null && sun.lightmapBakeType != LightmapBakeType.Realtime)
             {
@@ -84,9 +83,7 @@ namespace Pistol.EditorTools
             }
             Lightmapping.Clear();
             EditorSceneManager.MarkSceneDirty(scene);
-            Lightmapping.bakeCompleted -= OnBaked;
-            Lightmapping.bakeCompleted += OnBaked;
-            Lightmapping.BakeAsync();   // only the sky light and the reflection probe: a few seconds
+            StartBake();   // only the sky light and the reflection probe: a few seconds
             Debug.Log("Baked lighting removed, the sky light is being baked again (a few seconds). Save the scene afterwards.");
         }
 
@@ -101,15 +98,28 @@ namespace Pistol.EditorTools
             }
         }
 
-        // Things that move must stay dynamic: target parts with a moving behaviour, and everything under them
+        // Things that move must stay dynamic: targets that move or break in play (ShootingTarget.MovesAtRuntime),
+        // bodies, and everything under them
         static bool Moves(Transform t)
         {
             for (; t != null; t = t.parent)
-                if (t.GetComponent<HingedPlate>() || t.GetComponent<DetachingPlate>() || t.GetComponent<GongPlate>()
-                    || t.GetComponent<TexasStarSpinner>() || t.GetComponent<PaperTargetCard>() || t.GetComponent<Rigidbody>()
-                    || t.GetComponent<GlassPane>())   // breaks and disappears; see-through, it mustn't shade the bake
-                    return true;
+            {
+                if (t.GetComponent<Rigidbody>()) return true;
+                var target = t.GetComponent<ShootingTarget>();
+                if (target != null && target.MovesAtRuntime) return true;
+            }
             return false;
+        }
+
+        // The "Contribute GI" and "Reflection Probe" static flags on or off (with Undo)
+        static void SetBakeStatic(GameObject go, bool on)
+        {
+            const StaticEditorFlags Bake = StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic;
+            var flags = GameObjectUtility.GetStaticEditorFlags(go);
+            var wanted = on ? flags | Bake : flags & ~Bake;
+            if (wanted == flags) return;
+            Undo.RecordObject(go, on ? "Mark static for baking" : "Unmark static");
+            GameObjectUtility.SetStaticEditorFlags(go, wanted);
         }
 
         static int MarkStatics(float resolution)
@@ -122,21 +132,11 @@ namespace Pistol.EditorTools
                 foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
                 {
                     var go = r.gameObject;
-                    if (Moves(r.transform))
-                    {
-                        var was = GameObjectUtility.GetStaticEditorFlags(go);
-                        var dynamic = was & ~(StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic);
-                        if (dynamic != was) { Undo.RecordObject(go, "Unmark static"); GameObjectUtility.SetStaticEditorFlags(go, dynamic); }
-                        continue;
-                    }
-                    var flags = GameObjectUtility.GetStaticEditorFlags(go);
-                    var wanted = flags | StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic;
-                    if (wanted != flags)
-                    {
-                        Undo.RecordObject(go, "Mark static for baking");
-                        GameObjectUtility.SetStaticEditorFlags(go, wanted);
-                    }
-                    r.receiveGI = System.Array.IndexOf(ProbeLitRoots, root.name) >= 0 ? ReceiveGI.LightProbes : ReceiveGI.Lightmaps;
+                    bool moves = Moves(r.transform);
+                    SetBakeStatic(go, !moves);
+                    if (moves) continue;
+                    // How a renderer takes the baked light (lightmap, Unity's default, or the probes, like the car) is left
+                    // as its prefab set it
                     // The ground plane is huge: a low resolution in the lightmap is enough for the soft bounce light
                     if (go.transform.lossyScale.x > 50f || go.transform.lossyScale.z > 50f)
                     {
@@ -189,15 +189,11 @@ namespace Pistol.EditorTools
         // Where the range is: the static things except the huge ground, with some room around
         static Bounds RangeBounds()
         {
-            var b = new Bounds(Vector3.zero, Vector3.zero);
-            bool any = false;
+            var renderers = new List<Renderer>();
             foreach (var root in EditorSceneManager.GetActiveScene().GetRootGameObjects())
-                foreach (var r in root.GetComponentsInChildren<Renderer>(true))
-                {
-                    if (r.bounds.size.x > 100f || r.bounds.size.z > 100f) continue;
-                    if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
-                }
-            if (!any) b = new Bounds(Vector3.zero, new Vector3(20f, 4f, 20f));
+                renderers.AddRange(root.GetComponentsInChildren<Renderer>(true));
+            if (!EditorAssets.RendererBounds(renderers, out var b, r => r.bounds.size.x <= 100f && r.bounds.size.z <= 100f))
+                b = new Bounds(Vector3.zero, new Vector3(20f, 4f, 20f));
             b.Expand(new Vector3(8f, 0f, 8f));
             b.SetMinMax(new Vector3(b.min.x, 0f, b.min.z), new Vector3(b.max.x, Mathf.Max(b.max.y, 3f), b.max.z));
             return b;

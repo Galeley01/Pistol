@@ -19,7 +19,7 @@ namespace Pistol.EditorTools
     public static class LookVolumeSetup
     {
         const string ProfilePath = "Assets/_Project/Settings/PostFX Look.asset";
-        const string DebugPath = "Assets/_Project/Settings/DebugSettings.asset";
+        const string DebugPath = EditorPaths.DebugSettings;
         const string SkyPath = "Assets/_Project/Environment/Sky/M_Sky_GoldenGate.mat";
 
         [MenuItem("Pistol/Create Look Volume")]

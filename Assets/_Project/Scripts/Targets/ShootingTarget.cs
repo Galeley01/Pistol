@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Pistol.Ballistics;
 
@@ -8,9 +9,18 @@ namespace Pistol.Targets
     // BulletSystem plays it by the collider's Physics Material.
     //
     // Goes on the part that is hit (a plate) or on the root of a one-piece target: BulletSystem asks the hit
-    // collider and its parents. Targets that belong to a range are children of its TargetRange.
+    // collider and its parents. Every enabled target is in Active, wherever it is in the scene (TargetRange resets them).
     public abstract class ShootingTarget : MonoBehaviour, IDamageable
     {
+        static readonly List<ShootingTarget> active = new List<ShootingTarget>();
+        public static IReadOnlyList<ShootingTarget> Active => active;
+
+        protected virtual void OnEnable() => active.Add(this);
+        protected virtual void OnDisable() => active.Remove(this);
+
+        // Moves or disappears in play (plates, glass): the light bake keeps it dynamic. A fixed steel plate doesn't.
+        public virtual bool MovesAtRuntime => true;
+
         public void TakeHit(in BulletHit hit) => OnHit(hit);
 
         // What this target does when a bullet hits it

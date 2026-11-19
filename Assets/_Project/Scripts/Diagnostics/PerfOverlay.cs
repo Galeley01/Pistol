@@ -75,7 +75,7 @@ namespace Pistol.Diagnostics
         readonly float[] sorted = new float[HistorySize];
         int head, count;
 
-        int missedWindow, missedTotal, missedLastWindow;
+        int missedWindow, missedLastWindow;
         float missedWindowTimer;
 
         // ---------- Timings ----------
@@ -200,6 +200,7 @@ namespace Pistol.Diagnostics
 
         void OnEnable()
         {
+            useGUILayout = false;   // drawn with GUI.* only
             // Debug tools: off in normal (non-Development) builds
             if (!DebugSettings.Allowed) { enabled = false; return; }
             CreateKeys();
@@ -307,7 +308,6 @@ namespace Pistol.Diagnostics
             if (missedWindowTimer >= 5f)
             {
                 missedLastWindow = missedWindow;
-                missedTotal += missedWindow;
                 missedWindow = 0;
                 missedWindowTimer = 0f;
             }
@@ -330,6 +330,8 @@ namespace Pistol.Diagnostics
                 CurrentSegment().AddLoad(cpuMs, renderMs, gpuMs, drawCallsRec.LastValue, batchesRec.LastValue, setPassRec.LastValue,
                                          trianglesRec.LastValue, verticesRec.LastValue, shadowCastersRec.LastValue, gcAllocRec.LastValue);
 
+            // The panel text and the process CPU are only for the panel: nothing to do while it is hidden
+            if (!visible) return;
             accum += Time.unscaledDeltaTime;
             if (accum < UpdateInterval) return;
             accum = 0f;
@@ -367,10 +369,11 @@ namespace Pistol.Diagnostics
             toggleKey = null;
         }
 
+        readonly bool[] pressed = new bool[6];   // F5..F10 this frame (a field: no garbage every frame)
+
         void HandleKeys()
         {
             bool toggle = toggleKey.WasPressedThisFrame();
-            var pressed = new bool[fKeys.Length];
             for (int k = 0; k < fKeys.Length; k++) pressed[k] = fKeys[k].WasPressedThisFrame();
             bool shift = shiftKey.IsPressed();
             if (IsWeb && altKey.IsPressed())   // the browser may take the F-keys for itself
@@ -380,7 +383,7 @@ namespace Pistol.Diagnostics
             }
             bool f5 = pressed[0], f6 = pressed[1], f7 = pressed[2], f8 = pressed[3], f9 = pressed[4], f10 = pressed[5];
 
-            if (toggle) visible = !visible;
+            if (toggle) { visible = !visible; accum = UpdateInterval; }   // shown: fresh text right away
             if (f5 && IsWeb)
             {
                 // In the browser frames are synced by the browser itself. The "unlimited" mode (targetFrameRate)
@@ -475,15 +478,14 @@ namespace Pistol.Diagnostics
             if (revolver == null) revolver = FindFirstObjectByType<RevolverFire>();
             if (look == null) look = FindFirstObjectByType<LookSwitcher>();
             if (acoustics == null) acoustics = FindFirstObjectByType<RangeAcoustics>();
+            var cam = Camera.main;
             if (ppLayer == null)
             {
-                var cam = Camera.main;
                 if (cam != null) ppLayer = cam.GetComponent<PostProcessLayer>();
                 if (ppLayer == null) ppLayer = FindFirstObjectByType<PostProcessLayer>();
             }
             if (cameraEffects == null)
             {
-                var cam = Camera.main;
                 if (cam != null) cameraEffects = cam.GetComponent<CameraEffects>();
                 if (cameraEffects != null) screenFxOn = !cameraEffects.Suppressed;
             }
@@ -767,31 +769,28 @@ namespace Pistol.Diagnostics
         // Log file and report
         void OpenLog()
         {
-            if (IsWeb)
+            if (!IsWeb)
             {
-                memLog.Add("=== Pistol — performance log (browser) ===");
-                memLog.Add(DeviceString());
-                memLog.Add("Hitch = a frame that missed the display. Below — every hitch and what was happening in the game.");
-                memLog.Add("");
-                return;
+                if (Application.isEditor && !WriteLogInEditor) return;
+                try
+                {
+                    string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                    if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) dir = Application.persistentDataPath;
+                    logPath = Path.Combine(dir, $"Pistol_perf_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt");
+                    log = new StreamWriter(logPath, false, new UTF8Encoding(false)) { AutoFlush = true };
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning("PerfOverlay: failed to create the log file: " + e.Message);
+                    log = null;
+                    return;
+                }
             }
-            if (Application.isEditor && !WriteLogInEditor) return;
-            try
-            {
-                string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) dir = Application.persistentDataPath;
-                logPath = Path.Combine(dir, $"Pistol_perf_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt");
-                log = new StreamWriter(logPath, false, new UTF8Encoding(false)) { AutoFlush = true };
-                log.WriteLine("=== Pistol — performance log ===");
-                log.WriteLine(DeviceString());
-                log.WriteLine("Hitch = a frame that missed the display. Below — every hitch and what was happening in the game.");
-                log.WriteLine();
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("PerfOverlay: failed to create the log file: " + e.Message);
-                log = null;
-            }
+            // The header goes where every other line goes (the browser keeps the log in memory)
+            WriteLog(IsWeb ? "=== Pistol — performance log (browser) ===" : "=== Pistol — performance log ===");
+            WriteLog(DeviceString());
+            WriteLog("Hitch = a frame that missed the display. Below — every hitch and what was happening in the game.");
+            WriteLog("");
         }
 
         void WriteLog(string line)
@@ -952,12 +951,12 @@ namespace Pistol.Diagnostics
             Array.Sort(sorted, 0, count);
             float sum = 0f;
             for (int i = 0; i < count; i++) sum += sorted[i];
-            float avgMs = count > 0 ? sum / count : 0f;
-            float maxMs = count > 0 ? sorted[count - 1] : 0f;
+            float avgMs = sum / count;
+            float maxMs = sorted[count - 1];
             int worst = Mathf.Max(1, count / 100);
             float worstSum = 0f;
             for (int i = count - worst; i < count; i++) worstSum += sorted[i];
-            float low1Ms = count > 0 ? worstSum / worst : 0f;
+            float low1Ms = worstSum / worst;
 
             float avgFps = avgMs > 0 ? 1000f / avgMs : 0f;
             float low1Fps = low1Ms > 0 ? 1000f / low1Ms : 0f;
@@ -983,15 +982,14 @@ namespace Pistol.Diagnostics
             else
             {
                 float pct = reserveWorstMs / budget * 100f;
-                string verdict = pct >= 20f ? "<color=#7CFC8A>OK</color>"
-                               : pct >= 0f ? "<color=#FFD84D>TIGHT</color>"
-                               : "<color=#FF6B5B>OVER BUDGET</color>";
+                int g = Grade(pct >= 20f, pct >= 0f);
+                string verdict = $"<color={GradeHex[g]}>{(g == 0 ? "OK" : g == 1 ? "TIGHT" : "OVER BUDGET")}</color>";
                 reserveLine = $"<b>HEADROOM: {verdict}</b>   worst {Signed(reserveWorstMs)} ms ({pct:+0;-0}%)   avg {Signed(reserveAvgMs)} ms";
             }
 
-            string fpsColor = low1Fps >= 1000f / budget * 0.9f ? "#7CFC8A" : low1Fps >= 1000f / budget * 0.6f ? "#FFD84D" : "#FF6B5B";
-            string missedColor = missedLastWindow == 0 ? "#7CFC8A" : missedLastWindow < 5 ? "#FFD84D" : "#FF6B5B";
-            string hitchColor = hitchCount == 0 ? "#7CFC8A" : "#FFD84D";
+            string fpsColor = GradeHex[Grade(low1Fps >= 1000f / budget * 0.9f, low1Fps >= 1000f / budget * 0.6f)];
+            string missedColor = GradeHex[Grade(missedLastWindow == 0, missedLastWindow < 5)];
+            string hitchColor = GradeHex[Grade(hitchCount == 0, true)];
 
             // ---------- Load ----------
             string proc = processCpuPercent >= 0f ? $"{processCpuPercent:F0}% of {Environment.ProcessorCount} cores" : "n/a";
@@ -1039,11 +1037,12 @@ namespace Pistol.Diagnostics
 
         static string Signed(float v) => (v >= 0f ? "+" : "−") + Mathf.Abs(v).ToString("F1");
 
-        static string Colored(float percent)
-        {
-            string c = percent < 70f ? "#7CFC8A" : percent < 100f ? "#FFD84D" : "#FF6B5B";
-            return $"<color={c}>{percent:F0}%</color>";
-        }
+        static string Colored(float percent) => $"<color={GradeHex[Grade(percent < 70f, percent < 100f)]}>{percent:F0}%</color>";
+
+        // Good / tight / bad: one set of colours for the text and for the bars and the graph
+        static readonly string[] GradeHex = { "#7CFC8A", "#FFD84D", "#FF6B5B" };
+        static readonly Color[] GradeColor = { new Color(0.45f, 0.95f, 0.5f), new Color(1f, 0.85f, 0.3f), new Color(1f, 0.4f, 0.35f) };
+        static int Grade(bool good, bool ok) => good ? 0 : ok ? 1 : 2;
 
         // =====================================================================
         void OnGUI()
@@ -1077,7 +1076,7 @@ namespace Pistol.Diagnostics
 
             var graph = new Rect(box.x + 40f, box.y + textHeight, PanelWidth - 52f, graphHeight);
             if (Event.current.type == EventType.Repaint) DrawFpsGraph(graph, budget);
-            DrawGraphLabels(graph, budget);
+            if (Event.current.type == EventType.Repaint) DrawGraphLabels(graph, budget);
 
             float line = style.lineHeight;
             var bar = new Rect(box.x + 12f, box.y + 10f + line + 6f, PanelWidth - 24f, line * 1.4f);
@@ -1106,7 +1105,7 @@ namespace Pistol.Diagnostics
                 float worst01 = Mathf.Clamp01(frameWorstMs / scale);
                 float avg01 = Mathf.Clamp01(frameAvgMs / scale);
                 float pct = reserveWorstMs / budget;
-                Color c = pct >= 0.2f ? new Color(0.45f, 0.95f, 0.5f) : pct >= 0f ? new Color(1f, 0.85f, 0.3f) : new Color(1f, 0.4f, 0.35f);
+                Color c = GradeColor[Grade(pct >= 0.2f, pct >= 0f)];
 
                 GUI.color = new Color(c.r, c.g, c.b, 0.9f);
                 GUI.DrawTexture(new Rect(r.x, r.y, r.width * worst01, r.height), white);
@@ -1166,9 +1165,7 @@ namespace Pistol.Diagnostics
                 if (frameHitch[idx]) GLLine(x, r.y, x, r.yMax, new Color(1f, 0.3f, 0.25f, 0.55f));
                 if (i > 0)
                 {
-                    Color c = fps >= target * 0.9f ? new Color(0.45f, 0.95f, 0.5f)
-                            : fps >= target * 0.6f ? new Color(1f, 0.85f, 0.3f)
-                            : new Color(1f, 0.4f, 0.35f);
+                    Color c = GradeColor[Grade(fps >= target * 0.9f, fps >= target * 0.6f)];
                     GLLine(prevX, prevY, x, y, c);
                     GLLine(prevX, prevY + 1f, x, y + 1f, c);
                 }
@@ -1179,6 +1176,9 @@ namespace Pistol.Diagnostics
             GL.PopMatrix();
         }
 
+        int labelTop = -1, labelTarget = -1;
+        string topLabel, targetLabel, halfLabel;
+
         void DrawGraphLabels(Rect r, float budget)
         {
             float target = 1000f / budget, top = graphTop;
@@ -1187,9 +1187,15 @@ namespace Pistol.Diagnostics
                 labelStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, alignment = TextAnchor.MiddleRight };
                 labelStyle.normal.textColor = new Color(1f, 1f, 1f, 0.7f);
             }
-            GUI.Label(new Rect(r.x - 38f, r.y - 2f, 34f, 18f), top.ToString("F0"), labelStyle);
-            GUI.Label(new Rect(r.x - 38f, Y(r, target, top) - 9f, 34f, 18f), target.ToString("F0"), labelStyle);
-            GUI.Label(new Rect(r.x - 38f, Y(r, target * 0.5f, top) - 9f, 34f, 18f), (target * 0.5f).ToString("F0"), labelStyle);
+            int topValue = Mathf.RoundToInt(top), targetValue = Mathf.RoundToInt(target);
+            if (topValue != labelTop || targetValue != labelTarget)   // the numbers change rarely: no new strings every frame
+            {
+                labelTop = topValue; labelTarget = targetValue;
+                topLabel = top.ToString("F0"); targetLabel = target.ToString("F0"); halfLabel = (target * 0.5f).ToString("F0");
+            }
+            GUI.Label(new Rect(r.x - 38f, r.y - 2f, 34f, 18f), topLabel, labelStyle);
+            GUI.Label(new Rect(r.x - 38f, Y(r, target, top) - 9f, 34f, 18f), targetLabel, labelStyle);
+            GUI.Label(new Rect(r.x - 38f, Y(r, target * 0.5f, top) - 9f, 34f, 18f), halfLabel, labelStyle);
             GUI.Label(new Rect(r.x - 38f, r.yMax - 12f, 34f, 18f), "0", labelStyle);
         }
 

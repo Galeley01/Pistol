@@ -8,5 +8,6 @@ namespace Pistol.Targets
     {
         protected override void OnHit(in BulletHit hit) { }
         public override void ResetTarget() { }
+        public override bool MovesAtRuntime => false;
     }
 }

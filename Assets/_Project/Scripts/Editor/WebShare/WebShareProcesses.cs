@@ -63,7 +63,7 @@ namespace Pistol.EditorTools
             string python = FindPython(out string pythonArgs);
             string cloudflared = FindCloudflared();
             string script = Path.GetFullPath("Assets/_Project/Scripts/Editor/WebShare/serve.py");
-            if (python == null) { Fail("Python 3 не найден. Mac: xcode-select --install, Windows: winget install Python.Python.3.12"); return; }
+            if (python == null) { Fail("Python 3 не найден. " + PythonInstallHint); return; }
             if (cloudflared == null) { Fail("cloudflared не найден. " + CloudflaredInstallHint); return; }
             if (!File.Exists(Path.Combine(buildFolder ?? "", "index.html"))) { Fail("В папке нет index.html"); return; }
 
@@ -99,9 +99,7 @@ namespace Pistol.EditorTools
             bool server = Alive("Server"), tunnel = Alive("Tunnel");
             if (!server || !tunnel)
             {
-                string last = tunnel ? "" : LastLogLine();
-                Stop();
-                Fail((server ? "cloudflared" : "Сервер") + " завершился" + (last != "" ? ": " + last : ""));
+                FailWithLog((server ? "cloudflared" : "Сервер") + " завершился", withLog: !tunnel);
                 return;
             }
             if (Current == State.WaitingForLink)
@@ -113,11 +111,7 @@ namespace Pistol.EditorTools
                     Set(State.Ready);
                 }
                 else if (EditorApplication.timeSinceStartup - startedAt > LinkTimeout)
-                {
-                    string last = LastLogLine();
-                    Stop();
-                    Fail("Cloudflare не дал ссылку за 45 с" + (last != "" ? ": " + last : ""));
-                }
+                    FailWithLog("Cloudflare не дал ссылку за 45 с", withLog: true);
             }
         }
 
@@ -144,6 +138,14 @@ namespace Pistol.EditorTools
         {
             string tail = LogTail(1);
             return tail.Length > 160 ? tail.Substring(0, 160) + "…" : tail;
+        }
+
+        // Stops both processes and fails; the last line of cloudflared's log tells why (read before Stop clears it)
+        static void FailWithLog(string what, bool withLog)
+        {
+            string last = withLog ? LastLogLine() : "";
+            Stop();
+            Fail(what + (last != "" ? ": " + last : ""));
         }
 
         static void Fail(string message)
@@ -214,6 +216,7 @@ namespace Pistol.EditorTools
         }
 
         // ---------- Tools and ports ----------
+        public static string PythonInstallHint => IsWindows ? "winget install Python.Python.3.12" : "xcode-select --install";
         public static string CloudflaredInstallHint => IsWindows ? "winget install Cloudflare.cloudflared" : "brew install cloudflared";
 
         public static string FindCloudflared() => FindExe(IsWindows ? new[] { "cloudflared.exe" } : new[] { "cloudflared" },

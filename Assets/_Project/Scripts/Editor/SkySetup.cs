@@ -54,12 +54,8 @@ namespace Pistol.EditorTools
             importer.SaveAndReimport();
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(TexturePath);
 
-            var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
-            if (material == null)
-            {
-                material = new Material(Shader.Find("Skybox/Panoramic")) { name = "M_Sky_GoldenGate" };
-                AssetDatabase.CreateAsset(material, MaterialPath);
-            }
+            var material = EditorAssets.LoadOrCreateMaterial(MaterialPath, "Skybox/Panoramic");
+            if (material == null) return;
             material.SetTexture("_MainTex", texture);
             material.SetFloat("_Mapping", 1f);     // latitude-longitude layout
             material.SetFloat("_ImageType", 0f);   // full 360

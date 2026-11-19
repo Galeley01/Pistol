@@ -93,9 +93,8 @@ namespace Pistol.PostFx
         PostProcessVolume exposureVolume;
         AutoExposure exposure;
         bool? appliedEyes, appliedShadows;
-        // The project's own (new) shadow settings, read at start: put back on "new" and when Play ends.
+        // The project's own (new) shadow settings, read at start (Awake): put back on "new" and when Play ends.
         // Quality settings changed in Play stay in the project in the editor, so they must always be restored.
-        bool shadowsCaptured;
         ShadowResolution newShadowResolution;
         int newShadowCascades;
         float newShadowDistance, newSunBias, newSunNormalBias;
@@ -104,14 +103,17 @@ namespace Pistol.PostFx
         void SetAllOld(bool on) { if (debug != null) debug.SetAllOld(on); else localAllOld = on; }
         readonly System.Collections.Generic.List<(Renderer renderer, int index)> lightmapped =
             new System.Collections.Generic.List<(Renderer, int)>();
+        // The number of lightmaps of the scene, read once: LightmapSettings.lightmaps builds a new array on every call
+        int lightmapCount;
+        string label;          // the corner label, rebuilt only when what it shows changes
+        int labelState = -1;
 
         [ShowNativeProperty] public bool AllOld => allOld;
         // What is on right now (for the performance report)
         public bool PostOn => appliedPost == true;
         public bool SkyNew => appliedSky == true;
         public bool CameraNew => appliedCamera == true;
-        public bool EyeAdaptationOn => appliedEyes == true && SystemInfo.supportsComputeShaders;
-        public bool LightmapsUsed => appliedBaked != false && LightmapSettings.lightmaps.Length > 0;
+        public bool LightmapsUsed => appliedBaked != false && lightmapCount > 0;
         public float LensDistortion => appliedCamera == true ? newLensDistortion : float.NaN;   // NaN: the profile's own
 
         void Awake()
@@ -120,6 +122,8 @@ namespace Pistol.PostFx
             if (debug != null) debug.SetAllOld(false);   // the asset outlives Play sessions: start with the new look
             if (sun != null) newSunRotation = sun.transform.rotation;
             CaptureShadows();
+            lightmapCount = LightmapSettings.lightmaps.Length;
+            useGUILayout = false;
             newFog = RenderSettings.fog;   // the scene is saved with the new sky and its fog
             if (DebugSettings.Allowed && (debug == null || newSky == null || oldSky == null || sun == null || cameraMotion == null))
                 Debug.LogWarning("LookSwitcher: some references are empty (debug settings, skies, sun). Run Pistol > Create Look Volume and save the scene.", this);
@@ -146,7 +150,6 @@ namespace Pistol.PostFx
             // Without the debug settings the parts of the new look are simply all on
             bool post = !allOld && (debug == null || debug.NewPostFx);
             bool sky = !allOld && (debug == null || debug.NewSky);
-            bool baked = !allOld;
             bool camera = !allOld && (debug == null || debug.NewCamera);
             if (appliedBlocks != !allOld) { ApplyBlocks(!allOld); appliedBlocks = !allOld; }
             if (appliedCamera != camera && ApplyCamera(camera)) appliedCamera = camera;
@@ -158,7 +161,7 @@ namespace Pistol.PostFx
             if (exposure != null) TuneEyes();   // tunable live
             if (appliedPost != post) { volume.weight = post ? 1f : 0f; appliedPost = post; }
             if (appliedSky != sky) { ApplySky(sky); appliedSky = sky; }
-            if (appliedBaked != baked) { ApplyBaked(baked); appliedBaked = baked; }
+            if (appliedBaked != !allOld) { ApplyBaked(!allOld); appliedBaked = !allOld; }
             if (appliedShadows != !allOld) { ApplyShadows(!allOld); appliedShadows = !allOld; }
         }
 
@@ -168,13 +171,11 @@ namespace Pistol.PostFx
             newShadowCascades = QualitySettings.shadowCascades;
             newShadowDistance = QualitySettings.shadowDistance;
             if (sun != null) { newSunBias = sun.shadowBias; newSunNormalBias = sun.shadowNormalBias; }
-            shadowsCaptured = true;
         }
 
         // Shadow quality and the sun's shadow offsets: the project's own, or as they were before the new look
         void ApplyShadows(bool useNew)
         {
-            if (!shadowsCaptured) return;
             QualitySettings.shadowResolution = useNew ? newShadowResolution : oldShadowResolution;
             QualitySettings.shadowCascades = useNew ? newShadowCascades : oldShadowCascades;
             QualitySettings.shadowDistance = useNew ? newShadowDistance : oldShadowDistance;
@@ -300,17 +301,33 @@ namespace Pistol.PostFx
 
         void OnGUI()
         {
-            if (!showLabel || !DebugSettings.Allowed) return;
+            if (!showLabel || !DebugSettings.Allowed || Event.current.type != EventType.Repaint) return;
             style ??= new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperRight };
-            string text = allOld
-                ? "Look: OLD  (4 = new)"
-                : $"Look: NEW (4 = old)   Post: {(debug == null || debug.NewPostFx ? "on" : "off")}   Sky: {(debug == null || debug.NewSky ? "on" : "off")}   Camera: {(debug == null || debug.NewCamera ? "on" : "off")}   Eyes: {(appliedEyes == true ? (SystemInfo.supportsComputeShaders ? "on" : "n/a") : "off")}   Sound: {(debug == null || debug.NewAcoustics ? (debug != null && debug.ForceIndoor ? "indoor" : "on") : "off")}   Baked: {(LightmapSettings.lightmaps.Length > 0 ? "on" : "off")}";
+            string text = Label();
             var rect = new Rect(Screen.width - 900, 12, 888, 26);
             GUI.color = Color.black;
             GUI.Label(new Rect(rect.x + 1, rect.y + 1, rect.width, rect.height), text, style);
             GUI.color = new Color(0.75f, 1f, 0.75f);
             GUI.Label(rect, text, style);
             GUI.color = Color.white;
+        }
+
+        // What the label shows, packed into bits: the string is built again only when one of them changes
+        string Label()
+        {
+            bool post = debug == null || debug.NewPostFx, sky = debug == null || debug.NewSky, cam = debug == null || debug.NewCamera;
+            bool sound = debug == null || debug.NewAcoustics, indoor = debug != null && debug.ForceIndoor;
+            int state = (allOld ? 1 : 0) | (post ? 2 : 0) | (sky ? 4 : 0) | (cam ? 8 : 0) | (appliedEyes == true ? 16 : 0)
+                      | (sound ? 32 : 0) | (indoor ? 64 : 0) | (lightmapCount > 0 ? 128 : 0);
+            if (state == labelState) return label;
+            labelState = state;
+            string OnOff(bool on) => on ? "on" : "off";
+            label = allOld
+                ? "Look: OLD  (4 = new)"
+                : $"Look: NEW (4 = old)   Post: {OnOff(post)}   Sky: {OnOff(sky)}   Camera: {OnOff(cam)}   " +
+                  $"Eyes: {(appliedEyes == true ? (SystemInfo.supportsComputeShaders ? "on" : "n/a") : "off")}   " +
+                  $"Sound: {(sound ? (indoor ? "indoor" : "on") : "off")}   Baked: {OnOff(lightmapCount > 0)}";
+            return label;
         }
 
         // Called by Pistol > Create Look Volume

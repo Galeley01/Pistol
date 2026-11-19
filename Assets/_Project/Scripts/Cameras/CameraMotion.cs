@@ -156,7 +156,7 @@ namespace Pistol.Cameras
                 Mathf.Clamp(look.y * profile.swayAmount, -profile.swayMaxAngle, profile.swayMaxAngle),
                 Mathf.Clamp(-look.x * profile.swayAmount * 0.5f, -profile.swayMaxAngle, profile.swayMaxAngle),
                 Mathf.Clamp(-look.x * profile.swayAmount, -profile.swayMaxAngle, profile.swayMaxAngle));
-            sway = Vector3.Lerp(sway, swayTarget, 1f - Mathf.Exp(-profile.swaySmooth * dt));
+            sway = Vector3.Lerp(sway, swayTarget, Smoothing.Factor(profile.swaySmooth, dt));
 
             // ---------- Strafe tilt ----------
             strafe = Smoothing.Damp(strafe, -Mathf.Clamp(localVel.x / walk, -1f, 1f) * profile.strafeTilt, 6f, dt);
@@ -196,8 +196,8 @@ namespace Pistol.Cameras
             // ---------- Smoothed part ----------
             Vector3 targetPos = bobPos + breathPos + landPos + leanPos;
             Vector3 targetRot = bobRot + breathRot + sway + landRot + leanRot + new Vector3(0f, 0f, strafe);
-            posCurrent = Vector3.Lerp(posCurrent, targetPos, 1f - Mathf.Exp(-profile.smoothing * dt));
-            rotCurrent = Vector3.Lerp(rotCurrent, targetRot, 1f - Mathf.Exp(-profile.smoothing * dt));
+            posCurrent = Vector3.Lerp(posCurrent, targetPos, Smoothing.Factor(profile.smoothing, dt));
+            rotCurrent = Vector3.Lerp(rotCurrent, targetRot, Smoothing.Factor(profile.smoothing, dt));
 
             // ---------- Shake (added without smoothing so it stays sharp) ----------
             // 1) handheld: stronger when walking, even stronger when running and panting
@@ -224,7 +224,7 @@ namespace Pistol.Cameras
             float calmRun = exhausted ? 0f : runWeight * (1f - preFatigue);
             float filterSpeed = Mathf.Lerp(60f, profile.runShakeSmoothing, calmRun);
             shakeFiltered = Vector3.Lerp(shakeFiltered, shakeRot + jitterRot + stepRot,
-                                         1f - Mathf.Exp(-filterSpeed * dt));
+                                         Smoothing.Factor(filterSpeed, dt));
 
             // 4) sharp jolts from jumping and landing (no smoothing)
             impact = Mathf.Max(0f, impact - profile.impactDecay * dt);

@@ -41,29 +41,9 @@ namespace Pistol.Audio
         AcousticZone[] zones = System.Array.Empty<AcousticZone>();
         AcousticsProfile current;
         readonly List<(Collider collider, float distance, Vector3 point, Vector3 dir)> found = new List<(Collider, float, Vector3, Vector3)>();
-        static RaycastHit[] hits = new RaycastHit[8];
-        const int MaxHits = 256;
-
         // The nearest hit that isn't the shooter (the player's own capsule would stop every ray going backwards)
-        bool FirstHit(Vector3 from, Vector3 dir, float distance, out RaycastHit hit)
-        {
-            hit = default;
-            Transform self = listener != null ? listener.root : null;
-            // The buffer gets hits in no particular order: when it is full the nearest one may be missing, so grow it and ask again
-            int n = Physics.RaycastNonAlloc(from, dir, hits, distance, echoMask, QueryTriggerInteraction.Ignore);
-            while (n == hits.Length && hits.Length < MaxHits)
-            {
-                hits = new RaycastHit[hits.Length * 2];
-                n = Physics.RaycastNonAlloc(from, dir, hits, distance, echoMask, QueryTriggerInteraction.Ignore);
-            }
-            float best = float.MaxValue;
-            for (int i = 0; i < n; i++)
-            {
-                if (self != null && hits[i].collider.transform.IsChildOf(self)) continue;
-                if (hits[i].distance < best) { best = hits[i].distance; hit = hits[i]; }
-            }
-            return best < float.MaxValue;
-        }
+        bool FirstHit(Vector3 from, Vector3 dir, float distance, out RaycastHit hit) =>
+            PhysicsQuery.NearestHit(from, dir, distance, echoMask, listener != null ? listener.root : null, out hit);
 
         // Off = everything as recorded (comparison)
         public bool Active => isActiveAndEnabled && outdoor != null && (debug == null || debug.NewAcoustics);
@@ -209,9 +189,10 @@ namespace Pistol.Audio
             for (int i = 0; i < p.rays; i++)
             {
                 Vector3 dir = Quaternion.Euler(0f, offset + i * 360f / p.rays, 0f) * Vector3.forward;
-                float d = FirstHit(from, dir, 30f, out var h) ? h.distance : 30f;
-                open += dir * (d / 30f);
-                Probe(from, dir, p);
+                // One ray serves both: how open it is that way (up to 30 m) and an echo surface (up to max distance)
+                bool any = FirstHit(from, dir, Mathf.Max(OpenRange, p.maxDistance), out var h);
+                open += dir * (any ? Mathf.Min(h.distance, OpenRange) / OpenRange : 1f);
+                if (any && h.distance <= p.maxDistance) Consider(h, dir, p);
             }
             openSide = open.sqrMagnitude > 0.01f ? open.normalized * Mathf.Clamp01(open.magnitude / Mathf.Max(p.rays * 0.3f, 1f)) : Vector3.zero;
             if (p.verticalRays)
@@ -220,16 +201,26 @@ namespace Pistol.Audio
                 for (int i = 0; i < 4; i++)
                     Probe(from, Quaternion.Euler(-45f, offset + i * 90f, 0f) * Vector3.forward, p);
             }
-            found.Sort((a, b) => a.distance.CompareTo(b.distance));
+            found.Sort(ByDistance);
         }
+
+        const float OpenRange = 30f;   // how far a level ray looks for "open around the shooter", m
+        static readonly System.Comparison<(Collider collider, float distance, Vector3 point, Vector3 dir)> ByDistance =
+            (a, b) => a.distance.CompareTo(b.distance);
 
         void Probe(Vector3 from, Vector3 dir, AcousticsProfile p)
         {
-            if (!FirstHit(from, dir, p.maxDistance, out var h)) return;
+            if (FirstHit(from, dir, p.maxDistance, out var h)) Consider(h, dir, p);
+        }
+
+        // A surface found by a ray: one echo per surface, only big ones, not closer than the bang itself
+        void Consider(RaycastHit h, Vector3 dir, AcousticsProfile p)
+        {
             if (h.distance < p.reflectionMin) return;   // closer than this it is part of the bang
             var size = h.collider.bounds.size;
-            if (Mathf.Max(size.x, size.y, size.z) < p.minSurfaceSize) return;
-            if (found.Exists(f => f.collider == h.collider)) return;
+            if (Mathf.Max(size.x, Mathf.Max(size.y, size.z)) < p.minSurfaceSize) return;
+            for (int i = 0; i < found.Count; i++)
+                if (found[i].collider == h.collider) return;
             found.Add((h.collider, h.distance, h.point, dir));
         }
 

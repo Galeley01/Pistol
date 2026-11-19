@@ -22,15 +22,16 @@ namespace Pistol.EditorTools
         void OnEnable()
         {
             WebShareProcesses.Changed += Repaint;
-            cloudflared = WebShareProcesses.FindCloudflared();
-            python = WebShareProcesses.FindPython(out _);
+            Detect();
         }
 
         void OnDisable() => WebShareProcesses.Changed -= Repaint;
 
-        void OnFocus()
+        // Installed while the window was open: look again when it gets focus, not on every repaint
+        void OnFocus() => Detect();
+
+        void Detect()
         {
-            // Installed while the window was open: look again when it gets focus, not on every repaint
             cloudflared = WebShareProcesses.FindCloudflared();
             python = WebShareProcesses.FindPython(out _);
         }
@@ -40,7 +41,7 @@ namespace Pistol.EditorTools
             EditorGUILayout.HelpBox("Раздаёт WebGL-сборку по ссылке https://….trycloudflare.com. Ссылка работает, пока открыт Unity; " +
                                     "правка скриптов и Play её не прерывают.", MessageType.Info);
             if (python == null)
-                EditorGUILayout.HelpBox("Нужен Python 3. Mac: xcode-select --install. Windows: winget install Python.Python.3.12", MessageType.Error);
+                EditorGUILayout.HelpBox("Нужен Python 3: " + WebShareProcesses.PythonInstallHint, MessageType.Error);
             if (cloudflared == null)
                 EditorGUILayout.HelpBox("Нужен cloudflared: " + WebShareProcesses.CloudflaredInstallHint, MessageType.Error);
 

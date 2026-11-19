@@ -118,7 +118,7 @@ namespace Pistol.EditorTools
                       : new Vector2(-p.x * Mathf.Sign(n.z), p.y);
             }
 
-            if (!AssetDatabase.IsValidFolder(MeshDir)) AssetDatabase.CreateFolder("Assets/_Project/Environment", "Meshes");
+            EditorAssets.EnsureFolder(MeshDir);
             string safe = string.Join("_", objectName.Split(Path.GetInvalidFileNameChars())).Replace(" ", "").Replace("(", "_").Replace(")", "");
             string path = $"{MeshDir}/RangeBlock_{safe}.asset";
             var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
@@ -139,15 +139,7 @@ namespace Pistol.EditorTools
             return mesh;
         }
 
-        static void Import(string path, TextureImporterType type, bool srgb)
-        {
-            if (!(AssetImporter.GetAtPath(path) is TextureImporter ti)) { Debug.LogWarning("Texture not found: " + path); return; }
-            if (ti.textureType == type && ti.sRGBTexture == srgb && ti.wrapMode == TextureWrapMode.Repeat) return;
-            ti.textureType = type;
-            ti.sRGBTexture = srgb;
-            ti.wrapMode = TextureWrapMode.Repeat;
-            ti.mipmapEnabled = true;
-            ti.SaveAndReimport();
-        }
+        static void Import(string path, TextureImporterType type, bool srgb) =>
+            EditorAssets.ImportTexture(path, type, srgb, wrap: TextureWrapMode.Repeat);
     }
 }

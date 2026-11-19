@@ -79,9 +79,17 @@ namespace Pistol.Ballistics
 
         // The size of the mark for a bullet of this calibre, before the random spread
         public float Size(float caliber) => sizeInMeters ? meters : caliber * sizeScale;
+        // With the random spread: what one hit gets
+        public float RandomSize(float caliber) => Size(caliber) * (1f + UnityEngine.Random.Range(-sizeJitter, sizeJitter));
 
-        public Material[] MaterialsFor() =>
-            kind == Kind.Mesh && meshMaterials != null && meshMaterials.Length > 0 ? meshMaterials : new[] { material };
+        [System.NonSerialized] Material[] single;   // the flat decal's one material, as an array (no new array per hit)
+
+        public Material[] MaterialsFor()
+        {
+            if (kind == Kind.Mesh && meshMaterials != null && meshMaterials.Length > 0) return meshMaterials;
+            if (single == null || single[0] != material) single = new[] { material };
+            return single;
+        }
 
         public int Count => kind == Kind.Flat ? Mathf.Clamp(variants, 1, columns * rows) : (meshes != null ? meshes.Length : 0);
 

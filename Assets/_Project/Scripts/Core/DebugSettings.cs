@@ -132,7 +132,6 @@ namespace Pistol.Core
         [System.NonSerialized] bool allOld;
         public bool AllOld => Allowed && allOld;
         public void SetAllOld(bool on) => allOld = on;
-        public void SetNewPostFx(bool on) => newPostFx = on;
 
         public float CloseSlowMotion => Allowed ? Mathf.Clamp(closeSlowMotion, 0.02f, 1f) : 1f;
         public int ClosePauseAtPhase => Allowed ? closePauseAtPhase : -1;

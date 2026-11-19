@@ -1,4 +1,5 @@
 using UnityEngine;
+using Pistol.Core;
 using NaughtyAttributes;
 using Pistol.Ballistics;
 
@@ -164,8 +165,7 @@ namespace Pistol.Weapons.Revolver
                 r.material.color = spent ? new Color(0.42f, 0.33f, 0.17f) : new Color(0.8f, 0.62f, 0.27f);
             }
             foreach (var c in go.GetComponentsInChildren<Collider>()) Destroy(c);
-            foreach (var r in go.GetComponentsInChildren<Renderer>())
-                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            FirstPersonShadows.TurnOff(go);
             go.SetActive(false);
             return go;
         }

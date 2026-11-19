@@ -55,6 +55,8 @@ namespace Pistol.Ballistics
         class Hole
         {
             public Transform transform;
+            public MeshFilter filter;
+            public MeshRenderer renderer;
             public Transform surface;          // what was hit
             public bool follows;               // false for static geometry: it never moves
             public Vector3 localPosition;      // pose relative to the surface, scale ignored
@@ -63,10 +65,11 @@ namespace Pistol.Ballistics
 
         readonly Queue<Hole> holes = new Queue<Hole>();
         Transform holeRoot;
-        static RaycastHit[] hitBuffer = new RaycastHit[16];
 
         static Material sharedMaterial;
         static Mesh discMesh;
+        static MaterialPropertyBlock discBlock;
+        static readonly int ColorId = Shader.PropertyToID("_Color");
 
         // ---------- Firing ----------
         public void Fire(Vector3 origin, Vector3 direction, AmmoType ammo, Transform ignoreRoot)
@@ -91,17 +94,17 @@ namespace Pistol.Ballistics
                 BulletMath.Step(b.pos, b.vel, BulletMath.Gravity(b.ammo), dt, out Vector3 newPos, out Vector3 newVel);
                 Vector3 seg = newPos - b.pos;
 
-                // A surface that lets bullets through (a cardboard target) is crossed and the ray goes on
+                // A surface that lets bullets through (a cardboard target) is crossed and the ray goes on.
+                // After too many in one frame whatever comes next stops the bullet: it never flies through a wall.
                 Vector3 from = b.pos;
                 float left = seg.magnitude;
                 Vector3 dir = left > 0f ? seg / left : b.vel.normalized;
                 bool stopped = false;
-                int pass = 0;
-                for (; pass < MaxPassThrough && Raycast(from, dir, left, hitMask, b.ignoreRoot, out RaycastHit hit); pass++)
+                for (int pass = 0; left > 0f && PhysicsQuery.NearestHit(from, dir, left, hitMask, b.ignoreRoot, out RaycastHit hit); pass++)
                 {
                     b.travelled += hit.distance;
-                    var through = hit.collider.GetComponentInParent<IBulletPassThrough>();
-                    if (through is Object throughObj ? throughObj != null : through != null)
+                    var through = pass < MaxPassThrough ? hit.collider.GetComponentInParent<IBulletPassThrough>() : null;
+                    if (UnityNull.Alive(through))
                     {
                         var info = MakeHit(b, hit, newVel.magnitude);
                         if (through.PassesThrough(info, out bool counts))
@@ -111,7 +114,6 @@ namespace Pistol.Ballistics
                             from += dir * step;
                             left -= step;
                             b.travelled += PassThroughStep;
-                            if (left <= 0f) break;
                             continue;
                         }
                     }
@@ -120,15 +122,6 @@ namespace Pistol.Ballistics
                     Finish(i);
                     stopped = true;
                     break;
-                }
-                // Too many cards crossed in one frame: whatever comes next stops the bullet, it never flies through a wall
-                if (!stopped && pass == MaxPassThrough && left > 0f && Raycast(from, dir, left, hitMask, b.ignoreRoot, out RaycastHit last))
-                {
-                    b.travelled += last.distance;
-                    b.path?.Add(last.point);
-                    OnHit(b, last, newVel.magnitude);
-                    Finish(i);
-                    stopped = true;
                 }
                 if (stopped) continue;
 
@@ -148,44 +141,20 @@ namespace Pistol.Ballistics
             bullets.RemoveAt(index);
         }
 
-        // Ray along a segment, ignoring the shooter
-        public static bool Raycast(Vector3 from, Vector3 dir, float dist, LayerMask mask, Transform ignoreRoot, out RaycastHit best)
-        {
-            best = default;
-            if (dist <= 0f) return false;
-            // The buffer gets hits in no particular order: when it is full the nearest one may be missing, so grow it and ask again
-            int n = Physics.RaycastNonAlloc(from, dir.normalized, hitBuffer, dist, mask, QueryTriggerInteraction.Ignore);
-            while (n == hitBuffer.Length && hitBuffer.Length < MaxHitBuffer)
-            {
-                hitBuffer = new RaycastHit[hitBuffer.Length * 2];
-                n = Physics.RaycastNonAlloc(from, dir.normalized, hitBuffer, dist, mask, QueryTriggerInteraction.Ignore);
-            }
-            float bestDist = float.MaxValue;
-            bool found = false;
-            for (int i = 0; i < n; i++)
-            {
-                var h = hitBuffer[i];
-                if (ignoreRoot != null && h.collider.transform.IsChildOf(ignoreRoot)) continue;
-                if (h.distance < bestDist) { bestDist = h.distance; best = h; found = true; }
-            }
-            return found;
-        }
-
-        const int MaxHitBuffer = 256;
         const int MaxPassThrough = 8;            // surfaces a bullet may cross in one frame
         const float PassThroughStep = 0.006f;    // past the surface (a card is a few mm thick)
 
-        static BulletHit MakeHit(Bullet b, RaycastHit hit, float speed) => new BulletHit
+        BulletHit MakeHit(Bullet b, RaycastHit hit, float speed) => new BulletHit
         {
             point = hit.point, normal = hit.normal, direction = b.vel.normalized,
-            speed = speed, distance = b.travelled, ammo = b.ammo, collider = hit.collider
+            speed = speed, distance = b.travelled, ammo = b.ammo, collider = hit.collider, audio = gameAudio
         };
 
         // A hit on a surface the bullet goes through: the surface reacts and sounds, but no hole mark and no stop
         void HitThrough(in BulletHit info, RaycastHit hit, float travelled)
         {
             var target = hit.collider.GetComponentInParent<IDamageable>();
-            if (target is Object unityObj ? unityObj != null : target != null) target.TakeHit(info);
+            if (UnityNull.Alive(target)) target.TakeHit(info);
             PlayImpact(info, hit.collider, travelled);
             if (LogHits) Debug.Log($"Hit through: {hit.collider.name}, {info.distance:F1} m");
         }
@@ -197,13 +166,13 @@ namespace Pistol.Ballistics
             // One push per hit: a target (IDamageable) pushes itself with its own tuned push; anything else
             // with a Rigidbody gets the bullet's momentum
             var target = hit.collider.GetComponentInParent<IDamageable>();
-            bool isTarget = target is Object unityObj ? unityObj != null : target != null;
+            bool isTarget = UnityNull.Alive(target);
             if (!isTarget && hit.rigidbody != null && !hit.rigidbody.isKinematic)
                 hit.rigidbody.AddForceAtPosition(info.direction * b.ammo.bulletMass * speed, hit.point, ForceMode.Impulse);
             if (isTarget) target.TakeHit(info);
 
             var decal = surfaceSounds != null && (debug == null || debug.NewBulletHoles) ? surfaceSounds.DecalFor(hit.collider.sharedMaterial) : null;
-            if (decal != null && surfaceSounds != null && decal == surfaceSounds.defaultDecal) decal = StyleOverride(decal);
+            if (decal != null && decal == surfaceSounds.defaultDecal) decal = StyleOverride(decal);
             if (decal != null && debug != null && debug.AngledBulletHoles) decal = decal.ForAngle(Vector3.Angle(-info.direction, hit.normal));   // angled hits: an elongated mark
             PlaceHole(hit.point, hit.normal, info.direction, b.ammo.holeSize, hit.collider.transform, decal);
             PlayImpact(info, hit.collider, b.travelled);
@@ -245,7 +214,7 @@ namespace Pistol.Ballistics
         // A hole is never a child of what it hit: under a stretched object (a wall is a scaled cube) a rotated
         // child gets squashed into a line. Holes live in their own unscaled container and follow the surface
         // by its position and rotation only, so they are always round and of the right size.
-        void PlaceHole(Vector3 point, Vector3 normal, Vector3 direction, float size, Transform surface, ImpactDecal decal = null)
+        void PlaceHole(Vector3 point, Vector3 normal, Vector3 direction, float size, Transform surface, ImpactDecal decal)
         {
             if (holeRoot == null) holeRoot = new GameObject("BulletHoles").transform;
 
@@ -253,14 +222,15 @@ namespace Pistol.Ballistics
             Hole hole = holes.Count >= maxHoles ? holes.Dequeue() : null;
             if (hole == null || hole.transform == null)
             {
-                hole = new Hole { transform = CreateDisc("BulletHole", holeColor).transform };
-                hole.transform.SetParent(holeRoot, false);
+                var go = CreateDisc("BulletHole", holeColor);
+                go.transform.SetParent(holeRoot, false);
+                hole = new Hole { transform = go.transform, filter = go.GetComponent<MeshFilter>(), renderer = go.GetComponent<MeshRenderer>() };
             }
 
             Vector3 position = point + normal * 0.0015f;
             Quaternion rotation = Quaternion.LookRotation(normal);
-            var mf = hole.transform.GetComponent<MeshFilter>();
-            var mr = hole.transform.GetComponent<MeshRenderer>();
+            var mf = hole.filter;
+            var mr = hole.renderer;
             Mesh mesh = decal != null && (decal.material != null || decal.kind == ImpactDecal.Kind.Mesh) && decal.Count > 0
                 ? decal.MeshFor(Random.Range(0, decal.Count)) : null;
             if (mesh != null)
@@ -270,7 +240,7 @@ namespace Pistol.Ballistics
                 mr.sharedMaterials = decal.MaterialsFor();
                 mr.SetPropertyBlock(null);
                 mr.receiveShadows = true;
-                size = decal.Size(size) * (1f + Random.Range(-decal.sizeJitter, decal.sizeJitter));
+                size = decal.RandomSize(size);
                 // Along the bullet's travel on the surface (an elongated mark, its +X downrange), or a random turn
                 Vector3 travel = Vector3.ProjectOnPlane(direction, normal);
                 if (decal.alongTravel && travel.sqrMagnitude > 1e-6f)
@@ -280,17 +250,7 @@ namespace Pistol.Ballistics
                 rotation *= Quaternion.Euler(decal.meshRotation);
                 if (decal.kind == ImpactDecal.Kind.Mesh) position = point;   // a crater mesh starts at the surface level
             }
-            else
-            {
-                // The plain dark dot
-                if (discMesh == null) discMesh = BuildDisc(16);
-                mf.sharedMesh = discMesh;
-                mr.sharedMaterial = GetMaterial();
-                mr.receiveShadows = false;
-                var block = new MaterialPropertyBlock();
-                block.SetColor("_Color", holeColor);
-                mr.SetPropertyBlock(block);
-            }
+            else ApplyDisc(mf, mr, holeColor);   // the plain dark dot
             hole.transform.SetPositionAndRotation(position, rotation);
             hole.transform.localScale = Vector3.one * size;
             hole.transform.gameObject.SetActive(true);
@@ -332,17 +292,22 @@ namespace Pistol.Ballistics
         // A flat disc of diameter 1, used for bullet holes and the aim marker
         public static GameObject CreateDisc(string name, Color color)
         {
-            if (discMesh == null) discMesh = BuildDisc(16);
             var go = new GameObject(name);
-            go.AddComponent<MeshFilter>().sharedMesh = discMesh;
             var r = go.AddComponent<MeshRenderer>();
-            r.sharedMaterial = GetMaterial();
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            r.receiveShadows = false;
-            var block = new MaterialPropertyBlock();
-            block.SetColor("_Color", color);
-            r.SetPropertyBlock(block);
+            ApplyDisc(go.AddComponent<MeshFilter>(), r, color);
             return go;
+        }
+
+        static void ApplyDisc(MeshFilter filter, MeshRenderer renderer, Color color)
+        {
+            if (discMesh == null) discMesh = BuildDisc(16);
+            discBlock ??= new MaterialPropertyBlock();
+            filter.sharedMesh = discMesh;
+            renderer.sharedMaterial = GetMaterial();
+            renderer.receiveShadows = false;
+            discBlock.SetColor(ColorId, color);
+            renderer.SetPropertyBlock(discBlock);   // copied into the renderer: the block can be reused
         }
 
         // Plain untextured material using a built-in shader that exists in every build

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Pistol.Core;
 
 namespace Pistol.Arms
 {
@@ -60,8 +61,6 @@ namespace Pistol.Arms
             left.hand = Hand.Build(leftHand, false, joints);
         }
 
-        public bool Active(bool rightSide) => (rightSide ? right : left).blend > 0f;
-
         // The live wrist of a hand: anatomical rotation (Z fingers, Y palm) and offset in camera space,
         // with a 0..1 weight that fades in and out with tracking
         public bool Placement(bool rightSide, out Quaternion wrist, out Vector3 offset, out float weight)
@@ -91,7 +90,7 @@ namespace Pistol.Arms
             side.placementBlend = Mathf.MoveTowards(side.placementBlend, placed ? 1f : 0f, fade);
             if (!ok) return;
 
-            float k = 1f - Mathf.Exp(-settings.sharpness * dt);
+            float k = Smoothing.Factor(settings.sharpness, dt);
             if (placed)
             {
                 // Ready values from the tool; only interpolated here to cover the gap between packets

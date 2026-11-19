@@ -157,9 +157,9 @@ namespace Pistol.Arms
             // The left wrist follows the tracked hand (used by the grip next frame, before the IK)
             if (grip != null)
             {
-                bool placed = live.Placement(false, out Quaternion wrist, out Vector3 offset, out float weight);
+                live.Placement(false, out Quaternion wrist, out Vector3 offset, out float weight);   // weight 0 when not placed
                 if (!liveDebug.liveWrist || !useLeft) weight = 0f;
-                grip.SetLeftHandLiveWrist(liveCamera, wrist, offset * liveDebug.liveHandMoveScale, placed ? weight : 0f);
+                grip.SetLeftHandLiveWrist(liveCamera, wrist, offset * liveDebug.liveHandMoveScale, weight);
             }
         }
 

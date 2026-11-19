@@ -140,7 +140,7 @@ namespace Pistol.Weapons.Revolver
                 tr.localPosition = new Vector3(0f, 0f, ringDepth);
                 float s = hover ? hoverScale : 1f;
                 // Under the cursor the ring gets bigger and thicker (thickness grows with the XY scale)
-                tr.localScale = Vector3.Lerp(tr.localScale, new Vector3(s, s, 1f), 1f - Mathf.Exp(-20f * Time.deltaTime));
+                tr.localScale = Vector3.Lerp(tr.localScale, new Vector3(s, s, 1f), Smoothing.Factor(20f, Time.deltaTime));
             }
 
             Color oc = outlineColor; oc.a *= t;
@@ -202,9 +202,11 @@ namespace Pistol.Weapons.Revolver
             if (!on) foreach (var r in rings) if (r != null) r.enabled = false;
         }
 
+        static readonly int ColorId = Shader.PropertyToID("_Color");
+
         void SetColor(Renderer r, Color c)
         {
-            block.SetColor("_Color", c);
+            block.SetColor(ColorId, c);
             r.SetPropertyBlock(block);
         }
 

@@ -58,5 +58,14 @@ namespace Pistol.Ballistics
             if (e != null) { e.sound = sound; return; }
             entries.Add(new Entry { material = material, sound = sound });
         }
+
+        // Lists the surface if it isn't listed yet; fills only its empty slots (sounds and marks tuned by hand stay)
+        public void Register(PhysicsMaterial material, ImpactSoundProfile sound, ImpactDecal decal)
+        {
+            var e = Find(material);
+            if (e == null) entries.Add(e = new Entry { material = material });
+            if (e.sound == null) e.sound = sound;
+            if (e.decal == null) e.decal = decal;
+        }
     }
 }

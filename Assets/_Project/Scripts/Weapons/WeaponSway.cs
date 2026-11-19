@@ -71,6 +71,7 @@ namespace Pistol.Weapons
 
         void Awake()
         {
+            useGUILayout = false;   // the aim point is drawn with GUI.*, no layout pass needed
             if (profile == null) { Debug.LogError("WeaponSway: no profile assigned.", this); enabled = false; return; }
             rig = ItemRig.On(this);
             muzzle = rig != null ? rig.MuzzleOrRoot : transform;
@@ -148,7 +149,7 @@ namespace Pistol.Weapons
 
             // ---------- 2. Roll from turn speed (towards the turn) ----------
             float yawRate = aimDelta.x / dt + lagVel.y;   // how fast the barrel turns in the world
-            worldYawRate = Mathf.Lerp(worldYawRate, yawRate, 1f - Mathf.Exp(-12f * dt));
+            worldYawRate = Mathf.Lerp(worldYawRate, yawRate, Smoothing.Factor(12f, dt));
             float rollTarget = Mathf.Clamp(-worldYawRate * profile.rollPerTurnSpeed, -profile.maxRoll, profile.maxRoll);
             float dipTarget = Mathf.Min(Mathf.Abs(worldYawRate) * profile.dipPerTurnSpeed, profile.maxRoll * 0.5f);
 
@@ -184,7 +185,7 @@ namespace Pistol.Weapons
             // Strength follows speed smoothly: a calm walk is weak, running is strong.
             float speed01 = grounded ? Mathf.Clamp01(hSpeed / Mathf.Max(run, 0.1f)) : 0f;
             float intensity = Mathf.Pow(speed01, profile.speedCurve);
-            runWeight = Mathf.Lerp(runWeight, running && grounded ? 1f : 0f, 1f - Mathf.Exp(-5f * dt));
+            runWeight = Mathf.Lerp(runWeight, running && grounded ? 1f : 0f, Smoothing.Factor(5f, dt));
             float rate = hSpeed < walk ? profile.walkStepRate * Mathf.Lerp(0.75f, 1f, hSpeed / walk)
                                        : Mathf.Lerp(profile.walkStepRate, profile.runStepRate, Mathf.InverseLerp(walk, run, hSpeed));
             bobPhase += Mathf.PI * rate * dt * Mathf.Clamp01(hSpeed / 0.3f);

@@ -116,7 +116,7 @@ namespace Pistol.PostFx
             var p = Profile;
             bool on = p != null && owner != null && !owner.Suppressed && weight > 0.001f;
 
-            focusOn = on && p.focus && Ensure(ref focusVolume, ref dof, CreateDof);
+            focusOn = on && p.focus && Ensure(ref focusVolume, ref dof, NewDof);
             if (focusOn)
             {
                 dof.focusDistance.value = Mathf.Max(0.1f, focusDistance);
@@ -127,7 +127,7 @@ namespace Pistol.PostFx
             }
             Show(focusVolume, focusOn, p != null && p.fadeByAperture ? 1f : weight);
 
-            vignetteOn = on && p.vignette && Ensure(ref vignetteVolume, ref vignette, CreateVignette);
+            vignetteOn = on && p.vignette && Ensure(ref vignetteVolume, ref vignette, NewVignette);
             if (vignetteOn)
             {
                 vignette.intensity.value = p.vignetteIntensity;
@@ -136,7 +136,7 @@ namespace Pistol.PostFx
             }
             Show(vignetteVolume, vignetteOn, weight);
 
-            edgeOn = on && p.edgeBlur && Ensure(ref edgeVolume, ref edge, CreateEdge);
+            edgeOn = on && p.edgeBlur && Ensure(ref edgeVolume, ref edge, NewEdge);
             if (edgeOn)
             {
                 edge.intensity.value = p.edgeBlurIntensity;
@@ -181,6 +181,11 @@ namespace Pistol.PostFx
             if (volume != null) RuntimeUtilities.DestroyVolume(volume, true, true);
             volume = null;
         }
+
+        // Kept as fields: passing a method group allocates a new delegate on every call (Set runs every frame while aiming)
+        static readonly System.Func<DepthOfField> NewDof = CreateDof;
+        static readonly System.Func<Vignette> NewVignette = CreateVignette;
+        static readonly System.Func<EdgeBlur> NewEdge = CreateEdge;
 
         static DepthOfField CreateDof()
         {

@@ -10,5 +10,6 @@ namespace Pistol.Ballistics
         public float distance;       // distance travelled, m
         public AmmoType ammo;
         public Collider collider;
+        public Pistol.Audio.GameAudio audio;   // for a target that plays a sound of its own (breaking glass); may be null
     }
 }

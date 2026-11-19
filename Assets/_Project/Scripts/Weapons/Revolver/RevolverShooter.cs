@@ -78,7 +78,7 @@ namespace Pistol.Weapons.Revolver
             origin = muzzle != null ? muzzle.position : transform.position;
 
             float v = ammo != null ? ammo.muzzleVelocity : 440f;
-            float g = Physics.gravity.magnitude * (ammo != null ? ammo.gravityScale : 1f);
+            float g = BulletMath.Gravity(ammo).magnitude;
             float t = zeroDistance / v;
             float drop = 0.5f * g * t * t;
             float angle = Mathf.Atan2(sightHeight + drop, zeroDistance) * Mathf.Rad2Deg;
@@ -128,7 +128,7 @@ namespace Pistol.Weapons.Revolver
             {
                 BulletMath.Step(pos, vel, g, dt, out Vector3 newPos, out Vector3 newVel);
                 Vector3 seg = newPos - pos;
-                if (BulletSystem.Raycast(pos, seg, seg.magnitude, mask, ignoreRoot, out hit))
+                if (PhysicsQuery.NearestHit(pos, seg, seg.magnitude, mask, ignoreRoot, out hit))
                 {
                     points.Add(hit.point);
                     hitSomething = true;

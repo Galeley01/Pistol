@@ -16,88 +16,103 @@ namespace Pistol.EditorTools
     //   - glass: the one glass mesh of the model is split into its panes (10: windshield, rear, 6 side windows,
     //     2 headlights), each with its own collider and a GlassPane: cracks on every hit, tempered panes fall apart
     //     at the first hit, the windshield (the largest pane, laminated) after several;
-    //   - generated here: the crack web atlas, the shard meshes and the shard material;
-    //   - the car in the scene is added to the TargetRange reset (T makes the glass whole again).
-    // Existing assets are kept and updated. Also run by Pistol > Add Range Props after the car prefab is rebuilt.
-    // Menu: Pistol > Setup Car Damage. Save the scene afterwards.
+    //   - the car is lit by the light probes, not by a lightmap of its own (its lightmap UVs are many small pieces);
+    //   - generated here: the crack web atlas, the shard meshes and the shard material.
+    // T resets the glass like every target (GlassPane is a ShootingTarget). Existing assets are kept and updated.
+    // Pistol > Add Range Props builds the car prefab with this (Prepare, then Decorate); this menu redoes it on the
+    // existing prefab. Menu: Pistol > Setup Car Damage.
     public static class CarDamageSetup
     {
         const string CarDir = "Assets/_Project/Environment/Props/Car/";
         const string GlassDir = CarDir + "Glass/";
         const string AudioDir = CarDir + "Audio/";
-        const string DecalDir = "Assets/_Project/Weapons/Shared/FX/Decals/";
-        const string MetalDir = DecalDir + "Metal/";
-        const string TablePath = "Assets/_Project/Settings/SurfaceSounds.asset";
-        const string SteelSoundPath = "Assets/_Project/Targets/Audio/Steel_ImpactDirect.asset";
-        const string SteelProfilePath = "Assets/_Project/Targets/Steel_Impact.asset";
-        public const string CarMetalPath = CarDir + "PM_CarMetal.physicMaterial";
+        const string MetalDir = EditorPaths.Decals + "Metal/";
+        const string CarMetalPath = CarDir + "PM_CarMetal.physicMaterial";
         const string GlassPath = CarDir + "PM_Glass.physicMaterial";
         const string PrefabPath = CarDir + "Car.prefab";
 
-        const string GlassPart = "Object19";
-        static readonly string[] MetalParts = { "Plane23", "Object27", "Cylinder53" };
+        // The car model's parts (from the .blend): texture set, and whether the part is metal
+        public const string GlassSet = "glass";
+        public static readonly Dictionary<string, (string set, bool metal)> Parts = new Dictionary<string, (string, bool)>
+        {
+            { "Plane23", ("willys", true) }, { "Object27", ("disks", true) }, { "Cylinder53", ("metal", true) },
+            { "Cylinder54", ("tieres", false) }, { "Cylinder58", ("inside", false) }, { "Object19", (GlassSet, false) },
+        };
 
         const int WindshieldHits = 6;
         const int ShardMeshes = 6;
+
+        // What the car's parts need, made once per run
+        public sealed class Kit
+        {
+            public PhysicsMaterial metal, glass;
+            public ImpactDecal crack;
+            public Mesh[] shards;
+            public Material shardMaterial;
+            public SoundEvent shatter;
+        }
 
         [MenuItem("Pistol/Setup Car Damage")]
         static void Setup()
         {
             if (Application.isPlaying) { Debug.LogWarning("Set up outside Play Mode."); return; }
-            SetUpCarPrefab();
-            AddToRangeReset();
-            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-            Debug.Log("Car damage set up: metal holes and sound, glass panes that crack and shatter. Save the scene.");
-        }
-
-        // The car prefab and everything it needs; true if the prefab was changed
-        public static bool SetUpCarPrefab()
-        {
-            var metal = PhysicsMaterialAt(CarMetalPath, 0.4f, 0.4f, 0.1f);
-            var glass = PhysicsMaterialAt(GlassPath, 0.3f, 0.3f, 0.05f);
-            var metalDecal = MetalDecal();
-            var crack = CrackDecal();
-            var shards = ShardMeshAssets();
-            var shardMaterial = ShardMaterial();
-
-            var metalProfile = Profile("CarMetal_Impact", Sound("CarMetal_ImpactDirect", "Car Metal Hit.mp3", 0.85f, 0.265f, 0f, 0f));
-            var crackSound = Sound("Glass_Crack", "Glass Break.mp3", 0.55f, 0.055f, 0.55f, 0.15f);
-            var shatterSound = Sound("Glass_Shatter", "Glass Break.mp3", 0.9f, 0.055f, 0f, 0f);
-            var glassProfile = Profile("Glass_Impact", crackSound);
-            Register(metal, metalProfile, metalDecal);
-            Register(glass, glassProfile, null);
-            AssetDatabase.SaveAssets();
-
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null) { Debug.LogWarning("No car prefab yet: run Pistol > Add Range Props."); return false; }
+            var kit = Prepare();
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null) { Debug.LogWarning("No car prefab yet: run Pistol > Add Range Props."); return; }
             var root = PrefabUtility.LoadPrefabContents(PrefabPath);
             try
             {
-                foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
-                    if (System.Array.IndexOf(MetalParts, PartName(r.gameObject.name)) >= 0 && r.TryGetComponent<MeshCollider>(out var c))
-                        c.sharedMaterial = metal;
-
-                var panes = new List<MeshRenderer>();
-                foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
-                    if (r.gameObject.name.StartsWith("Glass_")) panes.Add(r);
-                if (panes.Count == 0)
-                {
-                    MeshRenderer source = null;
-                    foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
-                        if (PartName(r.gameObject.name) == GlassPart) source = r;
-                    if (source == null) { Debug.LogWarning("The car has no glass part " + GlassPart); return false; }
-                    panes = SplitGlass(source);
-                }
-                ConfigurePanes(panes, glass, crack, shards, shardMaterial, shatterSound);
+                Decorate(root, kit);
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
-            return true;
+            Debug.Log("Car damage set up: metal holes and sound, glass panes that crack and shatter.");
         }
 
-        static string PartName(string name)
+        // Surfaces, sounds, decals and shard assets; the surfaces are listed in the SurfaceTable
+        public static Kit Prepare()
         {
-            int split = name.IndexOf("_MeshPart", System.StringComparison.Ordinal);
-            return split > 0 ? name.Substring(0, split) : name;
+            var kit = new Kit
+            {
+                metal = EditorAssets.PhysicsMaterialAt(CarMetalPath, 0.4f, 0.4f, 0.1f),
+                glass = EditorAssets.PhysicsMaterialAt(GlassPath, 0.3f, 0.3f, 0.05f),
+                crack = CrackDecal(),
+                shards = ShardMeshAssets(),
+                shardMaterial = ShardMaterial(),
+                shatter = Sound("Glass_Shatter", "Glass Break.mp3", 0.9f, 0.055f, 0f, 0f),
+            };
+            var table = AssetDatabase.LoadAssetAtPath<SurfaceTable>(EditorPaths.SurfaceTable);
+            if (table == null) Debug.LogWarning("Surface table not found: " + EditorPaths.SurfaceTable);
+            else
+            {
+                table.Register(kit.metal, Profile("CarMetal_Impact", Sound("CarMetal_ImpactDirect", "Car Metal Hit.mp3", 0.85f, 0.265f, 0f, 0f)), MetalDecal());
+                table.Register(kit.glass, Profile("Glass_Impact", Sound("Glass_Crack", "Glass Break.mp3", 0.55f, 0.055f, 0.55f, 0.15f)), null);
+                EditorUtility.SetDirty(table);
+            }
+            AssetDatabase.SaveAssets();
+            return kit;
+        }
+
+        // On the car (a prefab being built or opened): metal surfaces, glass panes, light from the probes. One pass
+        // over the parts; the glass is split only once (later runs find the panes and set them up again).
+        public static void Decorate(GameObject root, Kit kit)
+        {
+            var panes = new List<MeshRenderer>();
+            MeshRenderer glassSource = null;
+            foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                r.receiveGI = ReceiveGI.LightProbes;
+                if (r.gameObject.name.StartsWith("Glass_")) { panes.Add(r); continue; }
+                if (!Parts.TryGetValue(EditorAssets.PartName(r.gameObject.name), out var part)) continue;
+                if (part.set == GlassSet) glassSource = r;
+                else if (part.metal && r.TryGetComponent<MeshCollider>(out var c)) c.sharedMaterial = kit.metal;
+            }
+            if (panes.Count == 0)
+            {
+                if (glassSource == null) { Debug.LogWarning("The car has no glass part."); return; }
+                panes = SplitGlass(glassSource);
+            }
+            foreach (var r in panes) r.receiveGI = ReceiveGI.LightProbes;
+            ConfigurePanes(panes, kit);
         }
 
         // ---------- Glass panes ----------
@@ -188,8 +203,7 @@ namespace Pistol.EditorTools
         }
 
         // The largest pane is the laminated windshield; the rest is tempered. Shards by the pane's area.
-        static void ConfigurePanes(List<MeshRenderer> panes, PhysicsMaterial glass, ImpactDecal crack, Mesh[] shards,
-                                   Material shardMaterial, SoundEvent shatterSound)
+        static void ConfigurePanes(List<MeshRenderer> panes, Kit kit)
         {
             float Area(MeshRenderer r)
             {
@@ -205,41 +219,19 @@ namespace Pistol.EditorTools
                 var collider = r.GetComponent<MeshCollider>();
                 if (collider == null) collider = r.gameObject.AddComponent<MeshCollider>();
                 collider.sharedMesh = r.GetComponent<MeshFilter>().sharedMesh;
-                collider.sharedMaterial = glass;
+                collider.sharedMaterial = kit.glass;
                 var pane = r.GetComponent<GlassPane>();
                 if (pane == null) pane = r.gameObject.AddComponent<GlassPane>();
                 bool laminated = r == windshield;
                 int count = Mathf.Clamp(Mathf.RoundToInt(Area(r) * 900f), 30, 180);
                 pane.Configure(laminated ? GlassPane.Kind.Laminated : GlassPane.Kind.Tempered, laminated ? WindshieldHits : 1,
-                               count, crack, shards, shardMaterial, shatterSound);
+                               count, kit.crack, kit.shards, kit.shardMaterial, kit.shatter);
                 if (laminated) r.gameObject.name = "Glass_Windshield";
                 EditorUtility.SetDirty(pane);
             }
         }
 
-        static void AddToRangeReset()
-        {
-            var range = Object.FindFirstObjectByType<TargetRange>();   // editor tool, once
-            GameObject car = null;
-            foreach (var root in EditorSceneManager.GetActiveScene().GetRootGameObjects())
-                if (root.name == "Car") car = root;
-            if (range == null || car == null) { Debug.LogWarning("No TargetRange or no Car in the scene: T won't reset the glass."); return; }
-            Undo.RecordObject(range, "Car damage");
-            range.AddReset(car);
-            EditorUtility.SetDirty(range);
-        }
-
-        // ---------- Surfaces and sounds ----------
-        static PhysicsMaterial PhysicsMaterialAt(string path, float dynamicFriction, float staticFriction, float bounce)
-        {
-            var m = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(path);
-            if (m != null) return m;
-            m = new PhysicsMaterial(Path.GetFileNameWithoutExtension(path))
-                { dynamicFriction = dynamicFriction, staticFriction = staticFriction, bounciness = bounce };
-            AssetDatabase.CreateAsset(m, path);
-            return m;
-        }
-
+        // ---------- Sounds ----------
         // A copy of the steel hit sound (mixer group, 3D settings) with another clip. startTime skips the silence
         // before the hit in the file (metal 0.27 s, glass 0.06 s), endTime cuts it (the crack is the start of the break)
         static SoundEvent Sound(string name, string clipFile, float volume, float startTime, float endTime, float endFade)
@@ -247,7 +239,7 @@ namespace Pistol.EditorTools
             string path = AudioDir + name + ".asset";
             var sound = AssetDatabase.LoadAssetAtPath<SoundEvent>(path);
             if (sound != null) return sound;
-            var steel = AssetDatabase.LoadAssetAtPath<SoundEvent>(SteelSoundPath);
+            var steel = AssetDatabase.LoadAssetAtPath<SoundEvent>(EditorPaths.SteelImpactDirect);
             sound = steel != null ? Object.Instantiate(steel) : ScriptableObject.CreateInstance<SoundEvent>();
             sound.name = name;
             var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(AudioDir + clipFile);
@@ -270,7 +262,7 @@ namespace Pistol.EditorTools
             string path = AudioDir + name + ".asset";
             var profile = AssetDatabase.LoadAssetAtPath<ImpactSoundProfile>(path);
             if (profile != null) return profile;
-            var steel = AssetDatabase.LoadAssetAtPath<ImpactSoundProfile>(SteelProfilePath);
+            var steel = AssetDatabase.LoadAssetAtPath<ImpactSoundProfile>(EditorPaths.SteelImpact);
             profile = steel != null ? Object.Instantiate(steel) : ScriptableObject.CreateInstance<ImpactSoundProfile>();
             profile.name = name;
             profile.direct = direct;
@@ -279,23 +271,12 @@ namespace Pistol.EditorTools
             return profile;
         }
 
-        static void Register(PhysicsMaterial material, ImpactSoundProfile sound, ImpactDecal decal)
-        {
-            var table = AssetDatabase.LoadAssetAtPath<SurfaceTable>(TablePath);
-            if (table == null) { Debug.LogWarning("Surface table not found: " + TablePath); return; }
-            var entry = table.entries.Find(e => e.material == material);
-            if (entry == null) table.entries.Add(entry = new SurfaceTable.Entry { material = material });
-            if (entry.sound == null) entry.sound = sound;
-            if (entry.decal == null) entry.decal = decal;
-            EditorUtility.SetDirty(table);
-        }
-
         // ---------- Decals ----------
         // 8 holes in sheet metal (black through-hole, bent petals); the hole is about 1/2.2 of the cell
         static ImpactDecal MetalDecal()
         {
-            Tex(MetalDir + "T_BulletHole_Metal_albedo.png", TextureImporterType.Default, true);
-            Tex(MetalDir + "T_BulletHole_Metal_normal.png", TextureImporterType.NormalMap, false);
+            Tex(MetalDir + "T_BulletHole_Metal_albedo.png", true);
+            Tex(MetalDir + "T_BulletHole_Metal_normal.png", false);
             var material = DecalMaterial(MetalDir + "M_BulletHole_Metal.mat", MetalDir + "T_BulletHole_Metal_albedo.png",
                                          MetalDir + "T_BulletHole_Metal_normal.png", 0.3f, -1);
             return DecalAsset(MetalDir + "Decal_Metal.asset", material, 4, 2, 8, d =>
@@ -314,7 +295,7 @@ namespace Pistol.EditorTools
                 File.WriteAllBytes(tex, CrackAtlas(512));
                 AssetDatabase.ImportAsset(tex, ImportAssetOptions.ForceSynchronousImport);
             }
-            Tex(tex, TextureImporterType.Default, true);
+            Tex(tex, true);
             // Drawn after the transparent glass, so the cracks aren't dimmed by it
             var material = DecalMaterial(GlassDir + "M_GlassCrack.mat", tex, null, 0.9f, 3010);
             return DecalAsset(GlassDir + "Decal_GlassCrack.asset", material, 2, 2, 4, d =>
@@ -327,14 +308,10 @@ namespace Pistol.EditorTools
 
         static Material DecalMaterial(string path, string albedo, string normal, float smoothness, int queue)
         {
-            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (m == null)
-            {
-                m = new Material(Shader.Find("Pistol/BulletDecal")) { name = Path.GetFileNameWithoutExtension(path) };
-                AssetDatabase.CreateAsset(m, path);
-            }
-            m.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(albedo));
-            if (normal != null) m.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(normal));
+            var m = EditorAssets.LoadOrCreateMaterial(path, "Pistol/BulletDecal");
+            if (m == null) return null;
+            m.SetTexture("_MainTex", EditorAssets.Texture(albedo));
+            if (normal != null) m.SetTexture("_BumpMap", EditorAssets.Texture(normal));
             m.SetFloat("_Glossiness", smoothness);
             m.renderQueue = queue;
             EditorUtility.SetDirty(m);
@@ -343,13 +320,7 @@ namespace Pistol.EditorTools
 
         static ImpactDecal DecalAsset(string path, Material material, int columns, int rows, int variants, System.Action<ImpactDecal> fresh)
         {
-            var d = AssetDatabase.LoadAssetAtPath<ImpactDecal>(path);
-            if (d == null)
-            {
-                d = ScriptableObject.CreateInstance<ImpactDecal>();
-                fresh(d);
-                AssetDatabase.CreateAsset(d, path);
-            }
+            var d = EditorAssets.LoadOrCreate(path, fresh);
             d.kind = ImpactDecal.Kind.Flat;
             d.material = material;
             d.columns = columns;
@@ -535,37 +506,17 @@ namespace Pistol.EditorTools
         // Clear, very smooth, fading by the particle colour's alpha
         static Material ShardMaterial()
         {
-            string path = GlassDir + "M_GlassShard.mat";
-            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (m != null) return m;
-            var shader = Shader.Find("Particles/Standard Surface") ?? Shader.Find("Standard");
-            m = new Material(shader) { name = "M_GlassShard" };
-            m.SetFloat("_Mode", 2f);
-            m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            m.SetInt("_ZWrite", 0);
-            m.EnableKeyword("_ALPHABLEND_ON");
-            m.SetColor("_Color", new Color(0.82f, 0.9f, 0.92f, 0.55f));
-            m.SetFloat("_Glossiness", 0.95f);
-            m.SetFloat("_Metallic", 0.1f);
-            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-            AssetDatabase.CreateAsset(m, path);
-            return m;
+            string shader = Shader.Find("Particles/Standard Surface") != null ? "Particles/Standard Surface" : "Standard";
+            return EditorAssets.LoadOrCreateMaterial(GlassDir + "M_GlassShard.mat", shader, m =>
+            {
+                EditorAssets.MakeFade(m, new Color(0.82f, 0.9f, 0.92f, 0.55f), 0.95f);
+                m.SetFloat("_Metallic", 0.1f);
+            });
         }
 
         // ---------- Import ----------
-        static void Tex(string path, TextureImporterType type, bool srgb)
-        {
-            if (!(AssetImporter.GetAtPath(path) is TextureImporter ti)) { Debug.LogWarning("Texture not found: " + path); return; }
-            if (ti.textureType == type && ti.sRGBTexture == srgb && ti.textureShape == TextureImporterShape.Texture2D
-                && ti.alphaIsTransparency == srgb && ti.wrapMode == TextureWrapMode.Clamp) return;
-            ti.textureType = type;
-            ti.textureShape = TextureImporterShape.Texture2D;   // a bare .meta can import as a cubemap
-            ti.sRGBTexture = srgb;
-            ti.alphaIsTransparency = srgb;
-            ti.wrapMode = TextureWrapMode.Clamp;
-            ti.mipmapEnabled = true;
-            ti.SaveAndReimport();
-        }
+        // Decal textures: clamped at the edges, alpha as transparency for the colour map
+        static void Tex(string path, bool colour) => EditorAssets.ImportTexture(path,
+            colour ? TextureImporterType.Default : TextureImporterType.NormalMap, colour, wrap: TextureWrapMode.Clamp, alphaIsTransparency: colour);
     }
 }

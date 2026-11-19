@@ -47,13 +47,9 @@ namespace Pistol.Arms
 
         public bool Listening { get; private set; }
         public int Port { get; private set; }
-        public float PacketsPerSecond { get; private set; }
-        public string Error { get; private set; }
 
         Hand right, left;
         float rightSeen = -1f, leftSeen = -1f;
-        float rateTimer;
-        int rateCount;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         UdpClient client;
@@ -61,7 +57,6 @@ namespace Pistol.Arms
         volatile bool running;
         readonly object gate = new object();
         byte[] pending;
-        int received;
 #endif
 
         // Opens or closes the socket; called every frame by the arms with the DebugSettings switch
@@ -94,12 +89,10 @@ namespace Pistol.Arms
                 thread.Start();
                 Listening = true;
                 Port = port;
-                Error = null;
                 Application.runInBackground = true;   // keep receiving while the tracking window has focus
             }
             catch (Exception e)
             {
-                Error = $"UDP {port}: {e.Message}";
                 Debug.LogWarning($"LiveHandReceiver: can't listen on port {port}: {e.Message}", this);
                 client = null;
             }
@@ -125,7 +118,7 @@ namespace Pistol.Arms
                 try
                 {
                     byte[] data = client.Receive(ref any);
-                    lock (gate) { pending = data; received++; }
+                    lock (gate) pending = data;
                 }
                 catch (SocketException) { if (!running) break; }
                 catch (ObjectDisposedException) { break; }
@@ -136,12 +129,7 @@ namespace Pistol.Arms
         {
             if (!Listening) return;
             byte[] data;
-            int count;
-            lock (gate) { data = pending; pending = null; count = received; received = 0; }
-
-            rateCount += count;
-            rateTimer += Time.unscaledDeltaTime;
-            if (rateTimer >= 0.5f) { PacketsPerSecond = rateCount / rateTimer; rateCount = 0; rateTimer = 0f; }
+            lock (gate) { data = pending; pending = null; }
 
             if (data == null) return;
             Packet packet;

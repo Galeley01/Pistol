@@ -150,7 +150,7 @@ namespace Pistol.EditorTools
                 fx.lightIntensity = LightIntensity;
                 fx.lightDuration = LightDuration;
 
-                if (!AssetDatabase.IsValidFolder(FxFolder)) AssetDatabase.CreateFolder("Assets/_Project/Weapons", "Revolver");
+                EditorAssets.EnsureFolder(FxFolder);
                 return PrefabUtility.SaveAsPrefabAsset(root, FxPath);
             }
             finally

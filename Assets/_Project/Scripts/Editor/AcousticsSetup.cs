@@ -16,7 +16,7 @@ namespace Pistol.EditorTools
         const string TailClip = Dir + "Distant Shot Tail.mp3";
         const string EchoClip = Dir + "Distant Shot Echo.mp3";
         const string ShotPath = "Assets/_Project/Weapons/Revolver/Audio/Revolver_Shot.asset";
-        const string DebugPath = "Assets/_Project/Settings/DebugSettings.asset";
+        const string DebugPath = EditorPaths.DebugSettings;
         const string OutdoorPath = "Assets/_Project/Settings/Acoustics_Outdoor.asset";
         const string IndoorPath = "Assets/_Project/Settings/Acoustics_Indoor.asset";
 
@@ -123,27 +123,19 @@ namespace Pistol.EditorTools
 
         static SoundEvent Sound(string name, string clipPath, UnityEngine.Audio.AudioMixerGroup output, System.Action<SoundEvent> setup)
         {
-            string path = Dir + name + ".asset";
-            var s = AssetDatabase.LoadAssetAtPath<SoundEvent>(path);
-            if (s != null) return s;
-            s = ScriptableObject.CreateInstance<SoundEvent>();
-            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(clipPath);
-            if (clip == null) Debug.LogWarning("Clip not found: " + clipPath);
-            s.clips = clip != null ? new[] { clip } : new AudioClip[0];
-            s.output = output;
-            setup(s);
-            AssetDatabase.CreateAsset(s, path);
-            return s;
+            return EditorAssets.LoadOrCreate<SoundEvent>(Dir + name + ".asset", s =>
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(clipPath);
+                if (clip == null) Debug.LogWarning("Clip not found: " + clipPath);
+                s.clips = clip != null ? new[] { clip } : new AudioClip[0];
+                s.output = output;
+                setup(s);
+            });
         }
 
         static AcousticsProfile Profile(string path, System.Action<AcousticsProfile> setup)
         {
-            var p = AssetDatabase.LoadAssetAtPath<AcousticsProfile>(path);
-            if (p != null) return p;
-            p = ScriptableObject.CreateInstance<AcousticsProfile>();
-            setup(p);
-            AssetDatabase.CreateAsset(p, path);
-            return p;
+            return EditorAssets.LoadOrCreate(path, setup);
         }
     }
 }

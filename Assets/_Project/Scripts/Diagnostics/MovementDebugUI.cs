@@ -32,6 +32,7 @@ namespace Pistol.Diagnostics
         void Start()
         {
             show = showOnStart;
+            useGUILayout = false;   // drawn with GUI.*, no layout pass needed
             if (movement == null) movement = GetComponentInParent<PlayerMovement>();
             if (movement == null) movement = FindFirstObjectByType<PlayerMovement>();
             tex = Texture2D.whiteTexture;

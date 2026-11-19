@@ -34,12 +34,8 @@ namespace Pistol.EditorTools
 
             // ---------- Material (Built-in, Standard) ----------
             string matPath = dir + "/M_Cartridge357.mat";
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-            if (mat == null)
-            {
-                mat = new Material(Shader.Find("Standard"));
-                AssetDatabase.CreateAsset(mat, matPath);
-            }
+            var mat = EditorAssets.LoadOrCreateMaterial(matPath, "Standard");
+            if (mat == null) return;
             mat.SetTexture("_MainTex", baseCol);
             if (normal != null) { mat.SetTexture("_BumpMap", normal); mat.EnableKeyword("_NORMALMAP"); }
             if (ms != null)
@@ -67,12 +63,7 @@ namespace Pistol.EditorTools
 
             // ---------- Cartridge asset ----------
             string ammoPath = dir + "/Ammo_357.asset";
-            var ammo = AssetDatabase.LoadAssetAtPath<AmmoType>(ammoPath);
-            if (ammo == null)
-            {
-                ammo = ScriptableObject.CreateInstance<AmmoType>();
-                AssetDatabase.CreateAsset(ammo, ammoPath);
-            }
+            var ammo = EditorAssets.LoadOrCreate<AmmoType>(ammoPath);
             ammo.livePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
             ammo.modelRotation = Vector3.zero;
             ammo.modelScale = 0.95f;
@@ -95,17 +86,10 @@ namespace Pistol.EditorTools
             Debug.Log("Cartridge .357 set up: material, model and Ammo_357" + (cyl != null ? " (assigned to the selected revolver)." : ". Select the Revolver before running the menu, or assign it to RevolverCylinder manually."));
         }
 
-        static Texture2D Texture(string path, bool srgb, bool normal, bool alphaFromInput)
-        {
-            var ti = AssetImporter.GetAtPath(path) as TextureImporter;
-            if (ti == null) { Debug.LogWarning("Texture not found: " + path); return null; }
-            ti.textureType = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
-            ti.sRGBTexture = srgb;
-            ti.alphaSource = alphaFromInput ? TextureImporterAlphaSource.FromInput : TextureImporterAlphaSource.None;
-            ti.alphaIsTransparency = false;
-            ti.maxTextureSize = 1024;
-            ti.SaveAndReimport();
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-        }
+        static Texture2D Texture(string path, bool srgb, bool normal, bool alphaFromInput) =>
+            EditorAssets.ImportTexture(path, normal ? TextureImporterType.NormalMap : TextureImporterType.Default, srgb, 1024,
+                alphaIsTransparency: false,
+                alphaSource: alphaFromInput ? TextureImporterAlphaSource.FromInput : TextureImporterAlphaSource.None)
+                ? EditorAssets.Texture(path) : null;
     }
 }

@@ -54,16 +54,17 @@ namespace Pistol.Targets
         Collider paneCollider;
         MeshFilter paneFilter;
         ParticleSystem burst;
-        readonly List<Transform> cracks = new List<Transform>();
+        class Crack { public Transform transform; public MeshFilter filter; public MeshRenderer renderer; }
+        readonly List<Crack> cracks = new List<Crack>();
         int hits, nextCrack;
         bool broken, shatterPending;
         Vector3 lastDirection = Vector3.forward;
-
-        static GameAudio audioCache;
-
-        public bool IsBroken => broken;
+        GameAudio hitAudio;   // the game's audio, brought by the hit (BulletHit.audio)
 
         static bool warmed;
+        static ParticleSystem.Particle[] particleBuffer = new ParticleSystem.Particle[256];
+
+        bool HasCrack => crack != null && crack.material != null && crack.Count > 0;
 
         void Awake()
         {
@@ -94,7 +95,7 @@ namespace Pistol.Targets
             }, 1);
 
             GameObject crackProbe = null;
-            if (crack != null && crack.material != null && crack.Count > 0)
+            if (HasCrack)
             {
                 crackProbe = new GameObject("Crack warm-up", typeof(MeshFilter), typeof(MeshRenderer));
                 crackProbe.GetComponent<MeshFilter>().sharedMesh = crack.MeshFor(0);
@@ -118,6 +119,7 @@ namespace Pistol.Targets
         {
             if (broken) return;
             hits++;
+            if (hit.audio != null) hitAudio = hit.audio;
             lastDirection = hit.direction.sqrMagnitude > 1e-6f ? hit.direction.normalized : transform.forward;
             AddCrack(hit);
             Chips(hit.point, -lastDirection);
@@ -131,31 +133,33 @@ namespace Pistol.Targets
         // ---------- Cracks ----------
         void AddCrack(in BulletHit hit)
         {
-            if (crack == null || crack.material == null || crack.Count == 0) return;
-            Transform t;
+            if (!HasCrack) return;
+            Crack c;
             if (cracks.Count < maxCracks)
             {
                 var go = new GameObject("Crack", typeof(MeshFilter), typeof(MeshRenderer));
-                var r = go.GetComponent<MeshRenderer>();
-                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                r.receiveShadows = false;
-                t = go.transform;
-                cracks.Add(t);
+                go.transform.SetParent(transform, false);   // the pane's scale is uniform: the crack keeps its shape
+                c = new Crack { transform = go.transform, filter = go.GetComponent<MeshFilter>(), renderer = go.GetComponent<MeshRenderer>() };
+                c.renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                c.renderer.receiveShadows = false;
+                cracks.Add(c);
             }
-            else t = cracks[nextCrack++ % cracks.Count];
+            else c = cracks[nextCrack++ % cracks.Count];
 
-            t.GetComponent<MeshFilter>().sharedMesh = crack.MeshFor(Random.Range(0, crack.Count));
-            t.GetComponent<MeshRenderer>().sharedMaterial = crack.material;
-            float caliber = hit.ammo != null ? hit.ammo.holeSize : 0.009f;
-            float size = crack.Size(caliber) * (1f + Random.Range(-crack.sizeJitter, crack.sizeJitter));
+            c.filter.sharedMesh = crack.MeshFor(Random.Range(0, crack.Count));
+            c.renderer.sharedMaterial = crack.material;
+            float size = crack.RandomSize(hit.ammo != null ? hit.ammo.holeSize : 0.009f);
             // Facing the shooter, just in front of the glass, turned at random
             Vector3 normal = Vector3.Dot(hit.normal, lastDirection) < 0f ? hit.normal : -hit.normal;
-            t.SetParent(null, false);
-            t.SetPositionAndRotation(hit.point + normal * 0.002f,
+            c.transform.SetPositionAndRotation(hit.point + normal * 0.002f,
                 Quaternion.LookRotation(normal) * Quaternion.Euler(0f, 0f, Random.value * 360f));
-            t.localScale = Vector3.one * size;
-            t.SetParent(transform, true);   // the pane's scale is uniform: the crack keeps its shape
-            t.gameObject.SetActive(true);
+            c.transform.localScale = Vector3.one * (size / Mathf.Max(transform.lossyScale.x, 1e-6f));
+            c.transform.gameObject.SetActive(true);
+        }
+
+        void HideCracks()
+        {
+            foreach (var c in cracks) if (c.transform != null) c.transform.gameObject.SetActive(false);
         }
 
         // ---------- Shattering ----------
@@ -166,7 +170,7 @@ namespace Pistol.Targets
             broken = true;
             if (paneRenderer != null) paneRenderer.enabled = false;
             if (paneCollider != null) paneCollider.enabled = false;
-            foreach (var c in cracks) if (c != null) c.gameObject.SetActive(false);
+            HideCracks();
 
             var system = Burst();
             if (system != null && shards > 0)
@@ -174,22 +178,22 @@ namespace Pistol.Targets
                 var emit = new ParticleSystem.EmitParams { applyShapeToPosition = true };
                 int before = system.particleCount;
                 system.Emit(emit, shards);
-                // Along the bullet with a spread, a little outwards from the glass; tumbling
-                var particles = new ParticleSystem.Particle[system.particleCount];
-                int count = system.GetParticles(particles);
-                for (int i = before; i < count; i++)
+                // Along the bullet with a spread, a little outwards from the glass; tumbling. Only the new shards
+                // are read back (they come after the ones already flying), into a buffer shared by all panes.
+                int added = system.particleCount - before;
+                if (particleBuffer.Length < added) particleBuffer = new ParticleSystem.Particle[Mathf.NextPowerOfTwo(added)];
+                int count = system.GetParticles(particleBuffer, added, before);
+                for (int i = 0; i < count; i++)
                 {
-                    Vector3 v = lastDirection * Random.Range(shardSpeed.x, shardSpeed.y) + Random.insideUnitSphere * 1.2f;
-                    particles[i].velocity = v;
-                    particles[i].startSize = Random.Range(shardSize.x, shardSize.y);
-                    particles[i].rotation3D = new Vector3(Random.value, Random.value, Random.value) * 360f;
+                    particleBuffer[i].velocity = lastDirection * Random.Range(shardSpeed.x, shardSpeed.y) + Random.insideUnitSphere * 1.2f;
+                    particleBuffer[i].startSize = Random.Range(shardSize.x, shardSize.y);
+                    particleBuffer[i].rotation3D = new Vector3(Random.value, Random.value, Random.value) * 360f;
                 }
-                system.SetParticles(particles, count);
+                system.SetParticles(particleBuffer, count, before);
             }
 
-            var gameAudio = Audio();
-            if (gameAudio != null && shatterSound != null)
-                gameAudio.Play(shatterSound, paneRenderer != null ? paneRenderer.bounds.center : transform.position);
+            if (hitAudio != null && shatterSound != null)
+                hitAudio.Play(shatterSound, paneRenderer != null ? paneRenderer.bounds.center : transform.position);
         }
 
         // A few small chips thrown back towards the shooter on every hit
@@ -283,12 +287,6 @@ namespace Pistol.Targets
             return burst;
         }
 
-        static GameAudio Audio()
-        {
-            if (audioCache == null) audioCache = FindFirstObjectByType<GameAudio>();   // once, on the first shatter
-            return audioCache;
-        }
-
         // ---------- Reset ----------
         public override void ResetTarget()
         {
@@ -299,7 +297,7 @@ namespace Pistol.Targets
             nextCrack = 0;
             if (paneRenderer != null) paneRenderer.enabled = true;
             if (paneCollider != null) paneCollider.enabled = true;
-            foreach (var c in cracks) if (c != null) c.gameObject.SetActive(false);
+            HideCracks();
             if (burst != null) burst.Clear();
         }
 

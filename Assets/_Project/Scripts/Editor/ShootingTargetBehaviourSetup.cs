@@ -14,9 +14,8 @@ namespace Pistol.EditorTools
     public static class ShootingTargetBehaviourSetup
     {
         const string PrefabDir = "Assets/ThirdParty/ShootingTargetSet/Prefabs/";
-        const string ImpactPath = "Assets/_Project/Targets/Steel_Impact.asset";
-        const string SteelPath = "Assets/_Project/Targets/PM_Steel.physicMaterial";
-        const string TablePath = "Assets/_Project/Settings/SurfaceSounds.asset";
+        const string ImpactPath = EditorPaths.SteelImpact;
+        const string TablePath = EditorPaths.SurfaceTable;
         // Not steel: the cardboard target keeps its colliders without the steel material
         static readonly string[] NotSteel = { "PaperTarget" };
 
@@ -123,20 +122,9 @@ namespace Pistol.EditorTools
         // The Steel Physics Material and the surface sound table (Steel -> steel impact), created when missing
         static PhysicsMaterial SteelMaterialAndTable(ImpactSoundProfile impact)
         {
-            var steel = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(SteelPath);
-            if (steel == null)
-            {
-                steel = new PhysicsMaterial("PM_Steel") { dynamicFriction = 0.4f, staticFriction = 0.5f, bounciness = 0.1f };
-                AssetDatabase.CreateAsset(steel, SteelPath);
-                Debug.Log("Created " + SteelPath);
-            }
-            var table = AssetDatabase.LoadAssetAtPath<SurfaceTable>(TablePath);
-            if (table == null)
-            {
-                table = ScriptableObject.CreateInstance<SurfaceTable>();
-                AssetDatabase.CreateAsset(table, TablePath);
-                Debug.Log("Created " + TablePath + ": assign it to BulletSystem (Surface Sounds)");
-            }
+            var steel = EditorAssets.PhysicsMaterialAt(EditorPaths.Steel, 0.4f, 0.5f, 0.1f);
+            var table = EditorAssets.LoadOrCreate<SurfaceTable>(TablePath,
+                _ => Debug.Log("Created " + TablePath + ": assign it to BulletSystem (Surface Sounds)"));
             if (impact != null && table.For(steel) != impact)
             {
                 table.Set(steel, impact);

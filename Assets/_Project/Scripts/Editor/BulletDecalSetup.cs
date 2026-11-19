@@ -19,8 +19,7 @@ namespace Pistol.EditorTools
     // Menu: Pistol > Setup Bullet Decals. Save the scene afterwards (BulletSystem gets the style list).
     public static class BulletDecalSetup
     {
-        const string Dir = "Assets/_Project/Weapons/Shared/FX/Decals/";
-        const string TablePath = "Assets/_Project/Settings/SurfaceSounds.asset";
+        const string Dir = EditorPaths.Decals;
 
         [MenuItem("Pistol/Setup Bullet Decals")]
         static void Setup()
@@ -36,7 +35,7 @@ namespace Pistol.EditorTools
             var flatExit = FlatDecal("ScanExit", "ScanExit", 1, 1, 1, new Color(0.85f, 0.85f, 0.84f), 1f,
                 d => { d.sizeInMeters = true; d.meters = 0.154f; d.sizeJitter = 0.2f; });
             // B: 3D craters
-            var mask = MaterialAt(Dir + "M_BulletHole_Mask.mat", "Pistol/BulletHoleMask", null);
+            var mask = EditorAssets.LoadOrCreateMaterial(Dir + "M_BulletHole_Mask.mat", "Pistol/BulletHoleMask");
             var craterEntry = CraterDecal("Entry", mask, flatEntry.material);
             var craterExit = CraterDecal("Exit", mask, flatExit.material);
             // Scan with depth: same textures + height, same size; depth as a fraction of the size = 2.5 cm / side
@@ -59,7 +58,7 @@ namespace Pistol.EditorTools
                 EditorUtility.SetDirty(depthExit);
             }
 
-            var table = AssetDatabase.LoadAssetAtPath<SurfaceTable>(TablePath);
+            var table = AssetDatabase.LoadAssetAtPath<SurfaceTable>(EditorPaths.SurfaceTable);
             if (table != null && table.defaultDecal == null)
             {
                 Undo.RecordObject(table, "Default bullet decal");
@@ -89,25 +88,26 @@ namespace Pistol.EditorTools
             string albedo = Dir + $"T_BulletHole_{tex}_Albedo.png", normal = Dir + $"T_BulletHole_{tex}_Normal.png";
             ImportTexture(albedo, false);
             ImportTexture(normal, true);
-            var material = MaterialAt(Dir + $"M_BulletHole_{asset}.mat", "Pistol/BulletDecal", m =>
+            var material = EditorAssets.LoadOrCreateMaterial(Dir + $"M_BulletHole_{asset}.mat", "Pistol/BulletDecal", m =>
             {
-                m.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(albedo));
-                m.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(normal));
+                m.SetTexture("_MainTex", EditorAssets.Texture(albedo));
+                m.SetTexture("_BumpMap", EditorAssets.Texture(normal));
                 m.SetColor("_Color", tint);
                 m.SetFloat("_BumpScale", bump);
                 m.SetFloat("_Glossiness", 0.12f);
             });
-            string path = Dir + $"Decal_{asset}.asset";
-            var d = AssetDatabase.LoadAssetAtPath<ImpactDecal>(path);
-            if (d != null) return d;
-            d = ScriptableObject.CreateInstance<ImpactDecal>();
-            d.kind = ImpactDecal.Kind.Flat;
-            d.material = material;
-            d.columns = cols; d.rows = rows; d.variants = variants;
-            setup(d);
-            AssetDatabase.CreateAsset(d, path);
-            return d;
+            return NewFlatDecal($"Decal_{asset}.asset", material, cols, rows, variants, setup);
         }
+
+        // A flat decal asset (kept as it is when it already exists: it may be tuned)
+        static ImpactDecal NewFlatDecal(string file, Material material, int cols, int rows, int variants, System.Action<ImpactDecal> setup) =>
+            EditorAssets.LoadOrCreate<ImpactDecal>(Dir + file, d =>
+            {
+                d.kind = ImpactDecal.Kind.Flat;
+                d.material = material;
+                d.columns = cols; d.rows = rows; d.variants = variants;
+                setup(d);
+            });
 
         static ImpactDecal CraterDecal(string side, Material mask, Material dust)
         {
@@ -124,10 +124,10 @@ namespace Pistol.EditorTools
             string albedo = Dir + $"T_BulletHole_Crater{side}_Albedo.png", normal = Dir + $"T_BulletHole_Crater{side}_Normal.png";
             ImportTexture(albedo, false);
             ImportTexture(normal, true);
-            var cavity = MaterialAt(Dir + $"M_BulletHole_Crater{side}.mat", "Pistol/BulletHoleCavity", m =>
+            var cavity = EditorAssets.LoadOrCreateMaterial(Dir + $"M_BulletHole_Crater{side}.mat", "Pistol/BulletHoleCavity", m =>
             {
-                m.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(albedo));
-                m.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(normal));
+                m.SetTexture("_MainTex", EditorAssets.Texture(albedo));
+                m.SetTexture("_BumpMap", EditorAssets.Texture(normal));
                 m.SetColor("_Color", new Color(0.85f, 0.85f, 0.84f));
             });
 
@@ -139,15 +139,11 @@ namespace Pistol.EditorTools
             var mats = renderer.sharedMaterials.Select(m =>
                 m == null ? mask : m.name.StartsWith("Cavity") ? cavity : m.name.StartsWith("Dust") ? dust : mask).ToArray();
 
-            string path = Dir + $"Decal_Crater{side}.asset";
-            var d = AssetDatabase.LoadAssetAtPath<ImpactDecal>(path);
-            if (d == null)
+            var d = EditorAssets.LoadOrCreate<ImpactDecal>(Dir + $"Decal_Crater{side}.asset", fresh =>
             {
-                d = ScriptableObject.CreateInstance<ImpactDecal>();
-                d.kind = ImpactDecal.Kind.Mesh;
-                d.sizeInMeters = true; d.meters = 1f; d.sizeJitter = 0.15f;
-                AssetDatabase.CreateAsset(d, path);
-            }
+                fresh.kind = ImpactDecal.Kind.Mesh;
+                fresh.sizeInMeters = true; fresh.meters = 1f; fresh.sizeJitter = 0.15f;
+            });
             d.meshes = new[] { filter.sharedMesh };
             d.meshMaterials = mats;
             d.material = cavity;
@@ -156,31 +152,30 @@ namespace Pistol.EditorTools
         }
 
         // The scan decal of that side with its height map: a copy of the flat decal's settings, the depth shader
-        static ImpactDecal DepthDecal(string side, ImpactDecal flat, float parallax)
-        {
-            string albedo = Dir + $"T_BulletHole_Scan{side}_Albedo.png", normal = Dir + $"T_BulletHole_Scan{side}_Normal.png";
-            string height = Dir + $"T_BulletHole_Scan{side}_Height.png";
-            if (!ImportHeight(height)) return null;
-
-            var material = MaterialAt(Dir + $"M_BulletHole_ScanDepth{side}.mat", "Pistol/BulletDecalDepth", m =>
+        // (its colour and normal textures were set up with the flat decal)
+        static ImpactDecal DepthDecal(string side, ImpactDecal flat, float parallax) =>
+            HeightDecal($"Scan{side}", $"ScanDepth{side}", parallax, d =>
             {
-                m.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(albedo));
-                m.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(normal));
-                m.SetTexture("_HeightMap", AssetDatabase.LoadAssetAtPath<Texture2D>(height));
+                d.sizeInMeters = true; d.meters = flat != null ? flat.meters : 0.15f; d.sizeJitter = 0.2f;
+            });
+
+        // A flat decal with a height map on the depth shader: T_BulletHole_<tex>_{Albedo,Normal,Height}
+        // -> M_BulletHole_<asset>.mat, Decal_<asset>.asset
+        static ImpactDecal HeightDecal(string tex, string asset, float parallax, System.Action<ImpactDecal> setup)
+        {
+            string albedo = Dir + $"T_BulletHole_{tex}_Albedo.png", normal = Dir + $"T_BulletHole_{tex}_Normal.png";
+            string height = Dir + $"T_BulletHole_{tex}_Height.png";
+            if (!ImportHeight(height)) return null;
+            var material = EditorAssets.LoadOrCreateMaterial(Dir + $"M_BulletHole_{asset}.mat", "Pistol/BulletDecalDepth", m =>
+            {
+                m.SetTexture("_MainTex", EditorAssets.Texture(albedo));
+                m.SetTexture("_BumpMap", EditorAssets.Texture(normal));
+                m.SetTexture("_HeightMap", EditorAssets.Texture(height));
                 m.SetColor("_Color", new Color(0.85f, 0.85f, 0.84f));
                 m.SetFloat("_Parallax", parallax);
             });
             FillMissing(material, albedo, normal, height);
-            string path = Dir + $"Decal_ScanDepth{side}.asset";
-            var d = AssetDatabase.LoadAssetAtPath<ImpactDecal>(path);
-            if (d != null) return d;
-            d = ScriptableObject.CreateInstance<ImpactDecal>();
-            d.kind = ImpactDecal.Kind.Flat;
-            d.material = material;
-            d.columns = 1; d.rows = 1; d.variants = 1;
-            d.sizeInMeters = true; d.meters = flat != null ? flat.meters : 0.15f; d.sizeJitter = 0.2f;
-            AssetDatabase.CreateAsset(d, path);
-            return d;
+            return NewFlatDecal($"Decal_{asset}.asset", material, 1, 1, 1, setup);
         }
 
         // A material made in the same run as its textures' first import can come out without them: fill the empty slots
@@ -219,58 +214,19 @@ namespace Pistol.EditorTools
         // An angled-hit mark (T_BulletHole_<tag>_*): depth shader, laid along the bullet's travel
         static ImpactDecal AngledDecal(string tag, float meters, float parallax)
         {
-            string albedo = Dir + $"T_BulletHole_{tag}_Albedo.png", normal = Dir + $"T_BulletHole_{tag}_Normal.png";
-            string height = Dir + $"T_BulletHole_{tag}_Height.png";
-            ImportTexture(albedo, false);
-            ImportTexture(normal, true);
-            if (!ImportHeight(height)) return null;
-            var material = MaterialAt(Dir + $"M_BulletHole_{tag}.mat", "Pistol/BulletDecalDepth", m =>
+            ImportTexture(Dir + $"T_BulletHole_{tag}_Albedo.png", false);
+            ImportTexture(Dir + $"T_BulletHole_{tag}_Normal.png", true);
+            return HeightDecal(tag, tag, parallax, d =>
             {
-                m.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(albedo));
-                m.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(normal));
-                m.SetTexture("_HeightMap", AssetDatabase.LoadAssetAtPath<Texture2D>(height));
-                m.SetColor("_Color", new Color(0.85f, 0.85f, 0.84f));
-                m.SetFloat("_Parallax", parallax);
+                d.sizeInMeters = true; d.meters = meters; d.sizeJitter = 0.15f;
+                d.randomRotation = false;
+                d.alongTravel = true;
             });
-            FillMissing(material, albedo, normal, height);
-            string path = Dir + $"Decal_{tag}.asset";
-            var d = AssetDatabase.LoadAssetAtPath<ImpactDecal>(path);
-            if (d != null) return d;
-            d = ScriptableObject.CreateInstance<ImpactDecal>();
-            d.kind = ImpactDecal.Kind.Flat;
-            d.material = material;
-            d.columns = 1; d.rows = 1; d.variants = 1;
-            d.sizeInMeters = true; d.meters = meters; d.sizeJitter = 0.15f;
-            d.randomRotation = false;
-            d.alongTravel = true;
-            AssetDatabase.CreateAsset(d, path);
-            return d;
         }
 
-        static Material MaterialAt(string path, string shaderName, System.Action<Material> setup)
-        {
-            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (m != null) return m;
-            var shader = Shader.Find(shaderName);
-            if (shader == null) { Debug.LogError($"Shader {shaderName} not found (compile error?)."); return null; }
-            m = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) };
-            setup?.Invoke(m);
-            AssetDatabase.CreateAsset(m, path);
-            return m;
-        }
-
-        static void ImportTexture(string path, bool normal)
-        {
-            if (!(AssetImporter.GetAtPath(path) is TextureImporter ti)) { Debug.LogWarning("Texture not found: " + path); return; }
-            var type = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
-            if (ti.textureType == type && ti.wrapMode == TextureWrapMode.Clamp) return;
-            ti.textureType = type;
-            ti.sRGBTexture = !normal;
-            ti.alphaIsTransparency = !normal;
-            ti.wrapMode = TextureWrapMode.Clamp;
-            ti.mipmapEnabled = true;
-            ti.maxTextureSize = 2048;
-            ti.SaveAndReimport();
-        }
+        // Decal textures: clamped at the edges, the colour map's alpha is its transparency
+        static void ImportTexture(string path, bool normal) => EditorAssets.ImportTexture(path,
+            normal ? TextureImporterType.NormalMap : TextureImporterType.Default, !normal, 2048,
+            wrap: TextureWrapMode.Clamp, alphaIsTransparency: !normal);
     }
 }

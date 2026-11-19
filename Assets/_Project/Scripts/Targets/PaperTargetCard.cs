@@ -98,9 +98,11 @@ namespace Pistol.Targets
                 {
                     if (x < 0 || x >= width) continue;
                     float dx = x - cx, dy = y - cy;
-                    float a = Mathf.Atan2(dy, dx);
-                    float edge = r * (1f + tear * (Mathf.PerlinNoise(seed + Mathf.Cos(a) * 1.5f, seed + Mathf.Sin(a) * 1.5f) - 0.5f) * 2f);
-                    if (dx * dx + dy * dy <= edge * edge) pixels[y * width + x] = 0;
+                    float d2 = dx * dx + dy * dy, len = Mathf.Sqrt(d2);
+                    // The direction from the centre (cos, sin of its angle) without trigonometry
+                    float cos = len > 0f ? dx / len : 1f, sin = len > 0f ? dy / len : 0f;
+                    float edge = r * (1f + tear * (Mathf.PerlinNoise(seed + cos * 1.5f, seed + sin * 1.5f) - 0.5f) * 2f);
+                    if (d2 <= edge * edge) pixels[y * width + x] = 0;
                 }
             }
             Holes++;
@@ -117,7 +119,6 @@ namespace Pistol.Targets
 
         void Clear()
         {
-            if (pixels == null) return;   // an inactive card (never awake) is reset too: nothing to clear yet
             for (int i = 0; i < pixels.Length; i++) pixels[i] = 255;
             Holes = 0;
             dirty = true;

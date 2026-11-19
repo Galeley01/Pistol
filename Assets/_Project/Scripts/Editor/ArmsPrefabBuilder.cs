@@ -167,7 +167,7 @@ namespace Pistol.EditorTools
                 // The arms prefab lives next to its definition: one folder per arms skin
                 string defPath = AssetDatabase.GetAssetPath(def);
                 string folder = string.IsNullOrEmpty(defPath) ? FallbackFolder : System.IO.Path.GetDirectoryName(defPath).Replace('\\', '/');
-                EnsureFolder(folder);
+                EditorAssets.EnsureFolder(folder);
                 string path = $"{folder}/{def.name}.prefab";
                 var saved = PrefabUtility.SaveAsPrefabAsset(instance, path);
                 if (saved == null) { Debug.LogError($"{def.name}: failed to save {path}.", def); return; }
@@ -207,12 +207,5 @@ namespace Pistol.EditorTools
         static Vector3 Normalize(Vector3 e) =>
             new Vector3(Mathf.DeltaAngle(0f, e.x), Mathf.DeltaAngle(0f, e.y), Mathf.DeltaAngle(0f, e.z));
 
-        static void EnsureFolder(string path)
-        {
-            if (AssetDatabase.IsValidFolder(path)) return;
-            int slash = path.LastIndexOf('/');
-            EnsureFolder(path.Substring(0, slash));
-            AssetDatabase.CreateFolder(path.Substring(0, slash), path.Substring(slash + 1));
-        }
     }
 }

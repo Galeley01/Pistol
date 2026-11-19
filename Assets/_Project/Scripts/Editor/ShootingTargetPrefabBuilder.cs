@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -126,15 +127,7 @@ namespace Pistol.EditorTools
             var anchor = byName[g.anchor];
 
             // Root at the anchor's X/Z, at the lowest (or highest) point of the whole group.
-            Bounds bounds = default;
-            bool hasBounds = false;
-            foreach (var t in parts)
-            {
-                var r = t.GetComponent<Renderer>();
-                if (r == null) continue;
-                if (!hasBounds) { bounds = r.bounds; hasBounds = true; }
-                else bounds.Encapsulate(r.bounds);
-            }
+            bool hasBounds = EditorAssets.RendererBounds(parts.Select(t => t.GetComponent<Renderer>()), out var bounds);
             var a = anchor.position;
             float y = !hasBounds ? a.y : g.pivot == Pivot.Top ? bounds.max.y : bounds.min.y;
 
