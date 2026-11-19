@@ -18,3 +18,9 @@ MonoBehaviour:
   - material: {fileID: 13400000, guid: 31566a821bac3459e83ae657e900b760, type: 2}
     sound: {fileID: 11400000, guid: cdf18286ff5a445fb44a839d8c36c100, type: 2}
     decal: {fileID: 0}
+  - material: {fileID: 13400000, guid: 74adce875d4634c0f8240da21e7bbcf7, type: 2}
+    sound: {fileID: 11400000, guid: 3ab7be675e5964e929226c31ad6f9af1, type: 2}
+    decal: {fileID: 11400000, guid: 9d94b96192eb2448793fc5eef8927eb7, type: 2}
+  - material: {fileID: 13400000, guid: 7dcca97406632464a9050539a1fecbf9, type: 2}
+    sound: {fileID: 11400000, guid: f738f989464e8424eb5f11a17b3a5cbf, type: 2}
+    decal: {fileID: 0}

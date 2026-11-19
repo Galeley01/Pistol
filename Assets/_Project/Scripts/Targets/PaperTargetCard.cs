@@ -117,6 +117,7 @@ namespace Pistol.Targets
 
         void Clear()
         {
+            if (pixels == null) return;   // an inactive card (never awake) is reset too: nothing to clear yet
             for (int i = 0; i < pixels.Length; i++) pixels[i] = 255;
             Holes = 0;
             dirty = true;

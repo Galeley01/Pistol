@@ -19,17 +19,30 @@ namespace Pistol.EditorTools
     {
         const string SettingsPath = "Assets/_Project/Environment/Lighting_Range.lighting";
         const string TargetModelPath = "Assets/ThirdParty/ShootingTargetSet/Models/ShootingTargetCollection.fbx";
-        const float GroundScaleInLightmap = 0.04f;   // the 1500 m plane: ~0.4 texel per metre at resolution 10
+        // The 1500 m ground plane gets ~0.4 texel per metre whatever the resolution: at a fixed share it fills the whole
+        // lightmap at a high resolution and squeezes everything else into a corner
+        const float GroundTexelsPerMetre = 0.4f;
+        const float NormalResolution = 10f, HighResolution = 30f;   // texels per metre for normal objects
+        // Complex props lit by the light probes instead of their own lightmap (their lightmap UVs are many small
+        // pieces): they still block and bounce light in the bake. Names of scene roots.
+        static readonly string[] ProbeLitRoots = { "Car" };
 
         [MenuItem("Pistol/Bake Lighting")]
-        static void Bake()
+        static void Bake() => Bake(false);
+
+        // Experiment: sharper soft shadows at the foot of walls and in corners, cleaner and darker AO. Costs bake time,
+        // lightmap memory and build size, not frame time.
+        [MenuItem("Pistol/Bake Lighting (High Quality)")]
+        static void BakeHigh() => Bake(true);
+
+        static void Bake(bool high)
         {
             if (Application.isPlaying) { Debug.LogWarning("Bake outside Play Mode."); return; }
             if (Lightmapping.isRunning) { Debug.LogWarning("A bake is already running."); return; }
 
             LightmapUvsOnTargets();
-            int statics = MarkStatics();
-            ApplySettings();
+            int statics = MarkStatics(high ? HighResolution : NormalResolution);
+            ApplySettings(high);
             var range = RangeBounds();
             LightProbes(range);
             ReflectionProbe(range);
@@ -38,7 +51,7 @@ namespace Pistol.EditorTools
             Lightmapping.bakeCompleted -= OnBaked;
             Lightmapping.bakeCompleted += OnBaked;
             Lightmapping.BakeAsync();
-            Debug.Log($"Bake started: {statics} static objects. Progress is in the bottom right corner of the editor.");
+            Debug.Log($"Bake started ({(high ? "high quality" : "normal")}): {statics} static objects. Progress is in the bottom right corner of the editor.");
         }
 
         static void OnBaked()
@@ -93,12 +106,13 @@ namespace Pistol.EditorTools
         {
             for (; t != null; t = t.parent)
                 if (t.GetComponent<HingedPlate>() || t.GetComponent<DetachingPlate>() || t.GetComponent<GongPlate>()
-                    || t.GetComponent<TexasStarSpinner>() || t.GetComponent<PaperTargetCard>() || t.GetComponent<Rigidbody>())
+                    || t.GetComponent<TexasStarSpinner>() || t.GetComponent<PaperTargetCard>() || t.GetComponent<Rigidbody>()
+                    || t.GetComponent<GlassPane>())   // breaks and disappears; see-through, it mustn't shade the bake
                     return true;
             return false;
         }
 
-        static int MarkStatics()
+        static int MarkStatics(float resolution)
         {
             int count = 0;
             var scene = EditorSceneManager.GetActiveScene();
@@ -107,8 +121,14 @@ namespace Pistol.EditorTools
                 if (root.GetComponentInChildren<Camera>(true) != null) continue;   // the player with the weapon and the arms
                 foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
                 {
-                    if (Moves(r.transform)) continue;
                     var go = r.gameObject;
+                    if (Moves(r.transform))
+                    {
+                        var was = GameObjectUtility.GetStaticEditorFlags(go);
+                        var dynamic = was & ~(StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic);
+                        if (dynamic != was) { Undo.RecordObject(go, "Unmark static"); GameObjectUtility.SetStaticEditorFlags(go, dynamic); }
+                        continue;
+                    }
                     var flags = GameObjectUtility.GetStaticEditorFlags(go);
                     var wanted = flags | StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic;
                     if (wanted != flags)
@@ -116,12 +136,12 @@ namespace Pistol.EditorTools
                         Undo.RecordObject(go, "Mark static for baking");
                         GameObjectUtility.SetStaticEditorFlags(go, wanted);
                     }
-                    r.receiveGI = ReceiveGI.Lightmaps;
+                    r.receiveGI = System.Array.IndexOf(ProbeLitRoots, root.name) >= 0 ? ReceiveGI.LightProbes : ReceiveGI.Lightmaps;
                     // The ground plane is huge: a low resolution in the lightmap is enough for the soft bounce light
                     if (go.transform.lossyScale.x > 50f || go.transform.lossyScale.z > 50f)
                     {
                         var so = new SerializedObject(r);
-                        so.FindProperty("m_ScaleInLightmap").floatValue = GroundScaleInLightmap;
+                        so.FindProperty("m_ScaleInLightmap").floatValue = GroundTexelsPerMetre / resolution;
                         so.ApplyModifiedProperties();
                     }
                     count++;
@@ -130,30 +150,32 @@ namespace Pistol.EditorTools
             return count;
         }
 
-        static void ApplySettings()
+        // The values are written on every bake, so the normal and the high quality bake can be switched back and forth
+        static void ApplySettings(bool high)
         {
             var settings = AssetDatabase.LoadAssetAtPath<LightingSettings>(SettingsPath);
             if (settings == null)
             {
                 settings = new LightingSettings { name = "Lighting_Range" };
-                settings.realtimeGI = false;
-                settings.bakedGI = true;
-                settings.mixedBakeMode = MixedLightingMode.IndirectOnly;   // the sun's direct light and shadows stay realtime
-                settings.lightmapper = LightingSettings.Lightmapper.ProgressiveGPU;
-                settings.lightmapResolution = 10f;    // texels per metre for normal objects
-                settings.lightmapMaxSize = 2048;
-                settings.lightmapPadding = 2;
-                settings.ao = true;                   // soft darkening near walls and under objects
-                settings.aoMaxDistance = 1f;
-                settings.aoExponentIndirect = 1f;
-                settings.directSampleCount = 32;
-                settings.indirectSampleCount = 256;
-                settings.environmentSampleCount = 256;
-                settings.maxBounces = 2;
-                settings.filteringMode = LightingSettings.FilterMode.Auto;
-                settings.lightmapCompression = LightmapCompression.NormalQuality;
                 AssetDatabase.CreateAsset(settings, SettingsPath);
             }
+            settings.realtimeGI = false;
+            settings.bakedGI = true;
+            settings.mixedBakeMode = MixedLightingMode.IndirectOnly;   // the sun's direct light and shadows stay realtime
+            settings.lightmapper = LightingSettings.Lightmapper.ProgressiveGPU;
+            settings.lightmapResolution = high ? HighResolution : NormalResolution;
+            settings.lightmapMaxSize = 2048;
+            settings.lightmapPadding = 2;
+            settings.ao = true;                               // soft darkening near walls and under objects
+            settings.aoMaxDistance = high ? 1.5f : 1f;
+            settings.aoExponentIndirect = high ? 1.5f : 1f;
+            settings.directSampleCount = 32;
+            settings.indirectSampleCount = high ? 1024 : 256;
+            settings.environmentSampleCount = high ? 512 : 256;
+            settings.maxBounces = 2;
+            settings.filteringMode = LightingSettings.FilterMode.Auto;
+            settings.lightmapCompression = high ? LightmapCompression.HighQuality : LightmapCompression.NormalQuality;
+            EditorUtility.SetDirty(settings);
             Lightmapping.lightingSettings = settings;
 
             var sun = RenderSettings.sun;

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: daa808a5b454482e84f6dee1e7451ba1, type: 3}
+  m_Name: CarMetal_Impact
+  m_EditorClassIdentifier: 
+  direct: {fileID: 11400000, guid: dbf4aca4f92d14bc78e19af61fca2e37, type: 2}
+  glancing: {fileID: 0}
+  glancingFrom: 45
+  glancingFull: 75
+  grazingVolume: 0.45
+  grazingPitch: 1.25
+  speedInfluence: 0.5
+  referenceSpeed: 440
+  delayBySpeedOfSound: 1
+  speedOfSound: 343
