@@ -12,7 +12,7 @@ Shader "Pistol/BulletDecalDepth"
         _BumpMap ("Normal Map", 2D) = "bump" {}
         _BumpScale ("Normal Strength", Range(0, 3)) = 1
         _HeightMap ("Height (1 = surface, 0 = deepest)", 2D) = "white" {}
-        _Parallax ("Depth (fraction of the decal size)", Range(0, 0.4)) = 0.16
+        _Parallax ("Depth (fraction of the decal size)", Range(0, 0.6)) = 0.16
         _Steps ("Depth steps", Range(4, 32)) = 16
         _ShadowStrength ("Self-shadow strength", Range(0, 1)) = 0.85
         _ShadowSoftness ("Self-shadow softness", Range(1, 40)) = 12

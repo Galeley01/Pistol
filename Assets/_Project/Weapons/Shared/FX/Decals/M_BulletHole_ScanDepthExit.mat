@@ -40,8 +40,8 @@ Material:
     - _BumpScale: 1
     - _CavityAO: 0.9
     - _Glossiness: 0.12
-    - _Parallax: 0.4
-    - _ShadowSoftness: 12
+    - _Parallax: 0.6
+    - _ShadowSoftness: 40
     - _ShadowStrength: 1
     - _Steps: 16
     m_Colors:

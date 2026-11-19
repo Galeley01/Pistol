@@ -31,4 +31,5 @@ MonoBehaviour:
   forceIndoor: 0
   steamAudioHrtf: 1
   newBulletHoles: 1
+  angledBulletHoles: 0
   bulletHoleStyle: 8
