@@ -23,9 +23,9 @@ MonoBehaviour:
   closeSlowMotion: 1
   closePauseAtPhase: -1
   closePauseAtLatch: 0
-  liveFingers: 1
-  liveFingersLeft: 1
-  liveWrist: 1
+  liveFingers: 0
+  liveFingersLeft: 0
+  liveWrist: 0
   liveHandMoveScale: 1
   liveFingersRight: 0
   liveFingersWeight: 1

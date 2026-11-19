@@ -1787,7 +1787,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   player: {fileID: 1942477188}
-  alsoReset: []
 --- !u!4 &1817560177
 Transform:
   m_ObjectHideFlags: 0
