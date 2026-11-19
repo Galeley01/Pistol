@@ -8,7 +8,7 @@ namespace Pistol.Items
     // and gives the arms the finger curls. When the item frees the left hand (HeldItem.LeftHandFree, e.g. the
     // revolver cylinder is open), the left hand moves away along an arc and relaxes its fingers.
     // The item may also lead the left hand to its own target for a moment (SetLeftHandOverride), e.g. the palm
-    // that pushes the cylinder shut.
+    // that pushes the cylinder shut. For debugging live fingers the left hand can also move aside (SetLeftHandLive).
     // The grip belongs to the item, so any arms skin holds it the same way.
     //
     // Goes on the item root, next to ItemRig and HeldItem.
@@ -36,6 +36,12 @@ namespace Pistol.Items
         ItemRig rig;
         float leftBlend = 1f;      // 1 = left hand on the grip, 0 = moved away
         float leftTarget01 = 1f;
+        float liveBlend;           // 1 = left hand in the live-fingers pose (debug)
+        bool liveWanted;
+        Quaternion liveWrist = Quaternion.identity;   // camera space, anatomical
+        Vector3 liveOffset;                           // camera space, meters
+        float liveWristWeight;
+        Transform liveCamera;
         bool warnedLegacy;
 
         public HandGripProfile Profile => profile;
@@ -63,6 +69,20 @@ namespace Pistol.Items
 
         public void ClearLeftHandOverride() => overrideWeight = 0f;
 
+        // Debug: while the left fingers follow a hand tracking tool, the left hand moves aside from the item
+        // (HandGripProfile → "Левая рука — живые пальцы") and comes back when turned off
+        public void SetLeftHandLive(bool live) => liveWanted = live;
+
+        // The tracked wrist for the live pose: rotation and offset in the camera's space, weight 0..1
+        public void SetLeftHandLiveWrist(Transform camera, Quaternion wrist, Vector3 offset, float weight)
+        {
+            liveCamera = camera;
+            liveWrist = wrist;
+            liveOffset = offset;
+            liveWristWeight = Mathf.Clamp01(weight);
+        }
+        public bool LeftHandLive => liveBlend > 0f;
+
         void Awake()
         {
             rig = GetComponent<ItemRig>();
@@ -78,6 +98,7 @@ namespace Pistol.Items
                 Debug.LogWarning($"ItemGrip: {profile.name} still has hand rotations of the old arms. Open the ArmsDefinition of those arms (Convert Legacy Grips on) and press \"Build arms prefab\".", profile);
             }
             leftBlend = Mathf.MoveTowards(leftBlend, leftTarget01, Time.deltaTime / Mathf.Max(profile.leftHandMoveTime, 0.01f));
+            liveBlend = Mathf.MoveTowards(liveBlend, liveWanted ? 1f : 0f, Time.deltaTime / Mathf.Max(profile.leftLiveMoveTime, 0.01f));
             if (liveFromProfile) ApplyProfileToPoints();
         }
 
@@ -109,6 +130,29 @@ namespace Pistol.Items
             rig.LeftHandGrip.localPosition = Vector3.Lerp(p.leftAwayPosition, p.left.wristPosition, t) + arc;
             rig.LeftHandGrip.localRotation = Quaternion.Slerp(awayRot, gripRot, t);
             if (rig.LeftElbowHint) rig.LeftElbowHint.localPosition = Vector3.Lerp(p.leftAwayElbowHint, p.left.elbowHint, t);
+
+            // Live fingers (debug): the left hand goes aside, along its own arc
+            if (liveBlend > 0f)
+            {
+                float l = Mathf.SmoothStep(0f, 1f, liveBlend);
+                Vector3 liveArc = new Vector3(-0.6f, 0.6f, -0.5f).normalized * (Mathf.Sin(l * Mathf.PI) * p.leftHandArc);
+                Vector3 livePos = p.leftLivePosition;
+                Quaternion liveRot = gripRot * Quaternion.Euler(p.leftLiveRotationOffset);
+                // The tracked wrist: its turn as seen from the eyes, and how far the hand moved from the place above
+                var parent = rig.LeftHandGrip.parent;
+                if (liveCamera != null && liveWristWeight > 0f)
+                {
+                    Vector3 move = liveCamera.rotation * liveOffset;
+                    if (parent != null) move = parent.InverseTransformVector(move);
+                    Quaternion rot = liveCamera.rotation * liveWrist;
+                    if (parent != null) rot = Quaternion.Inverse(parent.rotation) * rot;
+                    livePos += move * liveWristWeight;
+                    liveRot = Quaternion.Slerp(liveRot, rot, liveWristWeight);
+                }
+                rig.LeftHandGrip.localPosition = Vector3.Lerp(rig.LeftHandGrip.localPosition, livePos, l) + liveArc;
+                rig.LeftHandGrip.localRotation = Quaternion.Slerp(rig.LeftHandGrip.localRotation, liveRot, l);
+                if (rig.LeftElbowHint) rig.LeftElbowHint.localPosition = Vector3.Lerp(rig.LeftElbowHint.localPosition, p.leftLiveElbowHint, l);
+            }
 
             // The item's own target on top (palm on the cylinder): the palm centre goes to the point and the wrist
             // is placed back from it; converted from item-root space to the grip point's parent

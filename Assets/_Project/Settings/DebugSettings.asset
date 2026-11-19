@@ -23,6 +23,14 @@ MonoBehaviour:
   closeSlowMotion: 1
   closePauseAtPhase: -1
   closePauseAtLatch: 0
+  liveFingers: 1
+  liveFingersLeft: 1
+  liveWrist: 1
+  liveHandMoveScale: 1
+  liveFingersRight: 0
+  liveFingersWeight: 1
+  liveFingersMaxSpeed: 600
+  liveFingersPort: 5065
   newPostFx: 1
   newSky: 1
   newCamera: 0

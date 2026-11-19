@@ -41,6 +41,11 @@ namespace Pistol.Arms
             if (rig == null || holder == null) return;
             holder.ItemChanged += rig.Attach;
             rig.Attach(holder.Current);
+
+            // Debug: fingers from a hand tracking tool (DebugSettings → Live Fingers), editor and Development builds only
+            if (Pistol.Core.DebugSettings.Allowed && holder.Context?.Debug != null)
+                rig.UseLiveFingers(gameObject.AddComponent<LiveHandReceiver>(), holder.Context.Debug,
+                                   holder.Context.Camera != null ? holder.Context.Camera.transform : transform.parent);
         }
 
 #if UNITY_EDITOR

@@ -4,7 +4,7 @@ using NaughtyAttributes;
 namespace Pistol.Core
 {
     // All debug switches in one place: logs, bullet paths, the future bullet line, the aim point,
-    // slow motion and editor pauses for tuning the cylinder close.
+    // slow motion and editor pauses for tuning the cylinder close, live fingers from a hand tracking tool.
     // In a normal (non-Development) build every switch reads as off, whatever is ticked here,
     // and the debug overlays switch themselves off.
     // Given to the scene services (BulletSystem, GameAudio) and, through ItemContext, to held items.
@@ -40,6 +40,25 @@ namespace Pistol.Core
         public int closePauseAtPhase = -1;
         [BoxGroup("Закрытие барабана"), Tooltip("Поставить редактор на паузу в момент защёлкивания крана")]
         public bool closePauseAtLatch = false;
+
+        [BoxGroup("Живые пальцы (камера)"), Tooltip("Пальцы рук повторяют пальцы с камеры: внешняя тулза трекинга рук шлёт углы по UDP. " +
+                                                    "Поверх хвата оружия, кисть и рука остаются за оружием. Можно включать в Play")]
+        public bool liveFingers = false;
+        [BoxGroup("Живые пальцы (камера)"), Tooltip("Левая рука: пальцы с камеры, сама рука отходит от оружия (поза в профиле хвата)")]
+        public bool liveFingersLeft = true;
+        [BoxGroup("Живые пальцы (камера)"), Tooltip("Кисть тоже с камеры: поворот и положение (влево-вправо, вверх-вниз, ближе-дальше) " +
+                                                    "от позы «Левая рука — живые пальцы» в профиле хвата")]
+        public bool liveWrist = true;
+        [BoxGroup("Живые пальцы (камера)"), Range(0f, 3f), Tooltip("Во сколько раз движение руки в игре больше, чем пришло с камеры (0 — рука стоит на месте)")]
+        public float liveHandMoveScale = 1f;
+        [BoxGroup("Живые пальцы (камера)"), Tooltip("Правая рука тоже (держит оружие, поэтому пока выключено)")]
+        public bool liveFingersRight = false;
+        [BoxGroup("Живые пальцы (камера)"), Range(0f, 1f), Tooltip("Сила слоя: 0 — пальцы как в хвате, 1 — полностью как с камеры")]
+        public float liveFingersWeight = 1f;
+        [BoxGroup("Живые пальцы (камера)"), Range(90f, 2000f), Tooltip("Предел скорости сустава, градусы в секунду. Меньше — плавнее, срывы трекинга не дёргают руку")]
+        public float liveFingersMaxSpeed = 600f;
+        [BoxGroup("Живые пальцы (камера)"), Tooltip("UDP-порт тулзы (по умолчанию 5065)")]
+        public int liveFingersPort = 5065;
 
         [BoxGroup("Сравнение вида"), Tooltip("Новая постобработка: ACES, лёгкий bloom, AO. Выкл — как было. Клавиша 4 в игре — то же")]
         public bool newPostFx = true;
@@ -88,6 +107,7 @@ namespace Pistol.Core
         public bool TrajectoryPreview => Allowed && trajectoryPreview;
         public bool AimPoint => Allowed && aimPoint;
         public bool InfiniteAmmo => Allowed && infiniteAmmo;
+        public bool LiveFingers => Allowed && liveFingers;
         // In a normal build the new look is always on
         public bool NewPostFx => !Allowed || newPostFx;
         public bool NewSky => !Allowed || newSky;

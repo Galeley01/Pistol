@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Animations.Rigging;
 using NaughtyAttributes;
 using Pistol.Items;
+using Pistol.Core;
 
 namespace Pistol.Arms
 {
@@ -43,6 +44,10 @@ namespace Pistol.Arms
 
         RigBuilder rigBuilder;
         ItemGrip grip;
+        LiveHandReceiver liveSource;       // debug: live finger angles from a hand tracking tool
+        DebugSettings liveDebug;
+        Transform liveCamera;
+        LiveFingers live;
         Transform rightTarget, leftTarget;   // children of the item's grip points: anatomical hand -> this skin's hand bone
 
         public ArmsDefinition Definition => definition;
@@ -81,6 +86,7 @@ namespace Pistol.Arms
 
         public void Detach()
         {
+            if (grip != null) grip.SetLeftHandLive(false);
             if (rigBuilder != null) rigBuilder.enabled = false;
             if (rightTarget != null) Destroy(rightTarget.gameObject);
             if (leftTarget != null) Destroy(leftTarget.gameObject);
@@ -108,16 +114,52 @@ namespace Pistol.Arms
             ik.data.hintWeight = hint != null ? 1f : 0f;
         }
 
-        // Finger curls from the item's grip, after animation
+        // Finger curls from the item's grip, after animation; then the live finger layer (debug) on top
         void LateUpdate()
         {
-            if (grip == null) return;
-            foreach (var j in joints)
+            if (grip != null)
             {
-                if (j.bone == null) continue;
-                float angle = grip.FingerCurl(j.right, j.finger);
-                if (definition != null) angle += definition.FingerCurlOffset(j.right, j.finger);   // this skin's correction
-                j.bone.localRotation = j.restLocal * Quaternion.AngleAxis(angle, j.axis);
+                foreach (var j in joints)
+                {
+                    if (j.bone == null) continue;
+                    float angle = grip.FingerCurl(j.right, j.finger);
+                    if (definition != null) angle += definition.FingerCurlOffset(j.right, j.finger);   // this skin's correction
+                    j.bone.localRotation = j.restLocal * Quaternion.AngleAxis(angle, j.axis);
+                }
+            }
+            UpdateLiveFingers();
+        }
+
+        // Debug: lets the fingers follow a hand tracking tool while DebugSettings → Live Fingers is on
+        public void UseLiveFingers(LiveHandReceiver receiver, DebugSettings debug, Transform viewCamera)
+        {
+            liveSource = receiver;
+            liveDebug = debug;
+            liveCamera = viewCamera;
+        }
+
+        void UpdateLiveFingers()
+        {
+            if (liveSource == null || liveDebug == null) return;
+            bool on = liveDebug.LiveFingers;
+            bool useLeft = on && liveDebug.liveFingersLeft, useRight = on && liveDebug.liveFingersRight;
+            liveSource.SetListening(on, liveDebug.liveFingersPort);
+            if (grip != null) grip.SetLeftHandLive(useLeft);   // the left hand moves aside from the item
+            if (live == null)
+            {
+                if (!on) return;
+                live = new LiveFingers(right.hand, left.hand, joints);
+            }
+            live.Config.weight = liveDebug.liveFingersWeight;
+            live.Config.maxSpeed = liveDebug.liveFingersMaxSpeed;
+            live.Update(liveSource, useRight, useLeft, Time.deltaTime);
+            live.Apply();
+            // The left wrist follows the tracked hand (used by the grip next frame, before the IK)
+            if (grip != null)
+            {
+                bool placed = live.Placement(false, out Quaternion wrist, out Vector3 offset, out float weight);
+                if (!liveDebug.liveWrist || !useLeft) weight = 0f;
+                grip.SetLeftHandLiveWrist(liveCamera, wrist, offset * liveDebug.liveHandMoveScale, placed ? weight : 0f);
             }
         }
 

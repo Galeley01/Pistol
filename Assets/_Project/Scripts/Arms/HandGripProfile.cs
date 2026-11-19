@@ -69,6 +69,22 @@ namespace Pistol.Arms
         [BoxGroup("Левая рука — убрана (барабан открыт)"), Range(0f, 0.2f), Tooltip("Насколько рука уходит дугой наружу, а не по прямой")]
         public float leftHandArc = 0.06f;
 
+        // ---------- Left hand with live fingers (debug: DebugSettings → Live Fingers) ----------
+        [BoxGroup("Левая рука — живые пальцы (отладка)")]
+        [Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.5f), Tooltip("Куда уходит запястье, пока пальцы идут с камеры, метры относительно оружия")]
+        public Vector3 leftLivePosition = new Vector3(-0.22f, 0.03f, 0.04f);
+
+        [BoxGroup("Левая рука — живые пальцы (отладка)")]
+        [Vector3Slider(Vector3SliderAttribute.Kind.Rotation, 180f), Tooltip("Доворот кисти относительно её поворота на рукояти")]
+        public Vector3 leftLiveRotationOffset = new Vector3(0f, 0f, 0f);
+
+        [BoxGroup("Левая рука — живые пальцы (отладка)")]
+        [Vector3Slider(Vector3SliderAttribute.Kind.Position, 1f), Tooltip("Куда смотрит локоть, пока рука в стороне")]
+        public Vector3 leftLiveElbowHint = new Vector3(-0.45f, -0.4f, -0.2f);
+
+        [BoxGroup("Левая рука — живые пальцы (отладка)"), Range(0.1f, 3f), Tooltip("Сколько секунд рука уходит от оружия и возвращается")]
+        public float leftLiveMoveTime = 0.8f;
+
         // ---------- Left palm contact (e.g. pushing the cylinder shut) ----------
         [BoxGroup("Левая ладонь — касание"), Vector3Slider(Vector3SliderAttribute.Kind.Position, 0.15f)]
         [Tooltip("Где центр ладони относительно запястья, м, в осях кисти (Z — к пальцам, Y — куда смотрит ладонь). " +
