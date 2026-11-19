@@ -35,9 +35,16 @@ namespace Pistol.Arms
             public float[] viewFingers;  // protocol 3: fingers direction as the person sees their hand (x right, y up, z forward)
             public float[] viewBack;     // protocol 3: back-of-hand direction, same axes
             public float[] offset;       // protocol 3: meters the hand moved since its reference, same axes
-            public bool Valid => angles != null && angles.Length == AngleCount;
-            public bool HasPlacement => viewFingers != null && viewFingers.Length == 3 && viewBack != null && viewBack.Length == 3
-                                        && offset != null && offset.Length == 3;
+            public bool Valid => Finite(angles, AngleCount);
+            public bool HasPlacement => Finite(viewFingers, 3) && Finite(viewBack, 3) && Finite(offset, 3);
+
+            static bool Finite(float[] values, int length)
+            {
+                if (values == null || values.Length != length) return false;
+                foreach (float v in values)
+                    if (float.IsNaN(v) || float.IsInfinity(v)) return false;
+                return true;
+            }
         }
 
         public const int AngleCount = 20;
@@ -85,9 +92,11 @@ namespace Pistol.Arms
             Close();
             try
             {
-                client = new UdpClient(new IPEndPoint(IPAddress.Loopback, port));
+                var socket = new UdpClient(new IPEndPoint(IPAddress.Loopback, port));
+                client = socket;
                 running = true;
-                thread = new Thread(Listen) { IsBackground = true, Name = "Live hand receiver" };
+                // The thread keeps its own socket: after a reopen an old thread never reads the new one
+                thread = new Thread(() => Listen(socket)) { IsBackground = true, Name = "Live hand receiver" };
                 thread.Start();
                 Listening = true;
                 Port = port;
@@ -107,22 +116,30 @@ namespace Pistol.Arms
             running = false;
             client?.Close();   // unblocks Receive
             thread?.Join(200);
-            client = null;
+            lock (gate)
+            {
+                client = null;
+                pending = null;   // no packet from the closed socket after a reopen
+            }
             thread = null;
             Listening = false;
             right = left = null;
             rightSeen = leftSeen = -1f;
         }
 
-        void Listen()
+        void Listen(UdpClient socket)
         {
             var any = new IPEndPoint(IPAddress.Any, 0);
             while (running)
             {
                 try
                 {
-                    byte[] data = client.Receive(ref any);
-                    lock (gate) pending = data;
+                    byte[] data = socket.Receive(ref any);
+                    lock (gate)
+                    {
+                        if (!running || socket != client) return;
+                        pending = data;
+                    }
                 }
                 catch (SocketException) { if (!running) break; }
                 catch (ObjectDisposedException) { break; }

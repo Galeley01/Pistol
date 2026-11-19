@@ -97,7 +97,8 @@ namespace Pistol.Arms
                 Vector3 fingers = new Vector3(msg.viewFingers[0], msg.viewFingers[1], msg.viewFingers[2]);
                 Vector3 back = new Vector3(msg.viewBack[0], msg.viewBack[1], msg.viewBack[2]);
                 Vector3 offset = new Vector3(msg.offset[0], msg.offset[1], msg.offset[2]);
-                if (fingers.sqrMagnitude > 1e-6f && back.sqrMagnitude > 1e-6f)
+                // Parallel or zero directions give no rotation: keep the last one
+                if (Vector3.Cross(fingers, back).sqrMagnitude > 1e-6f)
                 {
                     Quaternion wrist = Quaternion.LookRotation(fingers, -back);
                     bool first = !side.hasPlacement || side.placementBlend <= fade;
